@@ -4,10 +4,12 @@ import { ACCENT_PALETTE } from './MulticolorHeading'
 
 const EASE = [0.25, 0.46, 0.45, 0.94]
 
+const BRAND_FONT = 'font-brand font-bold tracking-normal'
+
 const SIZE_STYLES = {
   nav: {
-    word: 'text-base sm:text-lg tracking-tight',
-    mark: 'h-11 w-11 sm:h-12 sm:w-12',
+    word: 'text-xl sm:text-2xl',
+    mark: 'h-14 w-14 sm:h-16 sm:w-16',
   },
   sm: { word: 'text-sm tracking-tight', mark: 'h-9 w-9' },
   md: { word: 'text-base tracking-tight', mark: 'h-9 w-9' },
@@ -32,7 +34,7 @@ function StaticNavigandoWordmark({ styles, className }) {
   const letters = 'navigando'.split('')
   return (
     <span
-      className={`inline-flex items-baseline font-extrabold leading-none ${styles.word} ${className}`}
+      className={`inline-flex items-baseline leading-none ${BRAND_FONT} ${styles.word} ${className}`}
       aria-hidden="true"
     >
       {letters.map((char, i) => (
@@ -84,7 +86,7 @@ function NavigandoWordmark({ size = 'md', className = '' }) {
 
   return (
     <span
-      className={`inline-flex items-baseline font-extrabold leading-none ${styles.word} ${className}`}
+      className={`inline-flex items-baseline leading-none ${BRAND_FONT} ${styles.word} ${className}`}
       aria-hidden="true"
     >
       {/* n — coral */}

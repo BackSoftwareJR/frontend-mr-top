@@ -2,6 +2,7 @@
 
 @theme {
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-brand: "Fredoka", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --color-warm-white: #fafaf8;
   --color-warm-cream: #f8f7f4;
   --color-charcoal: #1e293b;
