@@ -28,6 +28,9 @@ export const ANCHOR_ORDER = [
 
 export const CTA_GLOW_SEGMENTS = ['hero-cta', 'cta-final']
 
+/** Precomputed samples along path for cursor interpolation (no per-frame getPointAtLength) */
+export const PROGRESS_LOOKUP_SAMPLES = 20
+
 /** Fallback document-space points when anchors are not yet measured */
 export const FALLBACK_PATH_POINTS = [
   { x: 0.72, y: 0.12, normalized: true },
@@ -57,62 +60,38 @@ export function measureDocumentPoint(el) {
 }
 
 /**
- * Tight single-side arc around a CTA — approach from the left, sweep below, exit right.
- * Three synthetic points only (no full orbit).
+ * Tight arc under a CTA — left edge → midpoint under center → right edge.
+ * Points sit near the button bottom for precise alignment.
  */
-export function buildCtaOrbitPoints(ctaEl, entryPoint, options = {}) {
+export function buildCtaOrbitPoints(ctaEl, _entryPoint, options = {}) {
   const { variant = 'hero' } = options
   const rect = ctaEl.getBoundingClientRect()
-  const cx = rect.left + rect.width / 2 + window.scrollX
-  const cy = rect.top + rect.height / 2 + window.scrollY
-  const halfW = rect.width / 2
-  const halfH = rect.height / 2
+  const scrollX = window.scrollX
+  const scrollY = window.scrollY
+  const left = rect.left + scrollX
+  const right = rect.right + scrollX
+  const bottom = rect.bottom + scrollY
+  const cx = (left + right) / 2
+  const gap = variant === 'final' ? 10 : 8
 
   const glowSegment = variant === 'final' ? 'cta-final' : 'hero-cta'
 
-  if (variant === 'final') {
-    const gap = 32
-    return [
-      {
-        x: cx - halfW - gap * 0.15,
-        y: cy + halfH + gap * 0.45,
-        synthetic: true,
-        glowSegment,
-      },
-      {
-        x: cx + halfW * 0.15,
-        y: cy + halfH + gap * 0.95,
-        synthetic: true,
-        glowSegment,
-      },
-      {
-        x: cx + halfW + gap * 0.55,
-        y: cy + halfH + gap * 0.65 + 18,
-        synthetic: true,
-        glowSegment,
-      },
-    ]
-  }
-
-  const gap = 34
-  const approachFromLeft = entryPoint.x < cx
-
   return [
     {
-      x: approachFromLeft ? cx - halfW - gap * 0.2 : cx - halfW * 0.35,
-      y: cy + halfH + gap * 0.35,
+      x: left - 2,
+      y: bottom + gap,
       synthetic: true,
       glowSegment,
     },
     {
-      x: cx + halfW * 0.05,
-      y: cy + halfH + gap,
+      x: cx,
+      y: bottom + gap + (variant === 'final' ? 14 : 12),
       synthetic: true,
       glowSegment,
     },
     {
-      x: cx + halfW + gap * 0.45,
-      y: cy + halfH + gap * 0.55 + 14,
+      x: right + 2,
+      y: bottom + gap,
       synthetic: true,
       glowSegment,
     },
@@ -150,18 +129,51 @@ export function buildReadingPathD(points) {
   return buildCatmullRomPath(points)
 }
 
-/** Sample an SVG path from length 0 through maxLength (document space) */
-export function samplePathToLength(pathEl, maxLength, step = 5) {
-  const total = pathEl.getTotalLength()
-  if (!total || maxLength <= 0) return []
-
-  const end = Math.min(maxLength, total)
-  const points = []
-  for (let len = 0; len < end; len += step) {
-    points.push(pathEl.getPointAtLength(len))
+/** Build a fixed lookup table for progress → document point (computed once per path) */
+export function buildProgressLookup(pathEl, sampleCount = PROGRESS_LOOKUP_SAMPLES) {
+  const totalLength = pathEl.getTotalLength()
+  if (!totalLength) {
+    return { totalLength: 0, samples: [] }
   }
-  points.push(pathEl.getPointAtLength(end))
-  return points
+
+  const samples = []
+  for (let i = 0; i <= sampleCount; i += 1) {
+    const t = i / sampleCount
+    const len = t * totalLength
+    const pt = pathEl.getPointAtLength(len)
+    samples.push({ t, x: pt.x, y: pt.y })
+  }
+
+  return { totalLength, samples }
+}
+
+/** Interpolate document point from precomputed lookup at progress 0…1 */
+export function interpolateProgressLookup(lookup, progress) {
+  const { samples } = lookup
+  if (!samples.length || progress <= 0) {
+    return samples[0] ?? { x: 0, y: 0 }
+  }
+  if (progress >= 1) {
+    return samples[samples.length - 1] ?? { x: 0, y: 0 }
+  }
+
+  let lo = 0
+  let hi = samples.length - 1
+  while (lo < hi - 1) {
+    const mid = (lo + hi) >> 1
+    if (samples[mid].t <= progress) lo = mid
+    else hi = mid
+  }
+
+  const a = samples[lo]
+  const b = samples[hi]
+  const span = b.t - a.t || 1
+  const u = (progress - a.t) / span
+
+  return {
+    x: a.x + (b.x - a.x) * u,
+    y: a.y + (b.y - a.y) * u,
+  }
 }
 
 /** Convert document-space point to viewport coordinates */
@@ -172,9 +184,19 @@ export function documentToViewport(point, scrollY) {
   }
 }
 
-/** Keep the reading head inside the viewport */
+/** Keep the reading head inside the viewport when it would leave the screen */
 export function clampPointToViewport(point, viewport, margin = 22) {
   const { width, height } = viewport
+  if (!width || !height) return point
+
+  const inView =
+    point.x >= margin &&
+    point.x <= width - margin &&
+    point.y >= margin &&
+    point.y <= height - margin
+
+  if (inView) return point
+
   return {
     x: Math.max(margin, Math.min(width - margin, point.x)),
     y: Math.max(margin, Math.min(height - margin, point.y)),
@@ -193,7 +215,7 @@ export function measureWaypointLengths(pathEl, points) {
   const total = pathEl.getTotalLength()
   if (!total || !points.length) return []
 
-  const samples = Math.min(600, Math.max(80, Math.ceil(total / 1.5)))
+  const samples = Math.min(120, Math.max(40, Math.ceil(total / 4)))
   const lengths = []
 
   for (const pt of points) {
