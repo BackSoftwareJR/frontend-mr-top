@@ -17,7 +17,7 @@ export default function TrustPartnersSection() {
       id="trust"
       data-scroll-anchor="trust"
       data-scroll-label="Partner"
-      className="relative overflow-x-clip px-6 py-16 sm:py-20"
+      className="section-deferred relative overflow-x-clip px-6 py-16 sm:py-20"
     >
       <SectionBlob variant="amber" shape="ring" position="center" className="opacity-35" />
 

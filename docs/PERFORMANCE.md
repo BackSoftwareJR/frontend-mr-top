@@ -58,9 +58,10 @@ The main bottleneck on old phones is **main-thread work during scroll**: SVG `ge
 | Single 449 KB JS chunk | Long TTI on 3G |
 
 **Fixes applied:**
-- `WenandoMark` uses inline SVG asset (550 B) — identical at display size
+- `WenandoMark` uses **`/wenando-logo.png`** (multicolor ribbon) — preloaded in `index.html` with `fetchPriority="high"` on mobile hero LCP mark
 - `decoding="async"` on mark image
 - Vite `manualChunks` for framer-motion, react, router, lucide
+- Google Fonts CSS preloaded; Vite injects `modulepreload` for vendor + main chunks on build
 
 **Not changed (recommendations):**
 - Self-host font subset or `font-display: swap` only (already `display=swap` in URL)
@@ -97,7 +98,7 @@ Effect: fewer path lookup samples (32 vs 48/192). **Same animation appearance** 
 ## What the user should feel (old phone)
 
 - **Scroll:** Smoother finger tracking; reading line dot and stroke stay locked to scroll without micro-stutters
-- **Open:** Faster first paint — smaller initial JS on `/`, SVG logo decodes instantly
+- **Open:** Faster first paint — smaller initial JS on `/`, logo PNG preloaded for LCP
 - **CTA/stat fill:** Same sweep timing, less lag when line passes buttons
 - **Desktop:** Unchanged
 
@@ -125,7 +126,19 @@ Second pass targets **scroll jank on phones only** (`max-width: 768px`). Desktop
 | **B. Cheaper geometry** | Lookup samples: **48** mobile / **32** constrained (was 96 / 64); **no** scroll remap table on mobile; `buildReadingPathD(..., { isMobile })` uses **2** wavy-vertical cubics (desktop: 3) |
 | **C. Pause off-screen** | `IntersectionObserver` on `hero-dot` + `cta-final` — skip rAF work when neither anchor intersects (20% root margin) |
 | **D. GPU-friendly paint** | Dot via `translate3d` on wrapper `<g>`; `[contain:strict]` on layer + SVG `contain: strict` on mobile |
-| **E. Throttle fill sync** | `CtaFillSync` / `StatCardFillSync`: `throttleMobile` — skip when Δprogress < 0.002 **and** odd frame; `pathProgress` motion value updated on same rule |
+| **E. Throttle fill sync** | `CtaFillSync` / `StatCardFillSync`: skip when Δprogress < 0.002 **and** not every 3rd frame; same rule for `pathProgress` motion sync |
+
+### Round 3 (logo revert + precomputed scroll table)
+
+| Strategy | Implementation |
+|----------|----------------|
+| **F. Precomputed scroll frame table** | `buildMobileScrollFrameTable` — on path measure, bake scroll→stroke/dot values (64 samples); mobile rAF only `interpolateMobileScrollFrame` + batched DOM writes |
+| **G. Dynamic will-change** | `will-change: transform` on dot group only while scrolling (+ 150 ms idle clear) |
+| **H. Lighter samples** | Path lookup: 32 mobile / 24 constrained; wavy vertical: 2 mobile / 1 reduced-motion |
+| **I. Skip mobile glow overlays** | `CtaGlowOverlays` disabled on mobile (Framer opacity rings removed from hot path) |
+| **J. content-visibility** | `.section-deferred` on below-fold sections; `IntersectionObserver` triggers path remeasure when sections paint |
+| **K. Mobile animation diet** | Hero copy/CTA → CSS keyframes; nav morph off on mobile; Bento/Stats/MulticolorHeading skip blur/stagger; page fade skipped on mobile |
+| **L. Idle prefetch** | `usePrefetchOnIdle(['/wizard'])` on home |
 
 ### Before / after (mobile scroll path)
 
@@ -134,8 +147,10 @@ Second pass targets **scroll jank on phones only** (`max-width: 768px`). Desktop
 | Scroll → line | Framer `useTransform` every frame | Native scroll listener → single rAF → DOM only |
 | Dot position | `setAttribute('cx'/'cy')` via motion event | `translate3d(x, y, 0)` on group |
 | React re-render on scroll | None intended; motion subscriptions still ran | Motion scroll inputs stubbed; re-render only on path remeasure |
-| Lookup samples | 96 / 64 | 48 / 32 |
+| Lookup samples | 96 / 64 | 32 / 24 |
+| Scroll hot path | Per-frame progress + tip lookup | Precomputed frame table index + lerp |
 | Remap table | Skipped at runtime; could still build | Never built when `isMobile` |
+| CTA glow rings | Framer on mobile | Skipped on mobile |
 | `getPointAtLength` in hot path | None (lookup) | None (unchanged) |
 
 ### Files (mobile pass)
@@ -165,7 +180,7 @@ Chrome DevTools: Performance → 6× CPU slowdown, **430px** viewport, record sc
 2. **IntersectionObserver for below-fold sections** — defer chunk mount until near viewport; must trigger `remeasurePath` when anchors appear (coordinate with reading line).
 3. **rollup-plugin-visualizer** — add dev dependency for ongoing bundle audits.
 4. **Service worker / precache** — only if offline or repeat-visit latency becomes a product goal.
-5. **`content-visibility: auto` on sections** — can help paint; test for scroll-anchor drift with reading line before enabling.
+5. **`content-visibility: auto` on sections** — enabled via `.section-deferred` with remeasure hook; monitor anchor drift on oldest test devices.
 
 ---
 
@@ -173,10 +188,14 @@ Chrome DevTools: Performance → 6× CPU slowdown, **430px** viewport, record sc
 
 | File | Change |
 |------|--------|
-| `ScrollReadingLine.jsx` | Lookup-based dot, cached DOM refs, shared `pathProgress`, debounced viewport, memo, contain; **+ mobile rAF driver** |
-| `readingPathSchema.js` | `getPathTipFromLookup`, adaptive sample counts, remap sample param; **+ mobile wavy segment count** |
-| `performanceTier.js` | Constrained device heuristic |
-| `HeroSection.jsx` | *(reverted)* section lazy — conflicts with reading-line anchors |
-| `App.jsx` | Lazy wizard/dashboard routes |
-| `WenandoLogo.jsx` | SVG mark instead of PNG |
-| `vite.config.js` | Manual vendor chunks |
+| `ScrollReadingLine.jsx` | Precomputed mobile frame table, dynamic will-change, IO remeasure, skip glow on mobile |
+| `readingPathSchema.js` | `buildMobileScrollFrameTable`, 32/24 lookup samples, simplified reduced-motion path |
+| `WenandoLogo.jsx` | **PNG ribbon logo** + `fetchPriority` prop |
+| `HeroSection.jsx` | Mobile LCP mark priority, CSS hero fades, static nav on mobile |
+| `index.html` | Preload logo PNG + Google Fonts CSS |
+| `globals.css` | `.section-deferred`, mobile hero fade keyframes |
+| `performanceTier.js` | Shared `useIsMobile` |
+| `StatsSection.jsx`, `BentoSteps.jsx`, `MulticolorHeading.jsx`, `Home.jsx` | Mobile light-motion path |
+| `usePrefetchOnIdle.js` | Idle prefetch hook |
+| Below-fold sections | `section-deferred` for paint skipping + remeasure |
+| `vite.config.js` | Vendor chunks + `modulePreload` polyfill |

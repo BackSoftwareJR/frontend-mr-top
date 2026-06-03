@@ -102,7 +102,7 @@ export default function FAQSection() {
       id="faq"
       data-scroll-anchor="faq"
       data-scroll-label="FAQ"
-      className="relative overflow-x-clip px-6 py-20 sm:py-28"
+      className="section-deferred relative overflow-x-clip px-6 py-20 sm:py-28"
     >
       <SectionBlob variant="violet" shape="circle" position="top-left" />
       <SectionBlob variant="rose" shape="wave" position="bottom-right" />

@@ -81,7 +81,7 @@ export default function PersonalizedAnalysisSection() {
       id="personalized"
       data-scroll-anchor="personalized"
       data-scroll-label="Analisi personalizzata"
-      className="relative overflow-x-clip px-6 py-20 sm:py-28"
+      className="section-deferred relative overflow-x-clip px-6 py-20 sm:py-28"
     >
       <SectionBlob variant="violet" shape="blob" position="top-left" />
       <SectionBlob variant="rose" shape="circle" position="bottom-right" />

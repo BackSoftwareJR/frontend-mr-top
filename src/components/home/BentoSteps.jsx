@@ -1,7 +1,8 @@
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import AnimatedText from '../ui/AnimatedText'
 import MulticolorHeading from '../ui/MulticolorHeading'
 import SectionBlob from '../ui/SectionBlob'
+import { useIsMobile } from '../../utils/performanceTier'
 
 const STEPS = [
   {
@@ -65,12 +66,16 @@ const cardVariants = {
 }
 
 export default function BentoSteps() {
+  const isMobile = useIsMobile()
+  const prefersReducedMotion = useReducedMotion()
+  const lightMotion = isMobile || prefersReducedMotion
+
   return (
     <section
       id="bento"
       data-scroll-anchor="bento"
       data-scroll-label="Come funziona"
-      className="relative overflow-x-clip px-6 py-20 sm:py-28"
+      className="section-deferred relative overflow-x-clip px-6 py-20 sm:py-28"
     >
       <div className="relative mx-auto w-full max-w-6xl overflow-visible">
         <SectionBlob variant="teal" shape="wave" position="center" className="-z-10" />
@@ -84,8 +89,8 @@ export default function BentoSteps() {
         <motion.div
           className="relative z-10"
           variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
+          initial={lightMotion ? false : 'hidden'}
+          whileInView={lightMotion ? undefined : 'visible'}
           viewport={{ once: true, amount: 0.25 }}
         >
           <motion.div variants={cardVariants} className="mb-12 text-center sm:mb-14">
@@ -115,11 +120,15 @@ export default function BentoSteps() {
                     rotate: step.rotate,
                     boxShadow: step.postItShadow,
                   }}
-                  whileHover={{
-                    y: -5,
-                    rotate: 0,
-                    boxShadow: step.postItShadowHover,
-                  }}
+                  whileHover={
+                    lightMotion
+                      ? undefined
+                      : {
+                          y: -5,
+                          rotate: 0,
+                          boxShadow: step.postItShadowHover,
+                        }
+                  }
                   transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
                 >
                   <span

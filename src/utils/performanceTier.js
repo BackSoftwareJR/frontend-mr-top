@@ -1,6 +1,25 @@
 import { useEffect, useState } from 'react'
 
-const MOBILE_MEDIA = '(max-width: 768px)'
+export const MOBILE_MEDIA = '(max-width: 768px)'
+
+export function isMobileViewport() {
+  if (typeof window === 'undefined') return false
+  return window.matchMedia(MOBILE_MEDIA).matches
+}
+
+export function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => isMobileViewport())
+
+  useEffect(() => {
+    const media = window.matchMedia(MOBILE_MEDIA)
+    const update = () => setIsMobile(media.matches)
+    update()
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+
+  return isMobile
+}
 
 /** Heuristic for low-end phones — invisible to the user, reduces path math only */
 export function isConstrainedDevice() {

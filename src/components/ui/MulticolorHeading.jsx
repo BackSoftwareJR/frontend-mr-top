@@ -1,4 +1,5 @@
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
+import { useIsMobile } from '../../utils/performanceTier'
 
 export const ACCENT_PALETTE = [
   'text-[#E07A5F]',
@@ -32,6 +33,15 @@ const wordVariants = {
   },
 }
 
+const lightWordVariants = {
+  hidden: { opacity: 0, y: 8 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] },
+  },
+}
+
 function normalizeWords(words) {
   if (typeof words === 'string') {
     return words.split(/\s+/).filter(Boolean)
@@ -57,10 +67,14 @@ export default function MulticolorHeading({
   trailingAnchorRef = null,
   trailingAnchorProps = {},
 }) {
+  const isMobile = useIsMobile()
+  const prefersReducedMotion = useReducedMotion()
+  const lightMotion = isMobile || prefersReducedMotion
   const MotionTag = TAG_MAP[as] || motion.h2
+  const wordMotionVariants = lightMotion ? lightWordVariants : wordVariants
   const wordList = normalizeWords(words)
 
-  const motionProps = animate
+  const motionProps = animate && !lightMotion
     ? trigger === 'mount'
       ? { initial: 'hidden', animate: 'visible' }
       : {
@@ -86,7 +100,7 @@ export default function MulticolorHeading({
           isLast && trailingAnchorRef ? splitTrailingPeriod(word) : { text: word, period: null }
         const displayWord = period ? text : word
         const Tag = animate ? motion.span : 'span'
-        const tagProps = animate ? { variants: wordVariants } : {}
+        const tagProps = animate ? { variants: wordMotionVariants } : {}
 
         return (
           <Tag

@@ -36,10 +36,13 @@ export const CTA_GLOW_SEGMENTS = ['hero-cta', 'personalized-cta', 'cta-final']
 export const PROGRESS_LOOKUP_SAMPLES = 192
 
 /** Lighter lookup on mobile — visually identical at display scale */
-export const MOBILE_PROGRESS_LOOKUP_SAMPLES = 48
+export const MOBILE_PROGRESS_LOOKUP_SAMPLES = 32
 
 /** Fewer samples on constrained devices (old phones) */
-export const CONSTRAINED_PROGRESS_LOOKUP_SAMPLES = 32
+export const CONSTRAINED_PROGRESS_LOOKUP_SAMPLES = 24
+
+/** Precomputed scroll→frame table resolution (mobile rAF hot path) */
+export const MOBILE_SCROLL_FRAME_SAMPLES = 64
 
 /** Fewer wavy-vertical cubics on mobile (same amplitude, coarser chain) */
 export const MOBILE_WAVY_VERTICAL_SEGMENTS = 2
@@ -50,7 +53,11 @@ export function resolveProgressLookupSampleCount({ isMobile = false, isConstrain
   return PROGRESS_LOOKUP_SAMPLES
 }
 
-export function resolveWavyVerticalSegmentCount({ isMobile = false } = {}) {
+export function resolveWavyVerticalSegmentCount({
+  isMobile = false,
+  simplifiedPath = false,
+} = {}) {
+  if (simplifiedPath) return 1
   if (isMobile) return MOBILE_WAVY_VERTICAL_SEGMENTS
   return WAVY_VERTICAL_SEGMENTS
 }
@@ -1302,11 +1309,11 @@ function buildOrbitBezierSuffix(orbitPoints, fromPoint) {
 }
 
 /** Build SVG path: hero pass-through + final CTA orbit, Catmull-Rom elsewhere */
-export function buildReadingPathD(points, { isMobile = false } = {}) {
+export function buildReadingPathD(points, { isMobile = false, simplifiedPath = false } = {}) {
   if (!points.length) return ''
   if (points.length === 1) return `M ${fmt(points[0].x)} ${fmt(points[0].y)}`
 
-  const wavyVerticalSegments = resolveWavyVerticalSegmentCount({ isMobile })
+  const wavyVerticalSegments = resolveWavyVerticalSegmentCount({ isMobile, simplifiedPath })
 
   let d = `M ${fmt(points[0].x)} ${fmt(points[0].y)}`
   let i = 1
@@ -1533,6 +1540,85 @@ export function interpolateProgressLookup(lookup, progress) {
   return {
     x: a.x + (b.x - a.x) * u,
     y: a.y + (b.y - a.y) * u,
+  }
+}
+
+/**
+ * Precompute scroll progress → stroke/dot frame values once per path measure.
+ * Mobile rAF only binary-searches this table — no path math per frame.
+ */
+export function buildMobileScrollFrameTable(
+  lookup,
+  pathLength,
+  remapTable,
+  zoneConfig,
+  sampleCount = MOBILE_SCROLL_FRAME_SAMPLES,
+) {
+  if (!lookup?.samples?.length || !pathLength) return []
+
+  const table = []
+  for (let i = 0; i <= sampleCount; i += 1) {
+    const scrollProgress = i / sampleCount
+    const pathProgress = resolveReadingPathProgress(
+      scrollProgress,
+      remapTable,
+      zoneConfig,
+      { isMobile: true },
+    )
+    const strokeDashoffset =
+      pathProgress <= 0
+        ? pathLength
+        : pathLength - pathVisibleLength(pathLength, pathProgress, READING_STROKE_WIDTH)
+    const tip = getPathTipFromLookup(lookup, pathProgress)
+
+    table.push({
+      scrollProgress,
+      pathProgress,
+      strokeDashoffset,
+      dotX: tip.x,
+      dotY: tip.y,
+      dotOpacity: pathProgress > 0.001 ? 1 : 0,
+    })
+  }
+
+  return table
+}
+
+/** Interpolate a precomputed mobile scroll frame at raw document scroll progress */
+export function interpolateMobileScrollFrame(table, scrollProgress) {
+  if (!table.length) {
+    return {
+      pathProgress: 0,
+      strokeDashoffset: 0,
+      dotX: 0,
+      dotY: 0,
+      dotOpacity: 0,
+    }
+  }
+
+  if (scrollProgress <= 0) return table[0]
+  if (scrollProgress >= 1) return table[table.length - 1]
+
+  let lo = 0
+  let hi = table.length - 1
+  while (lo < hi - 1) {
+    const mid = (lo + hi) >> 1
+    if (table[mid].scrollProgress <= scrollProgress) lo = mid
+    else hi = mid
+  }
+
+  const a = table[lo]
+  const b = table[hi]
+  const span = b.scrollProgress - a.scrollProgress || 1
+  const u = (scrollProgress - a.scrollProgress) / span
+
+  return {
+    scrollProgress,
+    pathProgress: a.pathProgress + (b.pathProgress - a.pathProgress) * u,
+    strokeDashoffset: a.strokeDashoffset + (b.strokeDashoffset - a.strokeDashoffset) * u,
+    dotX: a.dotX + (b.dotX - a.dotX) * u,
+    dotY: a.dotY + (b.dotY - a.dotY) * u,
+    dotOpacity: u < 0.5 ? a.dotOpacity : b.dotOpacity,
   }
 }
 

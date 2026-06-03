@@ -11,6 +11,7 @@ import {
 import {
   buildProgressLookup,
   buildReadingPathD,
+  buildMobileScrollFrameTable,
   buildScrollPathRemap,
   computeCtaGlowRanges,
   computeReadingFill,
@@ -20,6 +21,7 @@ import {
   DOT_SIZE,
   getPathTipFromLookup,
   HERO_SCROLL_ZONE_END,
+  interpolateMobileScrollFrame,
   MOBILE_SCROLL_REMAP_SAMPLES,
   pathVisibleLength,
   READING_STROKE_WIDTH,
@@ -28,9 +30,7 @@ import {
   SCROLL_REMAP_SAMPLES,
   measureReadingPathPoints,
 } from '../../data/readingPathSchema'
-import { useConstrainedDevice } from '../../utils/performanceTier'
-
-const MOBILE_MEDIA_QUERY = '(max-width: 768px)'
+import { useConstrainedDevice, useIsMobile } from '../../utils/performanceTier'
 
 const LAYER_CLASS =
   'pointer-events-none fixed inset-0 z-[5] overflow-hidden [contain:layout]'
@@ -41,6 +41,8 @@ const MOBILE_LAYER_CLASS =
 const STROKE_OPACITY = 1
 const RESIZE_DEBOUNCE_MS = 150
 const MOBILE_SYNC_PROGRESS_EPSILON = 0.002
+const MOBILE_FILL_SYNC_FRAME_SKIP = 3
+const SCROLL_WILL_CHANGE_IDLE_MS = 150
 
 function getDocumentScrollYProgress() {
   const max = Math.max(
@@ -89,18 +91,22 @@ function useMobileReadingScrollFrame({
   dotGroupRef,
   dotCircleRef,
   pathProgressMv,
-  lookupRef,
-  pathLengthRef,
-  remapTableRef,
-  zoneConfigRef,
+  frameTableRef,
 }) {
   const rafRef = useRef(null)
   const pendingRef = useRef(false)
   const lastSyncProgressRef = useRef(-1)
   const frameCountRef = useRef(0)
+  const scrollIdleTimerRef = useRef(null)
 
   useEffect(() => {
     if (!enabled) return undefined
+
+    const setDotWillChange = (active) => {
+      const dotGroup = dotGroupRef.current
+      if (!dotGroup) return
+      dotGroup.style.willChange = active ? 'transform' : ''
+    }
 
     const flush = () => {
       pendingRef.current = false
@@ -108,15 +114,9 @@ function useMobileReadingScrollFrame({
 
       if (!anchorsVisibleRef.current) return
 
+      const table = frameTableRef.current
       const rawP = getDocumentScrollYProgress()
-      const p = resolveReadingPathProgress(
-        rawP,
-        remapTableRef.current,
-        zoneConfigRef.current,
-        { isMobile: true },
-      )
-
-      const len = lookupRef.current.totalLength || pathLengthRef.current
+      const frame = interpolateMobileScrollFrame(table, rawP)
       const scrollY = window.scrollY
 
       const group = scrollGroupRef.current
@@ -125,34 +125,37 @@ function useMobileReadingScrollFrame({
       }
 
       const path = visiblePathRef.current
-      if (path && len) {
-        const offset =
-          p <= 0 ? len : len - pathVisibleLength(len, p, READING_STROKE_WIDTH)
-        path.style.strokeDashoffset = String(offset)
+      if (path) {
+        path.style.strokeDashoffset = String(frame.strokeDashoffset)
       }
 
       const dotGroup = dotGroupRef.current
       const dot = dotCircleRef.current
       if (dotGroup && dot) {
-        const tip = getPathTipFromLookup(lookupRef.current, p)
-        dotGroup.style.transform = `translate3d(${tip.x}px, ${tip.y}px, 0)`
-        dot.style.opacity = p > 0.001 ? '1' : '0'
+        dotGroup.style.transform = `translate3d(${frame.dotX}px, ${frame.dotY}px, 0)`
+        dot.style.opacity = frame.dotOpacity > 0 ? '1' : '0'
       }
 
       frameCountRef.current += 1
-      const delta = Math.abs(p - lastSyncProgressRef.current)
+      const delta = Math.abs(frame.pathProgress - lastSyncProgressRef.current)
       const shouldSync =
         lastSyncProgressRef.current < 0 ||
         delta >= MOBILE_SYNC_PROGRESS_EPSILON ||
-        frameCountRef.current % 2 === 0
+        frameCountRef.current % MOBILE_FILL_SYNC_FRAME_SKIP === 0
 
       if (shouldSync) {
-        lastSyncProgressRef.current = p
-        pathProgressMv.set(p)
+        lastSyncProgressRef.current = frame.pathProgress
+        pathProgressMv.set(frame.pathProgress)
       }
     }
 
     const schedule = () => {
+      setDotWillChange(true)
+      window.clearTimeout(scrollIdleTimerRef.current)
+      scrollIdleTimerRef.current = window.setTimeout(() => {
+        setDotWillChange(false)
+      }, SCROLL_WILL_CHANGE_IDLE_MS)
+
       if (rafRef.current !== null) return
       pendingRef.current = true
       rafRef.current = requestAnimationFrame(flush)
@@ -163,6 +166,8 @@ function useMobileReadingScrollFrame({
 
     return () => {
       window.removeEventListener('scroll', schedule)
+      window.clearTimeout(scrollIdleTimerRef.current)
+      setDotWillChange(false)
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
     }
   }, [
@@ -173,10 +178,7 @@ function useMobileReadingScrollFrame({
     dotGroupRef,
     dotCircleRef,
     pathProgressMv,
-    lookupRef,
-    pathLengthRef,
-    remapTableRef,
-    zoneConfigRef,
+    frameTableRef,
   ])
 }
 
@@ -209,22 +211,26 @@ function useViewportSize() {
   return size
 }
 
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== 'undefined'
-      ? window.matchMedia(MOBILE_MEDIA_QUERY).matches
-      : false,
-  )
-
+/** Remeasure path when content-visibility sections enter the viewport */
+function useDeferredSectionRemeasure(onRemeasure, enabled) {
   useEffect(() => {
-    const media = window.matchMedia(MOBILE_MEDIA_QUERY)
-    const update = () => setIsMobile(media.matches)
-    update()
-    media.addEventListener('change', update)
-    return () => media.removeEventListener('change', update)
-  }, [])
+    if (!enabled || typeof document === 'undefined') return undefined
 
-  return isMobile
+    const sections = document.querySelectorAll('.section-deferred')
+    if (!sections.length) return undefined
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          onRemeasure()
+        }
+      },
+      { root: null, rootMargin: '12% 0px', threshold: 0 },
+    )
+
+    sections.forEach((el) => observer.observe(el))
+    return () => observer.disconnect()
+  }, [onRemeasure, enabled])
 }
 
 function useDebouncedRemeasure(onRemeasure, delayMs = RESIZE_DEBOUNCE_MS) {
@@ -317,7 +323,7 @@ const CtaFillSync = memo(function CtaFillSync({ pathProgress, glowRanges, thrott
         if (
           lastProgress >= 0 &&
           delta < MOBILE_SYNC_PROGRESS_EPSILON &&
-          frameCount % 2 !== 0
+          frameCount % MOBILE_FILL_SYNC_FRAME_SKIP !== 0
         ) {
           return
         }
@@ -416,7 +422,7 @@ const StatCardFillSync = memo(function StatCardFillSync({
         if (
           lastProgress >= 0 &&
           delta < MOBILE_SYNC_PROGRESS_EPSILON &&
-          frameCount % 2 !== 0
+          frameCount % MOBILE_FILL_SYNC_FRAME_SKIP !== 0
         ) {
           return
         }
@@ -514,9 +520,11 @@ function ReadingPathLayer({
   ctaRects,
   isMobile,
   isConstrained,
+  simplifiedPath,
 }) {
   const measurePathRef = useRef(null)
   const lookupRef = useRef({ totalLength: 0, samples: [] })
+  const frameTableRef = useRef([])
   const remapTableRef = useRef([])
   const zoneConfigRef = useRef({ pathEnd: 0, scrollEnd: HERO_SCROLL_ZONE_END })
   const [pathD, setPathD] = useState('')
@@ -529,11 +537,12 @@ function ReadingPathLayer({
   const remeasurePath = useCallback(() => {
     const nextPoints = measureReadingPathPoints()
     setPoints(nextPoints)
-    setPathD(buildReadingPathD(nextPoints, { isMobile }))
+    setPathD(buildReadingPathD(nextPoints, { isMobile, simplifiedPath }))
     setPathRevision((revision) => revision + 1)
-  }, [isMobile])
+  }, [isMobile, simplifiedPath])
 
   useDebouncedRemeasure(remeasurePath)
+  useDeferredSectionRemeasure(remeasurePath, isMobile)
 
   useEffect(() => {
     const pathEl = measurePathRef.current
@@ -576,6 +585,17 @@ function ReadingPathLayer({
       remapTableRef.current = []
     }
 
+    if (isMobile) {
+      frameTableRef.current = buildMobileScrollFrameTable(
+        lookup,
+        lookup.totalLength,
+        remapTableRef.current,
+        zoneConfigRef.current,
+      )
+    } else {
+      frameTableRef.current = []
+    }
+
     return undefined
   }, [pathRevision, viewport.height, isMobile, isConstrained, pathD, points])
 
@@ -600,12 +620,7 @@ function ReadingPathLayer({
   const scrollGroupRef = useRef(null)
   const dotGroupRef = useRef(null)
   const dotCircleRef = useRef(null)
-  const pathLengthRef = useRef(0)
   const anchorsVisibleRef = useReadingAnchorsVisible(isMobile && showCursor)
-
-  useEffect(() => {
-    pathLengthRef.current = pathLength
-  }, [pathLength])
 
   useMobileReadingScrollFrame({
     enabled: isMobile && showCursor && pathLength > 0,
@@ -615,10 +630,7 @@ function ReadingPathLayer({
     dotGroupRef,
     dotCircleRef,
     pathProgressMv: pathProgressMobile,
-    lookupRef,
-    pathLengthRef,
-    remapTableRef,
-    zoneConfigRef,
+    frameTableRef,
   })
 
   useMotionValueEvent(strokeDashoffset, 'change', (value) => {
@@ -647,15 +659,8 @@ function ReadingPathLayer({
 
     if (isMobile) {
       const rawP = getDocumentScrollYProgress()
-      const p = resolveReadingPathProgress(
-        rawP,
-        remapTableRef.current,
-        zoneConfigRef.current,
-        { isMobile: true },
-      )
-      const offset =
-        p <= 0 ? pathLength : pathLength - pathVisibleLength(pathLength, p, READING_STROKE_WIDTH)
-      visiblePathRef.current.style.strokeDashoffset = String(offset)
+      const frame = interpolateMobileScrollFrame(frameTableRef.current, rawP)
+      visiblePathRef.current.style.strokeDashoffset = String(frame.strokeDashoffset)
 
       if (scrollGroupRef.current) {
         scrollGroupRef.current.style.transform = `translate3d(0, ${-window.scrollY}px, 0)`
@@ -664,11 +669,10 @@ function ReadingPathLayer({
       const dotGroup = dotGroupRef.current
       const dot = dotCircleRef.current
       if (dotGroup && dot) {
-        const tip = getPathTipFromLookup(lookupRef.current, p)
-        dotGroup.style.transform = `translate3d(${tip.x}px, ${tip.y}px, 0)`
-        dot.style.opacity = p > 0.001 ? '1' : '0'
+        dotGroup.style.transform = `translate3d(${frame.dotX}px, ${frame.dotY}px, 0)`
+        dot.style.opacity = frame.dotOpacity > 0 ? '1' : '0'
       }
-      pathProgressMobile.set(p)
+      pathProgressMobile.set(frame.pathProgress)
       return
     }
 
@@ -726,7 +730,7 @@ function ReadingPathLayer({
 
             <g clipPath="url(#wenando-reading-viewport-clip)">
               {isMobile ? (
-                <g ref={scrollGroupRef} style={{ willChange: 'transform' }}>
+                <g ref={scrollGroupRef}>
                   <path
                     ref={visiblePathRef}
                     d={pathD}
@@ -738,7 +742,7 @@ function ReadingPathLayer({
                     opacity={STROKE_OPACITY}
                   />
                   {showCursor ? (
-                    <g ref={dotGroupRef} style={{ willChange: 'transform' }}>
+                    <g ref={dotGroupRef}>
                       <circle
                         ref={dotCircleRef}
                         cx={0}
@@ -746,7 +750,6 @@ function ReadingPathLayer({
                         r={DOT_SIZE / 2 + 0.5}
                         fill="url(#wenando-reading-gradient)"
                         opacity={0}
-                        style={{ willChange: 'opacity' }}
                       />
                     </g>
                   ) : null}
@@ -784,11 +787,13 @@ function ReadingPathLayer({
 
           {showCursor ? (
             <>
-              <CtaGlowOverlays
-                pathProgress={pathProgress}
-                glowRanges={glowRanges}
-                ctaRects={ctaRects}
-              />
+              {!isMobile ? (
+                <CtaGlowOverlays
+                  pathProgress={pathProgress}
+                  glowRanges={glowRanges}
+                  ctaRects={ctaRects}
+                />
+              ) : null}
               <CtaFillSync
                 pathProgress={pathProgress}
                 glowRanges={glowRanges}
@@ -817,6 +822,7 @@ function ReadingLineLayer({ reducedMotion, isMobile, isConstrained }) {
   const progress = reducedMotion ? staticProgress : scrollYProgress
   const layerScrollY = isMobile ? mobileScrollStubY : scrollY
   const layerScrollProgress = isMobile ? mobileScrollStubProgress : progress
+  const simplifiedPath = reducedMotion
 
   const viewport = useViewportSize()
   const ctaRects = useCtaAnchorRects()
@@ -838,6 +844,7 @@ function ReadingLineLayer({ reducedMotion, isMobile, isConstrained }) {
         ctaRects={ctaRects}
         isMobile={isMobile}
         isConstrained={isConstrained}
+        simplifiedPath={simplifiedPath}
       />
     </div>
   )

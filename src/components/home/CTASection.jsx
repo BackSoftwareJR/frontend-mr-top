@@ -8,7 +8,7 @@ export default function CTASection() {
   return (
     <section
       id="cta"
-      className="relative overflow-x-clip px-6 py-20 sm:py-24"
+      className="section-deferred relative overflow-x-clip px-6 py-20 sm:py-24"
     >
       <SectionBlob variant="coral" shape="wave" position="bottom-left" />
       <SectionBlob variant="amber" shape="ring" position="top-right" />

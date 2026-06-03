@@ -1,7 +1,8 @@
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import GlassCard from '../ui/GlassCard'
 import MulticolorHeading from '../ui/MulticolorHeading'
 import SectionBlob from '../ui/SectionBlob'
+import { useIsMobile } from '../../utils/performanceTier'
 
 /** Minimal SVG marks — not icon tiles; paired with top accent bar per card */
 function StatMark({ variant, className = '' }) {
@@ -175,12 +176,16 @@ const itemVariants = {
 }
 
 export default function StatsSection() {
+  const isMobile = useIsMobile()
+  const prefersReducedMotion = useReducedMotion()
+  const lightMotion = isMobile || prefersReducedMotion
+
   return (
     <section
       id="stats"
       data-scroll-anchor="stats"
       data-scroll-label="Numeri"
-      className="relative overflow-x-clip px-6 py-20 sm:py-24"
+      className="section-deferred relative overflow-x-clip px-6 py-20 sm:py-24"
     >
       <SectionBlob variant="amber" shape="ring" position="top-right" />
 
@@ -197,8 +202,8 @@ export default function StatsSection() {
         <motion.div
           className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
           variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
+          initial={lightMotion ? false : 'hidden'}
+          whileInView={lightMotion ? undefined : 'visible'}
           viewport={{ once: true, amount: 0.3 }}
         >
           {STATS.map((stat) => (

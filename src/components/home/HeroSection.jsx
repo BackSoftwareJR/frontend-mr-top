@@ -33,7 +33,12 @@ export default function HeroSection() {
       <SectionBlob variant="violet" shape="blob" position="bottom-left" />
 
       <div className="relative z-10 mb-8 flex flex-col items-center gap-3 md:hidden">
-        <WenandoMark className="h-24 w-24" />
+        <WenandoMark
+          className="h-24 w-24"
+          width={96}
+          height={96}
+          fetchPriority="high"
+        />
         <WenandoLogo size="lg" align="center" />
       </div>
 
