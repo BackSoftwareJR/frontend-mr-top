@@ -8,7 +8,8 @@ const STEPS = [
     title: 'Analisi',
     description:
       'Raccogliamo le esigenze reali con un percorso guidato, empatico e senza stress.',
-    gradient: 'from-purple-500/30 to-pink-500/20',
+    iconBg: 'bg-[#5B8A72]/10',
+    iconColor: 'text-[#5B8A72]',
     delay: 0,
   },
   {
@@ -16,7 +17,8 @@ const STEPS = [
     title: 'Match',
     description:
       'Il motore confronta centinaia di strutture verificate e seleziona le più compatibili.',
-    gradient: 'from-teal-400/30 to-cyan-500/20',
+    iconBg: 'bg-teal-50',
+    iconColor: 'text-teal-700',
     delay: 0.1,
   },
   {
@@ -24,7 +26,8 @@ const STEPS = [
     title: 'Soluzione',
     description:
       'Ricevi proposte personalizzate con trasparenza su costi, servizi e disponibilità.',
-    gradient: 'from-rose-400/30 to-orange-500/20',
+    iconBg: 'bg-[#C4785A]/10',
+    iconColor: 'text-[#C4785A]',
     delay: 0.2,
   },
 ]
@@ -56,7 +59,7 @@ export default function BentoSteps() {
     >
       <motion.p
         variants={cardVariants}
-        className="mb-8 text-sm font-semibold tracking-widest text-white/40 uppercase"
+        className="mb-8 text-sm font-semibold tracking-widest text-slate-400 uppercase"
       >
         Come funziona
       </motion.p>
@@ -68,12 +71,12 @@ export default function BentoSteps() {
             <motion.div key={step.title} variants={cardVariants}>
               <GlassCard className="group h-full p-6 text-left sm:p-8">
                 <div
-                  className={`mb-5 inline-flex rounded-2xl bg-gradient-to-br ${step.gradient} p-3`}
+                  className={`mb-5 inline-flex rounded-2xl ${step.iconBg} p-3`}
                 >
-                  <Icon className="h-6 w-6 text-white" strokeWidth={1.75} />
+                  <Icon className={`h-6 w-6 ${step.iconColor}`} strokeWidth={1.75} />
                 </div>
-                <h3 className="mb-2 text-xl font-bold text-white">{step.title}</h3>
-                <p className="text-sm leading-relaxed text-white/55">
+                <h3 className="mb-2 text-xl font-bold text-slate-800">{step.title}</h3>
+                <p className="text-sm leading-relaxed text-slate-600">
                   {step.description}
                 </p>
               </GlassCard>

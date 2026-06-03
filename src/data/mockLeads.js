@@ -63,15 +63,15 @@ export const mockLeads = [
 
 export const statusStyles = {
   'Hot Match': {
-    className: 'bg-gradient-to-r from-pink-500/25 to-rose-500/25 text-pink-300 border-pink-400/30 glow-badge-hot',
+    className: 'bg-[#C4785A]/10 text-[#A8654A] border-[#C4785A]/25 glow-badge-hot',
   },
   'Warm Lead': {
-    className: 'bg-gradient-to-r from-teal-500/20 to-cyan-500/20 text-teal-300 border-teal-400/30 glow-badge-warm',
+    className: 'bg-[#5B8A72]/10 text-[#4A7360] border-[#5B8A72]/25 glow-badge-warm',
   },
   New: {
-    className: 'bg-gradient-to-r from-purple-500/20 to-violet-500/20 text-purple-300 border-purple-400/30',
+    className: 'bg-teal-50 text-teal-700 border-teal-200',
   },
   Contacted: {
-    className: 'bg-white/8 text-white/50 border-white/15',
+    className: 'bg-slate-50 text-slate-500 border-slate-200',
   },
 }

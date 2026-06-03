@@ -34,13 +34,13 @@ export default function MagneticButton({
   }
 
   const baseStyles =
-    'relative inline-flex items-center justify-center gap-2 rounded-2xl px-8 py-4 text-base font-bold tracking-tight transition-shadow duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400/50'
+    'relative inline-flex items-center justify-center gap-2 rounded-2xl px-8 py-4 text-base font-bold tracking-tight transition-shadow duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5B8A72]/40'
 
   const variants = {
     primary:
-      'glass-strong glow-pink text-white hover:shadow-[0_0_60px_rgba(244,114,182,0.45)]',
+      'bg-[#5B8A72] text-white glow-sage hover:bg-[#4A7360] hover:shadow-[0_6px_20px_rgba(91,138,114,0.35)]',
     secondary:
-      'border border-white/20 bg-white/8 text-white/90 backdrop-blur-xl hover:bg-white/12',
+      'border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-[#5B8A72]/40 hover:text-[#5B8A72]',
   }
 
   const combinedClassName = `${baseStyles} ${variants[variant] || variants.primary} ${className}`

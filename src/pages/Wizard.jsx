@@ -135,7 +135,7 @@ export default function Wizard() {
               transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
               className="w-full max-w-xl"
             >
-              <h2 className="text-gradient mb-8 text-2xl font-bold sm:text-3xl">
+              <h2 className="mb-8 text-2xl font-bold text-slate-800 sm:text-3xl">
                 {step.question}
               </h2>
               {renderStepContent()}
@@ -143,7 +143,7 @@ export default function Wizard() {
           </AnimatePresence>
         </div>
 
-        <footer className="pb-8 text-center text-sm font-medium text-white/40">
+        <footer className="pb-8 text-center text-sm font-medium text-slate-400">
           {currentStep + 1} / {steps.length}
         </footer>
       </div>

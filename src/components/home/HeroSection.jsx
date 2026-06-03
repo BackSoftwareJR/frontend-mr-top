@@ -13,10 +13,10 @@ export default function HeroSection() {
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/6 px-4 py-2 backdrop-blur-xl"
+        className="mb-8 inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/80 px-4 py-2 shadow-sm backdrop-blur-xl"
       >
-        <HeartHandshake className="h-4 w-4 text-pink-400" strokeWidth={2} />
-        <span className="text-xs font-semibold tracking-wide text-white/70 uppercase">
+        <HeartHandshake className="h-4 w-4 text-[#5B8A72]" strokeWidth={2} />
+        <span className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
           CareAdvisor
         </span>
       </motion.div>
@@ -25,14 +25,14 @@ export default function HeroSection() {
         as="h1"
         trigger="mount"
         text="La guida sicura per chi ami."
-        className="text-gradient mb-6 max-w-4xl text-5xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl md:text-7xl lg:text-8xl"
+        className="mb-6 max-w-4xl text-5xl font-extrabold leading-[1.05] tracking-tight text-slate-800 sm:text-6xl md:text-7xl lg:text-8xl"
       />
 
       <motion.p
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, duration: 0.6 }}
-        className="mb-12 max-w-2xl text-lg font-medium text-white/60 sm:text-xl md:text-2xl"
+        className="mb-12 max-w-2xl text-lg font-medium text-slate-600 sm:text-xl md:text-2xl"
       >
         L&apos;intelligenza di un algoritmo, l&apos;empatia di un concierge.
       </motion.p>
@@ -70,17 +70,17 @@ function HomeNav() {
       transition={{ duration: 0.5 }}
       className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4"
     >
-      <nav className="flex w-full max-w-3xl items-center justify-between gap-4 rounded-2xl border border-white/12 bg-white/6 px-5 py-3 backdrop-blur-2xl">
+      <nav className="flex w-full max-w-3xl items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white/80 px-5 py-3 shadow-sm backdrop-blur-2xl">
         <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-pink-500 to-purple-600">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#5B8A72]">
             <HeartHandshake className="h-4 w-4 text-white" strokeWidth={2} />
           </div>
-          <span className="text-sm font-bold text-white">CareAdvisor</span>
+          <span className="text-sm font-bold text-slate-800">CareAdvisor</span>
         </Link>
         <div className="flex items-center gap-3">
           <Link
             to="/dashboard"
-            className="hidden text-xs font-semibold text-white/60 transition-colors hover:text-white sm:block"
+            className="hidden text-xs font-semibold text-slate-500 transition-colors hover:text-[#5B8A72] sm:block"
           >
             Area B2B
           </Link>

@@ -19,11 +19,11 @@ export default function AutonomyStep({ step, onSelect }) {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: index * 0.08 }}
-          whileHover={{ scale: 1.02, borderColor: 'rgba(255,255,255,0.3)' }}
+          whileHover={{ scale: 1.02, borderColor: 'rgba(91,138,114,0.4)' }}
           whileTap={{ scale: 0.98 }}
-          className="w-full rounded-2xl border border-white/12 bg-white/6 px-6 py-5 text-left backdrop-blur-xl transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400/40"
+          className="w-full rounded-2xl border border-slate-200 bg-white px-6 py-5 text-left shadow-sm transition-colors hover:border-[#5B8A72]/40 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#5B8A72]/30"
         >
-          <span className="text-lg font-bold text-white">{option.label}</span>
+          <span className="text-lg font-bold text-slate-800">{option.label}</span>
         </motion.button>
       ))}
     </div>
@@ -63,7 +63,7 @@ export function LocationStep({ step, value, onSelect }) {
         }}
         onFocus={() => setOpen(true)}
         placeholder={step.placeholder}
-        className="w-full rounded-2xl border border-white/12 bg-white/6 px-5 py-4 text-lg font-medium text-white placeholder:text-white/35 backdrop-blur-xl focus:border-pink-400/40 focus:outline-none focus:ring-2 focus:ring-pink-400/20"
+        className="w-full rounded-2xl border border-slate-200 bg-white px-5 py-4 text-lg font-medium text-slate-800 placeholder:text-slate-400 shadow-sm focus:border-[#5B8A72]/50 focus:outline-none focus:ring-2 focus:ring-[#5B8A72]/20"
         autoComplete="off"
       />
 
@@ -71,7 +71,7 @@ export function LocationStep({ step, value, onSelect }) {
         <motion.ul
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute left-0 right-0 top-full z-10 mt-2 overflow-hidden rounded-2xl border border-white/12 bg-slate-900/90 backdrop-blur-2xl"
+          className="absolute left-0 right-0 top-full z-10 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg"
         >
           {suggestions.map((loc) => (
             <li key={loc.value}>
@@ -82,7 +82,7 @@ export function LocationStep({ step, value, onSelect }) {
                   setOpen(false)
                   onSelect(loc)
                 }}
-                className="w-full px-5 py-3.5 text-left text-base font-medium text-white transition-colors hover:bg-white/8 focus:outline-none"
+                className="w-full px-5 py-3.5 text-left text-base font-medium text-slate-800 transition-colors hover:bg-slate-50 focus:outline-none"
               >
                 {loc.label}
               </button>
@@ -101,7 +101,7 @@ function formatEuro(value) {
 function ThumbLabel({ value, percent }) {
   return (
     <div
-      className="pointer-events-none absolute top-0 -translate-x-1/2 whitespace-nowrap rounded-lg border border-white/15 bg-slate-900/90 px-2.5 py-1 text-xs font-bold text-pink-300 backdrop-blur-xl"
+      className="pointer-events-none absolute top-0 -translate-x-1/2 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-[#5B8A72] shadow-sm"
       style={{ left: `${percent}%` }}
     >
       {formatEuro(value)}€
@@ -136,7 +136,7 @@ export function BudgetStep({ step, value, onChange, onNext, onBack }) {
 
   return (
     <div>
-      <p className="mb-10 text-center text-3xl font-bold tracking-tight text-white sm:text-4xl">
+      <p className="mb-10 text-center text-3xl font-bold tracking-tight text-slate-800 sm:text-4xl">
         Da {formatEuro(minVal)}€ a {formatEuro(maxVal)}€
       </p>
 
@@ -144,9 +144,9 @@ export function BudgetStep({ step, value, onChange, onNext, onBack }) {
         <ThumbLabel value={minVal} percent={minPercent} />
         <ThumbLabel value={maxVal} percent={maxPercent} />
 
-        <div className="absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-white/12" />
+        <div className="absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-slate-200" />
         <div
-          className="absolute top-1/2 h-2 -translate-y-1/2 rounded-full bg-gradient-to-r from-pink-500 to-purple-500"
+          className="absolute top-1/2 h-2 -translate-y-1/2 rounded-full bg-[#5B8A72]"
           style={{ left: `${fillLeft}%`, width: `${fillWidth}%` }}
         />
         <input
@@ -171,7 +171,7 @@ export function BudgetStep({ step, value, onChange, onNext, onBack }) {
         />
       </div>
 
-      <div className="mb-10 flex justify-between text-sm font-medium text-white/40">
+      <div className="mb-10 flex justify-between text-sm font-medium text-slate-400">
         <span>{formatEuro(budgetMin)}€</span>
         <span>{formatEuro(budgetMax)}€</span>
       </div>
@@ -180,14 +180,14 @@ export function BudgetStep({ step, value, onChange, onNext, onBack }) {
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white/60 transition-colors hover:bg-white/8 hover:text-white"
+          className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800"
         >
           Indietro
         </button>
         <button
           type="button"
           onClick={onNext}
-          className="rounded-2xl border border-white/15 bg-gradient-to-r from-pink-500/30 to-purple-500/30 px-6 py-3 text-sm font-bold text-white backdrop-blur-xl transition-all hover:from-pink-500/40 hover:to-purple-500/40"
+          className="rounded-2xl bg-[#5B8A72] px-6 py-3 text-sm font-bold text-white shadow-sm transition-all hover:bg-[#4A7360]"
         >
           Continua
         </button>
@@ -204,7 +204,7 @@ export function ContactStep({ step, value, onChange, onSubmit, onBack, canSubmit
   }
 
   const inputClass =
-    'w-full rounded-2xl border border-white/12 bg-white/6 px-5 py-3.5 text-white placeholder:text-white/35 backdrop-blur-xl focus:border-pink-400/40 focus:outline-none focus:ring-2 focus:ring-pink-400/20'
+    'w-full rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-slate-800 placeholder:text-slate-400 shadow-sm focus:border-[#5B8A72]/50 focus:outline-none focus:ring-2 focus:ring-[#5B8A72]/20'
 
   return (
     <div>
@@ -228,7 +228,7 @@ export function ContactStep({ step, value, onChange, onSubmit, onBack, canSubmit
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white/60 transition-colors hover:bg-white/8 hover:text-white"
+          className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800"
         >
           Indietro
         </button>
@@ -236,7 +236,7 @@ export function ContactStep({ step, value, onChange, onSubmit, onBack, canSubmit
           type="button"
           onClick={onSubmit}
           disabled={!canSubmit}
-          className="rounded-2xl border border-white/15 bg-gradient-to-r from-pink-500/30 to-purple-500/30 px-6 py-3 text-sm font-bold text-white backdrop-blur-xl transition-all hover:from-pink-500/40 hover:to-purple-500/40 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-2xl bg-[#5B8A72] px-6 py-3 text-sm font-bold text-white shadow-sm transition-all hover:bg-[#4A7360] disabled:cursor-not-allowed disabled:opacity-40"
         >
           {step.submitLabel}
         </button>

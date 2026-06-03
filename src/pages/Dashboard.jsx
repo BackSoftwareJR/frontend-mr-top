@@ -33,14 +33,14 @@ function StatusBadge({ status }) {
 
 function DashboardSidebar() {
   return (
-    <aside className="hidden w-64 shrink-0 flex-col border-r border-white/8 bg-black/20 backdrop-blur-2xl lg:flex">
-      <div className="flex items-center gap-3 border-b border-white/8 px-6 py-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-pink-500 to-purple-600">
+    <aside className="hidden w-64 shrink-0 flex-col border-r border-slate-200 bg-white/90 backdrop-blur-2xl lg:flex">
+      <div className="flex items-center gap-3 border-b border-slate-200 px-6 py-6">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#5B8A72]">
           <HeartHandshake className="h-5 w-5 text-white" strokeWidth={2} />
         </div>
         <div>
-          <p className="text-sm font-bold text-white">CareAdvisor</p>
-          <p className="text-xs text-white/40">Area B2B</p>
+          <p className="text-sm font-bold text-slate-800">CareAdvisor</p>
+          <p className="text-xs text-slate-500">Area B2B</p>
         </div>
       </div>
 
@@ -53,8 +53,8 @@ function DashboardSidebar() {
               to={item.to}
               className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
                 item.active
-                  ? 'bg-white/10 text-white'
-                  : 'text-white/50 hover:bg-white/6 hover:text-white/80'
+                  ? 'bg-[#5B8A72]/10 text-[#4A7360]'
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
               }`}
             >
               <Icon className="h-4 w-4" strokeWidth={2} />
@@ -64,10 +64,10 @@ function DashboardSidebar() {
         })}
       </nav>
 
-      <div className="border-t border-white/8 p-4">
+      <div className="border-t border-slate-200 p-4">
         <Link
           to="/"
-          className="flex items-center justify-center rounded-xl border border-white/12 px-4 py-2.5 text-xs font-semibold text-white/60 transition-colors hover:bg-white/6 hover:text-white"
+          className="flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-600 transition-colors hover:border-[#5B8A72]/40 hover:text-[#5B8A72]"
         >
           Torna al sito
         </Link>
@@ -82,7 +82,7 @@ function LeadsGrid() {
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead>
-            <tr className="border-b border-white/8 text-xs font-semibold tracking-wider text-white/40 uppercase">
+            <tr className="border-b border-slate-200 text-xs font-semibold tracking-wider text-slate-500 uppercase">
               <th className="px-6 py-4">Lead</th>
               <th className="px-6 py-4">Zona</th>
               <th className="px-6 py-4">Budget</th>
@@ -99,22 +99,22 @@ function LeadsGrid() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.06 }}
-                className="border-b border-white/6 transition-colors hover:bg-white/4"
+                className="border-b border-slate-100 transition-colors hover:bg-slate-50/80"
               >
                 <td className="px-6 py-4">
-                  <p className="font-semibold text-white">{lead.name}</p>
-                  <p className="text-xs text-white/35">{lead.id}</p>
+                  <p className="font-semibold text-slate-800">{lead.name}</p>
+                  <p className="text-xs text-slate-400">{lead.id}</p>
                 </td>
-                <td className="px-6 py-4 text-white/70">{lead.location}</td>
-                <td className="px-6 py-4 font-medium text-teal-300">{lead.budget}</td>
-                <td className="px-6 py-4 text-white/60">{lead.autonomy}</td>
+                <td className="px-6 py-4 text-slate-600">{lead.location}</td>
+                <td className="px-6 py-4 font-medium text-[#5B8A72]">{lead.budget}</td>
+                <td className="px-6 py-4 text-slate-600">{lead.autonomy}</td>
                 <td className="px-6 py-4">
-                  <span className="font-bold text-pink-300">{lead.score}</span>
+                  <span className="font-bold text-[#C4785A]">{lead.score}</span>
                 </td>
                 <td className="px-6 py-4">
                   <StatusBadge status={lead.status} />
                 </td>
-                <td className="px-6 py-4 text-white/40">{lead.date}</td>
+                <td className="px-6 py-4 text-slate-400">{lead.date}</td>
               </motion.tr>
             ))}
           </tbody>
@@ -144,16 +144,16 @@ export default function Dashboard() {
         <main className="flex-1 overflow-auto p-6 lg:p-10">
           <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-gradient text-3xl font-bold tracking-tight sm:text-4xl">
+              <h1 className="text-3xl font-bold tracking-tight text-slate-800 sm:text-4xl">
                 Lead in arrivo
               </h1>
-              <p className="mt-1 text-white/50">
+              <p className="mt-1 text-slate-500">
                 {mockLeads.length} lead attivi · {hotCount} hot match
               </p>
             </div>
             <Link
               to="/"
-              className="inline-flex items-center justify-center rounded-xl border border-white/12 bg-white/6 px-4 py-2.5 text-xs font-semibold text-white/70 backdrop-blur-xl transition-colors hover:text-white lg:hidden"
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-600 shadow-sm transition-colors hover:border-[#5B8A72]/40 hover:text-[#5B8A72] lg:hidden"
             >
               Torna al sito
             </Link>
@@ -161,12 +161,12 @@ export default function Dashboard() {
 
           <div className="mb-8 grid gap-4 sm:grid-cols-3">
             {[
-              { label: 'Hot Match', value: hotCount, color: 'text-pink-300' },
-              { label: 'Warm Lead', value: mockLeads.filter((l) => l.status === 'Warm Lead').length, color: 'text-teal-300' },
-              { label: 'Nuovi oggi', value: 2, color: 'text-purple-300' },
+              { label: 'Hot Match', value: hotCount, color: 'text-[#C4785A]' },
+              { label: 'Warm Lead', value: mockLeads.filter((l) => l.status === 'Warm Lead').length, color: 'text-[#5B8A72]' },
+              { label: 'Nuovi oggi', value: 2, color: 'text-teal-700' },
             ].map((stat) => (
               <GlassCard key={stat.label} className="p-5">
-                <p className="text-xs font-semibold tracking-wider text-white/40 uppercase">
+                <p className="text-xs font-semibold tracking-wider text-slate-400 uppercase">
                   {stat.label}
                 </p>
                 <p className={`mt-1 text-3xl font-bold ${stat.color}`}>{stat.value}</p>
