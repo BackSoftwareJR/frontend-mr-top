@@ -213,7 +213,7 @@ Second pass targets **scroll jank on phones only** (`max-width: 768px`). Desktop
 |----------|----------------|
 | **AB. Static mobile hero / headings** | `HeroSection.jsx`, `MulticolorHeadingStatic`, `AnimatedTextStatic`, `MagneticButtonStatic`, `WenandoWordmarkStatic` — zero `framer-motion` import on ≤768px; desktop motion in lazy `*Desktop.jsx` / `*Motion.jsx` chunks |
 | **AC. Bundle: JSX from React, not motion** | Removed `framer-motion` from Vite `manualChunks` — Rolldown was re-exporting JSX via the motion chunk, forcing ~135 KB sync load on bootstrap; motion now lazy in `proxy-*.js` (~121 KB gzip 39 KB) only when desktop sections or deferred reading line load |
-| **AD. Deferred lazy reading line (mobile)** | `Home.jsx` → `DeferredMobileReadingLine`: `useDeferUntilReady` (idle / load+120ms / first scroll) + `lazy(ScrollReadingLine)` — not on LCP critical path |
+| **AD. ~~Deferred lazy reading line (mobile)~~** | **Final:** no reading line on mobile (choppy on real devices). Round 7 tried `DeferredMobileReadingLine`; reverted — `Home.jsx` mobile path is `HomePageContent` only. Desktop: `HomeDesktop.jsx` eager `ScrollReadingLine`. |
 | **AE. Perceptually smooth scroll line** | `MOBILE_SCROLL_FRAME_SAMPLES = 40`; continuous rAF (no fps cap); `lerpMobileFrame` with factor **0.35** on dot/stroke/pathProgress — silk between table samples, no stepped motion on slow scroll |
 | **AF. Touch / compositor** | `overscroll-behavior-y: none` on `html, body` ≤768px; reading layer `translate3d(0,0,0)` + `-webkit-transform` |
 | **AG. Load hygiene** | `main.jsx` → dynamic `bootstrap.jsx`; Home lazy; preconnect limited to Google Fonts (essential) |
@@ -237,7 +237,7 @@ Desktop path unchanged: `HomeDesktop.jsx` eager `ScrollReadingLine`, full Framer
 
 | | Round 5 | Round 6 |
 |--|---------|---------|
-| Reading line on mobile | Lazy chunk after idle/scroll | **Deferred lazy** (Round 7) — ~14 KB chunk + motion proxy after idle/scroll, not at LCP |
+| Reading line on mobile | Lazy chunk after idle/scroll | **None** (final) — no `ScrollReadingLine` chunk on mobile |
 | Framer `useScroll` on mobile | 1 subscriber (reading line) | **0** (no reading line chunk) |
 | Path measure on mount | Sync + delayed timeouts | Idle-first + 300ms resize debounce |
 | Scroll paint (2-core phone) | 30 fps | 20 fps |
@@ -267,7 +267,7 @@ Desktop path unchanged: `HomeDesktop.jsx` eager `ScrollReadingLine`, full Framer
 |--|---------|---------|
 | `vendor-motion` / `proxy` on bootstrap | Sync ~135 KB (JSX via motion chunk) | **None** — JSX from `vendor-react` only |
 | Hero / headings on mobile | Partial static | Fully static; motion lazy on desktop |
-| Reading line mount | Removed (interim) | Deferred lazy + 40-sample lerp rAF |
+| Reading line mount | Removed (interim) | Tried deferred lazy; **reverted** — none on mobile (final) |
 | Scroll paint | 20 fps cap (low-core) | Continuous rAF + 0.35 lerp |
 | Frame table samples | 24 | **40** |
 
@@ -275,7 +275,7 @@ Desktop path unchanged: `HomeDesktop.jsx` eager `ScrollReadingLine`, full Framer
 
 | File | Change |
 |------|--------|
-| `Home.jsx` | `DeferredMobileReadingLine` — idle/scroll deferred lazy chunk |
+| `Home.jsx` | Mobile: static `HomePageContent` only (no reading line); desktop lazy `HomeDesktop` |
 | `HeroSection.jsx`, `*Static.jsx`, `*Desktop.jsx`, `*Motion.jsx` | Mobile/desktop split for all home motion |
 | `ScrollReadingLine.jsx` | `MOBILE_LERP_FACTOR = 0.35`, continuous rAF, GPU layer classes |
 | `readingPathSchema.js` | `MOBILE_SCROLL_FRAME_SAMPLES = 40` |
@@ -284,14 +284,20 @@ Desktop path unchanged: `HomeDesktop.jsx` eager `ScrollReadingLine`, full Framer
 | `main.jsx` / `bootstrap.jsx` | Thin entry split |
 | `PERFORMANCE.md` | Round 7 documentation |
 
-### Files (Round 6 — interim Round 7 note removed)
+### Mobile reading line — final decision
+
+| | Round 7 experiment | Final |
+|--|-------------------|-------|
+| Mobile line | Deferred lazy + 40-sample lerp rAF | **Disabled** — too choppy on real devices |
+| Round 7 load wins | — | **Retained:** static hero/headings, `vendor-react` bootstrap without sync motion chunk, `MagneticButtonStatic`, `StatsSectionStatic`, `HomeDesktop` lazy on desktop only |
+| Desktop | Full `ScrollReadingLine` + motion lazy chunks | Unchanged |
 
 | File | Change |
 |------|--------|
-| `Home.jsx` | ~~No reading line on mobile~~ superseded by Round 7 deferred lazy |
+| `Home.jsx` | No `ScrollReadingLine` / `useDeferUntilReady` on mobile |
 | `MagneticButtonStatic.jsx` | Static `outline-coral` on mobile |
 | `StatsSectionStatic.jsx` | Removed `reading-line-stat` class from stat cards |
-| `PERFORMANCE.md` | Document mobile reading line disabled by design |
+| `PERFORMANCE.md` | Mobile = no reading line; Round 7 bundle splits retained |
 
 ---
 
