@@ -3,30 +3,20 @@ import { motion, useReducedMotion } from 'framer-motion'
 const EASE = [0.25, 0.46, 0.45, 0.94]
 
 const SIZE_STYLES = {
-  nav: {
-    word: 'text-[15px] sm:text-base',
-    we: 'text-[15px] sm:text-base',
-    tag: 'text-[7px] sm:text-[8px] tracking-[0.18em]',
-    tagMargin: 'mt-0.5',
-  },
-  sm: {
-    word: 'text-sm',
-    we: 'text-sm',
-    tag: 'text-[9px] tracking-[0.22em]',
-    tagMargin: 'mt-1',
-  },
-  md: {
-    word: 'text-base',
-    we: 'text-base',
-    tag: 'text-[10px] tracking-[0.25em]',
-    tagMargin: 'mt-1.5',
-  },
-  lg: {
-    word: 'text-2xl sm:text-3xl',
-    we: 'text-2xl sm:text-3xl',
-    tag: 'text-xs tracking-[0.28em]',
-    tagMargin: 'mt-2',
-  },
+  nav: { word: 'text-[15px] sm:text-base' },
+  sm: { word: 'text-sm' },
+  md: { word: 'text-base' },
+  lg: { word: 'text-2xl sm:text-3xl' },
+}
+
+const MIDDLE_LETTERS = ['a', 'v', 'i', 'g']
+
+const TIMING = {
+  hold: 0.2,
+  splitDuration: 0.6,
+  letterStagger: 0.08,
+  letterDelay: 0.55,
+  letterDuration: 0.38,
 }
 
 export function WenandoMark({ className = 'h-9 w-9' }) {
@@ -43,74 +33,97 @@ export function WenandoMark({ className = 'h-9 w-9' }) {
   )
 }
 
+function NavigandoWordmark({ size = 'md', className = '' }) {
+  const prefersReducedMotion = useReducedMotion()
+  const styles = SIZE_STYLES[size] || SIZE_STYLES.md
+
+  if (prefersReducedMotion) {
+    return (
+      <span
+        className={`inline-block font-extrabold leading-none text-slate-800 ${styles.word} ${className}`}
+      >
+        navigando
+      </span>
+    )
+  }
+
+  return (
+    <span
+      className={`inline-flex items-baseline font-extrabold leading-none ${styles.word} ${className}`}
+    >
+      <motion.span
+        initial={{ x: 6 }}
+        animate={{ x: -5 }}
+        transition={{
+          duration: TIMING.splitDuration,
+          delay: TIMING.hold,
+          ease: EASE,
+        }}
+        className="inline-block will-change-transform"
+      >
+        <span className="bg-gradient-to-r from-[#E07A5F] via-[#E9A84A] to-[#E07A5F] bg-clip-text text-transparent">
+          n
+        </span>
+      </motion.span>
+
+      <motion.span
+        className="inline-flex items-baseline overflow-hidden"
+        initial={{ width: '0.35em' }}
+        animate={{ width: 'auto' }}
+        transition={{
+          duration: TIMING.splitDuration,
+          delay: TIMING.hold,
+          ease: EASE,
+        }}
+      >
+        {MIDDLE_LETTERS.map((letter, index) => (
+          <motion.span
+            key={letter}
+            initial={{ opacity: 0, y: 8, scale: 0.75, filter: 'blur(5px)' }}
+            animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+            transition={{
+              duration: TIMING.letterDuration,
+              delay: TIMING.letterDelay + index * TIMING.letterStagger,
+              ease: EASE,
+            }}
+            className="inline-block text-slate-800 will-change-transform"
+          >
+            {letter}
+          </motion.span>
+        ))}
+      </motion.span>
+
+      <motion.span
+        initial={{ x: -6 }}
+        animate={{ x: 5 }}
+        transition={{
+          duration: TIMING.splitDuration,
+          delay: TIMING.hold,
+          ease: EASE,
+        }}
+        className="inline-block text-slate-800 will-change-transform"
+      >
+        ando
+      </motion.span>
+    </span>
+  )
+}
+
 export default function WenandoLogo({
   size = 'md',
-  showTagline = false,
   className = '',
   align = 'start',
 }) {
-  const prefersReducedMotion = useReducedMotion()
-  const styles = SIZE_STYLES[size] || SIZE_STYLES.md
   const alignClass =
     align === 'center' ? 'items-center' : align === 'end' ? 'items-end' : 'items-start'
 
-  const instant = prefersReducedMotion
-
   return (
     <div
-      className={`inline-flex flex-col ${alignClass} ${className}`}
-      aria-label="Wenando"
+      className={`inline-flex ${alignClass} ${className}`}
+      aria-label="Wenando navigando"
       role="img"
     >
-      <span
-        className={`inline-flex items-baseline font-extrabold leading-none ${styles.word}`}
-      >
-        <motion.span
-          initial={instant ? false : { maxWidth: 0, opacity: 0 }}
-          animate={{ maxWidth: '2.75em', opacity: 1 }}
-          transition={
-            instant
-              ? { duration: 0 }
-              : { duration: 0.65, delay: 0.55, ease: EASE }
-          }
-          className="inline-block overflow-hidden align-baseline will-change-[max-width]"
-        >
-          <span
-            className={`inline-block origin-left whitespace-nowrap will-change-transform ${styles.we}`}
-            style={{ transformOrigin: '0% 50%' }}
-          >
-            <span className="bg-gradient-to-r from-[#E07A5F] via-[#E9A84A] to-[#E07A5F] bg-clip-text text-transparent">
-              We
-            </span>
-          </span>
-        </motion.span>
-
-        <motion.span
-          initial={instant ? false : { opacity: 0, x: 8 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={
-            instant ? { duration: 0 } : { duration: 0.45, delay: 0.05, ease: EASE }
-          }
-          className="text-slate-800 will-change-transform"
-        >
-          nando
-        </motion.span>
-      </span>
-
-      {showTagline && (
-        <motion.span
-          initial={instant ? false : { opacity: 0, y: 8, letterSpacing: '0.4em' }}
-          animate={{ opacity: 1, y: 0, letterSpacing: '0.18em' }}
-          transition={
-            instant
-              ? { duration: 0 }
-              : { duration: 0.7, delay: 1.15, ease: EASE }
-          }
-          className={`${styles.tagMargin || 'mt-2'} font-semibold text-slate-400 uppercase ${styles.tag}`}
-        >
-          navigando
-        </motion.span>
-      )}
+      <NavigandoWordmark size={size} />
     </div>
   )
 }

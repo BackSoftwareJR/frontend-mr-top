@@ -83,9 +83,9 @@ function HomeNav() {
       className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4"
     >
       <nav className="flex w-full max-w-4xl items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white/80 px-5 py-2.5 shadow-sm backdrop-blur-2xl">
-        <Link to="/" className="flex min-w-0 items-center gap-2.5">
-          <WenandoMark className="h-8 w-8 shrink-0" />
-          <WenandoLogo size="nav" showTagline className="min-w-0" />
+        <Link to="/" className="flex min-w-0 items-center gap-3">
+          <WenandoMark className="h-11 w-11 shrink-0 sm:h-12 sm:w-12" />
+          <WenandoLogo size="nav" className="min-w-0" />
         </Link>
         <div className="flex items-center gap-3">
           <Link
