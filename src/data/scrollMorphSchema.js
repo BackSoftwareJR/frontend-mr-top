@@ -26,11 +26,11 @@ export const BLOB_PATHS = [
 ]
 
 export const SCROLL_MORPH_KEYFRAMES = [
-  { progress: 0, x: 82, y: 18, scale: 1, rotate: -8, pathIndex: 0, color: '#E07A5F', opacity: 0.2 },
-  { progress: 0.25, x: 18, y: 50, scale: 1.12, rotate: 12, pathIndex: 1, color: '#9B8EC4', opacity: 0.22 },
-  { progress: 0.5, x: 78, y: 82, scale: 0.92, rotate: -6, pathIndex: 2, color: '#5CB8A8', opacity: 0.18 },
-  { progress: 0.75, x: 50, y: 22, scale: 1.06, rotate: 8, pathIndex: 3, color: '#E9A84A', opacity: 0.2 },
-  { progress: 1, x: 50, y: 22, scale: 1, rotate: 0, pathIndex: 3, color: '#E9A84A', opacity: 0.2 },
+  { progress: 0, x: 82, y: 18, scale: 1, rotate: -8, pathIndex: 0, color: '#E07A5F', opacity: 0.38 },
+  { progress: 0.25, x: 18, y: 50, scale: 1.12, rotate: 12, pathIndex: 1, color: '#9B8EC4', opacity: 0.4 },
+  { progress: 0.5, x: 78, y: 82, scale: 0.92, rotate: -6, pathIndex: 2, color: '#5CB8A8', opacity: 0.36 },
+  { progress: 0.75, x: 50, y: 22, scale: 1.06, rotate: 8, pathIndex: 3, color: '#E9A84A', opacity: 0.38 },
+  { progress: 1, x: 50, y: 22, scale: 1, rotate: 0, pathIndex: 3, color: '#E9A84A', opacity: 0.38 },
 ]
 
 /** Framer Motion spring — lower stiffness = smoother lag */

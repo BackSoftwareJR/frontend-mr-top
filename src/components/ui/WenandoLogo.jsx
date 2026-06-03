@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ACCENT_PALETTE } from './MulticolorHeading'
 
 const EASE = [0.25, 0.46, 0.45, 0.94]
 
-const BRAND_FONT = 'font-brand font-semibold tracking-normal'
+const BRAND_FONT = 'font-brand font-medium tracking-normal'
 
 const SIZE_STYLES = {
   nav: {
@@ -18,38 +18,29 @@ const SIZE_STYLES = {
 
 const MIDDLE = ['a', 'v', 'i', 'g']
 
-/** ms — Phase 1 nando → 2 expand → 3 hold navigando → 4 collapse → loop */
+/** ms — hold Wenando → expand avig → hold navigando → collapse → loop */
 const CYCLE_MS = {
-  nandoHold: 1200,
+  wenandoHold: 2400,
   expand: 650,
   navigandoHold: 3000,
   collapse: 650,
 }
 
-function colorClass(index) {
-  return ACCENT_PALETTE[index % ACCENT_PALETTE.length]
+function shufflePalette() {
+  const shuffled = [...ACCENT_PALETTE]
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  return shuffled
 }
 
-function StaticNavigandoWordmark({ styles, className }) {
-  const letters = 'navigando'.split('')
-  return (
-    <span
-      className={`inline-flex items-baseline overflow-visible pb-0.5 leading-[1.2] ${BRAND_FONT} ${styles.word} ${className}`}
-      aria-hidden="true"
-    >
-      {letters.map((char, i) => (
-        <span key={`${char}-${i}`} className={`inline-block ${colorClass(i)}`}>
-          {char}
-        </span>
-      ))}
-    </span>
-  )
-}
-
-function NavigandoWordmark({ size = 'md', className = '' }) {
+function WenandoWordmark({ size = 'md', className = '', colors }) {
   const prefersReducedMotion = useReducedMotion()
   const styles = SIZE_STYLES[size] || SIZE_STYLES.md
   const [expanded, setExpanded] = useState(false)
+
+  const colorAt = (index) => colors[index % colors.length]
 
   useEffect(() => {
     if (prefersReducedMotion) return undefined
@@ -60,7 +51,7 @@ function NavigandoWordmark({ size = 'md', className = '' }) {
     const run = (isExpanded) => {
       if (cancelled) return
       setExpanded(isExpanded)
-      const delay = isExpanded ? CYCLE_MS.navigandoHold : CYCLE_MS.nandoHold
+      const delay = isExpanded ? CYCLE_MS.navigandoHold : CYCLE_MS.wenandoHold
       const transitionMs = isExpanded ? CYCLE_MS.collapse : CYCLE_MS.expand
       timer = window.setTimeout(
         () => run(!isExpanded),
@@ -68,7 +59,7 @@ function NavigandoWordmark({ size = 'md', className = '' }) {
       )
     }
 
-    timer = window.setTimeout(() => run(true), CYCLE_MS.nandoHold)
+    timer = window.setTimeout(() => run(true), CYCLE_MS.wenandoHold)
 
     return () => {
       cancelled = true
@@ -76,8 +67,19 @@ function NavigandoWordmark({ size = 'md', className = '' }) {
     }
   }, [prefersReducedMotion])
 
+  const wordClass = `inline-flex items-baseline overflow-visible pb-0.5 leading-[1.2] ${BRAND_FONT} ${styles.word} ${className}`
+
   if (prefersReducedMotion) {
-    return <StaticNavigandoWordmark styles={styles} className={className} />
+    const letters = 'Wenando'.split('')
+    return (
+      <span className={wordClass} aria-hidden="true">
+        {letters.map((char, i) => (
+          <span key={`${char}-${i}`} className={`inline-block ${colorAt(i)}`}>
+            {char}
+          </span>
+        ))}
+      </span>
+    )
   }
 
   const middleStagger = 0.07
@@ -85,22 +87,25 @@ function NavigandoWordmark({ size = 'md', className = '' }) {
   const collapseStagger = 0.05
 
   return (
-    <span
-      className={`inline-flex items-baseline overflow-visible pb-0.5 leading-[1.2] ${BRAND_FONT} ${styles.word} ${className}`}
-      aria-hidden="true"
-    >
-      {/* n — coral */}
-      <motion.span layout className="inline-block">
-        <span className={colorClass(0)}>n</span>
+    <span className={wordClass} aria-hidden="true">
+      {/* We — always visible */}
+      <motion.span layout className="inline-flex">
+        <span className={`inline-block ${colorAt(0)}`}>W</span>
+        <span className={`inline-block ${colorAt(1)}`}>e</span>
       </motion.span>
 
-      {/* avig — width collapses to 0 so n meets an with no gap */}
+      {/* n — always visible */}
+      <motion.span layout className="inline-block">
+        <span className={colorAt(2)}>n</span>
+      </motion.span>
+
+      {/* avig — animates in/out for navigando moment */}
       <motion.span
         layout
         className="inline-flex overflow-x-hidden overflow-y-visible whitespace-nowrap pb-0.5"
         initial={false}
         animate={{
-          maxWidth: expanded ? '5ch' : 0,
+          maxWidth: expanded ? '4.5ch' : 0,
           opacity: expanded ? 1 : 0,
         }}
         transition={{
@@ -130,7 +135,7 @@ function NavigandoWordmark({ size = 'md', className = '' }) {
                     delay: middleBaseDelay + index * middleStagger,
                     ease: EASE,
                   }}
-                  className={`inline-block ${colorClass(1 + index)}`}
+                  className={`inline-block ${colorAt(3 + index)}`}
                 >
                   {letter}
                 </motion.span>
@@ -139,19 +144,21 @@ function NavigandoWordmark({ size = 'md', className = '' }) {
         </span>
       </motion.span>
 
-      {/* ando — syllable colors when collapsed, per-letter when expanded */}
+      {/* ando — always visible; per-letter when expanded */}
       <motion.span layout className="inline-flex">
         {expanded ? (
           <>
-            <span className={colorClass(5)}>a</span>
-            <span className={colorClass(6)}>n</span>
-            <span className={colorClass(7)}>d</span>
-            <span className={colorClass(8)}>o</span>
+            <span className={colorAt(7)}>a</span>
+            <span className={colorAt(8)}>n</span>
+            <span className={colorAt(9)}>d</span>
+            <span className={colorAt(10)}>o</span>
           </>
         ) : (
           <>
-            <span className={colorClass(1)}>an</span>
-            <span className={colorClass(2)}>do</span>
+            <span className={colorAt(3)}>a</span>
+            <span className={colorAt(4)}>n</span>
+            <span className={colorAt(5)}>d</span>
+            <span className={colorAt(6)}>o</span>
           </>
         )}
       </motion.span>
@@ -178,6 +185,7 @@ export default function WenandoLogo({
   className = '',
   align = 'start',
 }) {
+  const colors = useMemo(() => shufflePalette(), [])
   const styles = SIZE_STYLES[size] || SIZE_STYLES.md
   const alignClass =
     align === 'center' ? 'items-center' : align === 'end' ? 'items-end' : 'items-start'
@@ -185,10 +193,10 @@ export default function WenandoLogo({
   return (
     <div
       className={`inline-flex min-w-0 overflow-visible ${alignClass} ${className}`}
-      aria-label="Wenando navigando"
+      aria-label="Wenando"
       role="img"
     >
-      <NavigandoWordmark size={size} />
+      <WenandoWordmark size={size} colors={colors} />
     </div>
   )
 }
