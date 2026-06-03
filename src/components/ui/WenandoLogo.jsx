@@ -1,10 +1,15 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { ACCENT_PALETTE } from './MulticolorHeading'
 
 const EASE = [0.25, 0.46, 0.45, 0.94]
 
 const BRAND_FONT = 'font-brand font-medium tracking-normal'
+
+/** Matches hero neutral copy and MulticolorHeading neutral words */
+const WE_CLASS = 'text-slate-800'
+const BODY_CLASS = 'text-slate-800'
+/** Single subtle brand accent — at most one letter in the wordmark */
+const ACCENT_CLASS = 'text-[#E07A5F]'
 
 const SIZE_STYLES = {
   nav: {
@@ -26,21 +31,10 @@ const CYCLE_MS = {
   collapse: 650,
 }
 
-function shufflePalette() {
-  const shuffled = [...ACCENT_PALETTE]
-  for (let i = shuffled.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-  }
-  return shuffled
-}
-
-function WenandoWordmark({ size = 'md', className = '', colors }) {
+function WenandoWordmark({ size = 'md', className = '' }) {
   const prefersReducedMotion = useReducedMotion()
   const styles = SIZE_STYLES[size] || SIZE_STYLES.md
   const [expanded, setExpanded] = useState(false)
-
-  const colorAt = (index) => colors[index % colors.length]
 
   useEffect(() => {
     if (prefersReducedMotion) return undefined
@@ -70,14 +64,15 @@ function WenandoWordmark({ size = 'md', className = '', colors }) {
   const wordClass = `inline-flex items-baseline overflow-visible pb-0.5 leading-[1.2] ${BRAND_FONT} ${styles.word} ${className}`
 
   if (prefersReducedMotion) {
-    const letters = 'Wenando'.split('')
     return (
       <span className={wordClass} aria-hidden="true">
-        {letters.map((char, i) => (
-          <span key={`${char}-${i}`} className={`inline-block ${colorAt(i)}`}>
-            {char}
-          </span>
-        ))}
+        <span className={`inline-block ${WE_CLASS}`}>W</span>
+        <span className={`inline-block ${WE_CLASS}`}>e</span>
+        <span className={`inline-block ${BODY_CLASS}`}>N</span>
+        <span className={`inline-block ${BODY_CLASS}`}>a</span>
+        <span className={`inline-block ${BODY_CLASS}`}>n</span>
+        <span className={`inline-block ${BODY_CLASS}`}>d</span>
+        <span className={`inline-block ${ACCENT_CLASS}`}>o</span>
       </span>
     )
   }
@@ -88,15 +83,15 @@ function WenandoWordmark({ size = 'md', className = '', colors }) {
 
   return (
     <span className={wordClass} aria-hidden="true">
-      {/* We — always visible */}
+      {/* We — always dark, never accent */}
       <motion.span layout className="inline-flex">
-        <span className={`inline-block ${colorAt(0)}`}>W</span>
-        <span className={`inline-block ${colorAt(1)}`}>e</span>
+        <span className={`inline-block ${WE_CLASS}`}>W</span>
+        <span className={`inline-block ${WE_CLASS}`}>e</span>
       </motion.span>
 
-      {/* n — always visible */}
+      {/* N — uppercase start of Nando */}
       <motion.span layout className="inline-block">
-        <span className={colorAt(2)}>n</span>
+        <span className={BODY_CLASS}>N</span>
       </motion.span>
 
       {/* avig — animates in/out for navigando moment */}
@@ -135,7 +130,7 @@ function WenandoWordmark({ size = 'md', className = '', colors }) {
                     delay: middleBaseDelay + index * middleStagger,
                     ease: EASE,
                   }}
-                  className={`inline-block ${colorAt(3 + index)}`}
+                  className={`inline-block ${BODY_CLASS}`}
                 >
                   {letter}
                 </motion.span>
@@ -144,23 +139,12 @@ function WenandoWordmark({ size = 'md', className = '', colors }) {
         </span>
       </motion.span>
 
-      {/* ando — always visible; per-letter when expanded */}
+      {/* ando — always visible */}
       <motion.span layout className="inline-flex">
-        {expanded ? (
-          <>
-            <span className={colorAt(7)}>a</span>
-            <span className={colorAt(8)}>n</span>
-            <span className={colorAt(9)}>d</span>
-            <span className={colorAt(10)}>o</span>
-          </>
-        ) : (
-          <>
-            <span className={colorAt(3)}>a</span>
-            <span className={colorAt(4)}>n</span>
-            <span className={colorAt(5)}>d</span>
-            <span className={colorAt(6)}>o</span>
-          </>
-        )}
+        <span className={BODY_CLASS}>a</span>
+        <span className={BODY_CLASS}>n</span>
+        <span className={BODY_CLASS}>d</span>
+        <span className={ACCENT_CLASS}>o</span>
       </motion.span>
     </span>
   )
@@ -185,7 +169,6 @@ export default function WenandoLogo({
   className = '',
   align = 'start',
 }) {
-  const colors = useMemo(() => shufflePalette(), [])
   const styles = SIZE_STYLES[size] || SIZE_STYLES.md
   const alignClass =
     align === 'center' ? 'items-center' : align === 'end' ? 'items-end' : 'items-start'
@@ -193,10 +176,10 @@ export default function WenandoLogo({
   return (
     <div
       className={`inline-flex min-w-0 overflow-visible ${alignClass} ${className}`}
-      aria-label="Wenando"
+      aria-label="WeNando"
       role="img"
     >
-      <WenandoWordmark size={size} colors={colors} />
+      <WenandoWordmark size={size} />
     </div>
   )
 }
