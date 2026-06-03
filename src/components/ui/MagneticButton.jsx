@@ -12,6 +12,7 @@ export default function MagneticButton({
   className = '',
   variant = 'primary',
   type = 'button',
+  readingLineCta = false,
 }) {
   const ref = useRef(null)
   const x = useMotionValue(0)
@@ -39,11 +40,15 @@ export default function MagneticButton({
   const variants = {
     primary:
       'bg-[#E07A5F] text-white glow-coral hover:bg-[#c96a52] hover:shadow-[0_6px_20px_rgba(224,122,95,0.35)]',
+    'outline-coral': readingLineCta
+      ? 'border border-[#E07A5F] bg-transparent hover:border-[#c96a52]'
+      : 'border border-[#E07A5F] bg-transparent text-[#E07A5F] hover:border-[#c96a52] hover:text-[#c96a52]',
     secondary:
       'border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-[#E07A5F]/40 hover:text-[#E07A5F]',
   }
 
-  const combinedClassName = `${baseStyles} ${variants[variant] || variants.primary} ${className}`
+  const readingLineClass = readingLineCta ? 'reading-line-cta' : ''
+  const combinedClassName = `${baseStyles} ${variants[variant] || variants.primary} ${readingLineClass} ${className}`
 
   const motionProps = {
     ref,

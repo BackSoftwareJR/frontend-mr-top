@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronDown, HelpCircle } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import MulticolorHeading from '../ui/MulticolorHeading'
 import SectionBlob from '../ui/SectionBlob'
 
@@ -8,52 +8,67 @@ const FAQS = [
   {
     question: 'Quanto costa il servizio Wenando?',
     answer:
-      'L\'analisi iniziale è completamente gratuita per le famiglie. Il nostro compenso arriva dalle strutture partner, solo se decidete di procedere con una di esse.',
-    accent: 'border-[#E07A5F]/25',
-    bg: 'bg-[#E07A5F]/[0.02]',
+      "L'analisi iniziale è completamente gratuita per le famiglie. Il nostro compenso arriva dalle strutture partner, solo se decidete di procedere con una di esse.",
+    accent: '#E07A5F',
   },
   {
     question: 'Quanto tempo ci vuole per ricevere le proposte?',
     answer:
       'In media entro 48 ore lavorative. Per situazioni urgenti, segnalatecelo nel modulo e attiviamo la priorità.',
-    accent: 'border-[#E9A84A]/25',
-    bg: 'bg-[#E9A84A]/[0.03]',
+    accent: '#E9A84A',
   },
   {
     question: 'Perché non mostrate un catalogo di strutture?',
     answer:
       'Ogni famiglia ha esigenze diverse. Preferiamo analizzare la vostra situazione nel dettaglio prima di consigliare qualsiasi soluzione — così le proposte sono davvero pertinenti.',
-    accent: 'border-[#9B8EC4]/25',
-    bg: 'bg-[#9B8EC4]/[0.03]',
+    accent: '#9B8EC4',
   },
   {
     question: 'Posso cambiare struttura se non siamo soddisfatti?',
     answer:
       'Assolutamente sì. Vi accompagniamo anche dopo la scelta, senza costi aggiuntivi, finché non trovate la soluzione giusta.',
-    accent: 'border-[#E879A0]/25',
-    bg: 'bg-[#E879A0]/[0.02]',
+    accent: '#E879A0',
   },
 ]
 
-function FAQItem({ faq, isOpen, onToggle }) {
+function FAQItem({ faq, index, isOpen, onToggle }) {
+  const step = String(index + 1).padStart(2, '0')
+
   return (
-    <div
-      className={`overflow-hidden rounded-2xl border bg-white/80 shadow-sm ${faq.accent} ${faq.bg}`}
-    >
+    <div className="group border-b border-slate-200/80 last:border-b-0">
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition-colors hover:bg-white/60"
+        aria-expanded={isOpen}
+        className="flex w-full items-start gap-4 py-6 text-left transition-colors sm:gap-6 sm:py-7"
       >
-        <span className="font-semibold text-slate-800">{faq.question}</span>
+        <span
+          className="mt-0.5 shrink-0 text-xs font-bold tracking-widest tabular-nums transition-colors sm:text-sm"
+          style={{ color: isOpen ? faq.accent : '#94a3b8' }}
+        >
+          {step}
+        </span>
+
+        <span className="min-w-0 flex-1">
+          <span
+            className={`block text-base font-semibold leading-snug transition-colors sm:text-lg ${
+              isOpen ? 'text-slate-900' : 'text-slate-800 group-hover:text-slate-900'
+            }`}
+          >
+            {faq.question}
+          </span>
+        </span>
+
         <motion.span
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.25 }}
-          className="shrink-0 text-slate-400"
+          className="mt-1 shrink-0 text-slate-400"
+          style={{ color: isOpen ? faq.accent : undefined }}
         >
           <ChevronDown className="h-5 w-5" />
         </motion.span>
       </button>
+
       <AnimatePresence initial={false}>
         {isOpen && (
           <motion.div
@@ -61,10 +76,17 @@ function FAQItem({ faq, isOpen, onToggle }) {
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="overflow-hidden"
           >
-            <p className="border-t border-slate-100/80 px-6 py-4 text-sm leading-relaxed text-slate-600">
-              {faq.answer}
-            </p>
+            <div className="flex gap-4 pb-6 sm:gap-6 sm:pb-7">
+              <span aria-hidden className="w-6 shrink-0 sm:w-8" />
+              <p
+                className="border-l-2 pl-5 text-sm leading-relaxed text-slate-600 sm:pl-6 sm:text-base"
+                style={{ borderColor: `${faq.accent}55` }}
+              >
+                {faq.answer}
+              </p>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -73,7 +95,7 @@ function FAQItem({ faq, isOpen, onToggle }) {
 }
 
 export default function FAQSection() {
-  const [openIndex, setOpenIndex] = useState(null)
+  const [openIndex, setOpenIndex] = useState(0)
 
   return (
     <section
@@ -85,43 +107,48 @@ export default function FAQSection() {
       <SectionBlob variant="violet" shape="circle" position="top-left" />
       <SectionBlob variant="rose" shape="wave" position="bottom-right" />
 
-      <div className="relative z-10 mx-auto max-w-3xl">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mb-12 text-center"
-        >
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#9B8EC4]/25 bg-[#9B8EC4]/8 px-4 py-1.5">
-            <HelpCircle className="h-4 w-4 text-[#9B8EC4]" />
-            <span className="text-xs font-semibold tracking-wide text-[#9B8EC4] uppercase">
+      <div className="relative z-10 mx-auto max-w-6xl">
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start lg:gap-16 xl:gap-24">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center lg:sticky lg:top-28 lg:text-left"
+          >
+            <p className="mb-3 text-xs font-semibold tracking-[0.2em] text-slate-400 uppercase">
               Domande frequenti
-            </span>
-          </div>
-          <MulticolorHeading
-            as="h2"
-            words="Siamo qui per chiarire ogni dubbio"
-            className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl"
-            startIndex={0}
-          />
-        </motion.div>
-
-        <motion.div
-          className="space-y-3"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.1 }}
-        >
-          {FAQS.map((faq, index) => (
-            <FAQItem
-              key={faq.question}
-              faq={faq}
-              isOpen={openIndex === index}
-              onToggle={() => setOpenIndex(openIndex === index ? null : index)}
+            </p>
+            <MulticolorHeading
+              as="h2"
+              words="Siamo qui per chiarire ogni dubbio"
+              className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl"
+              startIndex={0}
             />
-          ))}
-        </motion.div>
+            <p className="mx-auto mt-5 max-w-sm text-base leading-relaxed text-slate-600 lg:mx-0">
+              Risposte dirette, senza tecnicismi. Se non trovi quello che cerchi,
+              scrivici — rispondiamo sempre.
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+          >
+            <div className="border-t border-slate-200/80">
+              {FAQS.map((faq, index) => (
+                <FAQItem
+                  key={faq.question}
+                  faq={faq}
+                  index={index}
+                  isOpen={openIndex === index}
+                  onToggle={() => setOpenIndex(openIndex === index ? null : index)}
+                />
+              ))}
+            </div>
+          </motion.div>
+        </div>
       </div>
     </section>
   )

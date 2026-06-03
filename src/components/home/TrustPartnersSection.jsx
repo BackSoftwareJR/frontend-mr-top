@@ -1,33 +1,14 @@
 import { motion } from 'framer-motion'
-import { Award, BadgeCheck, Handshake, Landmark } from 'lucide-react'
 import MulticolorHeading from '../ui/MulticolorHeading'
 import SectionBlob from '../ui/SectionBlob'
 
 const PARTNERS = [
-  { name: 'Regione Lombardia', icon: Landmark },
-  { name: 'ANASTE', icon: Handshake },
-  { name: 'Federanziani', icon: BadgeCheck },
-  { name: 'Quality Care', icon: Award },
-  { name: 'Salute Italia', icon: BadgeCheck },
-  { name: 'CNA Senior', icon: Handshake },
-]
-
-const ACCENT_COLORS = [
-  'text-[#E07A5F]',
-  'text-[#E9A84A]',
-  'text-[#9B8EC4]',
-  'text-[#E879A0]',
-  'text-[#5CB8A8]',
-  'text-[#E07A5F]',
-]
-
-const BADGE_BGS = [
-  'bg-[#E07A5F]/8',
-  'bg-[#E9A84A]/8',
-  'bg-[#9B8EC4]/8',
-  'bg-[#E879A0]/8',
-  'bg-[#5CB8A8]/8',
-  'bg-[#E07A5F]/8',
+  'Regione Lombardia',
+  'ANASTE',
+  'Federanziani',
+  'Quality Care',
+  'Salute Italia',
+  'CNA Senior',
 ]
 
 export default function TrustPartnersSection() {
@@ -36,17 +17,21 @@ export default function TrustPartnersSection() {
       id="trust"
       data-scroll-anchor="trust"
       data-scroll-label="Partner"
-      className="relative overflow-x-clip border-y border-slate-200/50 bg-gradient-to-b from-white/60 via-[#E9A84A]/[0.03] to-white/60 px-6 py-20 backdrop-blur-sm"
+      className="relative overflow-x-clip px-6 py-16 sm:py-20"
     >
-      <SectionBlob variant="amber" shape="ring" position="center" />
+      <SectionBlob variant="amber" shape="ring" position="center" className="opacity-35" />
 
       <div className="relative z-10 mx-auto max-w-6xl">
         <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mb-10 text-center"
+          transition={{ duration: 0.5 }}
+          className="mb-8 text-center sm:mb-10"
         >
+          <p className="mb-3 text-xs font-semibold tracking-[0.2em] text-slate-400 uppercase">
+            Chi ci affida la propria fiducia
+          </p>
           <MulticolorHeading
             as="h2"
             words="Partner e riconoscimenti"
@@ -56,27 +41,29 @@ export default function TrustPartnersSection() {
         </motion.div>
 
         <motion.div
-          className="flex flex-wrap items-center justify-center gap-6 sm:gap-10"
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 10 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.5, delay: 0.08 }}
+          className="border-y border-slate-200/70 py-8 sm:py-10"
         >
-          {PARTNERS.map((partner, index) => {
-            const Icon = partner.icon
-            return (
-              <div
-                key={partner.name}
-                className={`flex items-center gap-2.5 rounded-full px-4 py-2 ${BADGE_BGS[index % BADGE_BGS.length]} opacity-80 transition-opacity hover:opacity-100`}
-              >
-                <Icon
-                  className={`h-5 w-5 ${ACCENT_COLORS[index % ACCENT_COLORS.length]}`}
-                  strokeWidth={1.75}
-                />
-                <span className="text-sm font-semibold text-slate-600">{partner.name}</span>
-              </div>
-            )
-          })}
+          <ul className="flex flex-wrap items-center justify-center gap-x-2 gap-y-3 text-center sm:gap-x-3">
+            {PARTNERS.map((name, index) => (
+              <li key={name} className="inline-flex items-center">
+                {index > 0 && (
+                  <span
+                    aria-hidden
+                    className="mx-3 hidden text-slate-300 sm:inline sm:mx-4"
+                  >
+                    ·
+                  </span>
+                )}
+                <span className="text-sm font-semibold tracking-tight text-slate-600 transition-colors hover:text-slate-900 sm:text-base">
+                  {name}
+                </span>
+              </li>
+            ))}
+          </ul>
         </motion.div>
       </div>
     </section>

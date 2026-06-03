@@ -98,7 +98,7 @@ export default function MulticolorHeading({
             {period ? (
               <span
                 ref={trailingAnchorRef}
-                className="inline-block"
+                className="inline-block w-[0.28em] text-center align-baseline leading-none"
                 {...trailingAnchorProps}
               >
                 {period}

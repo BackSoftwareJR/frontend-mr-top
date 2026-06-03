@@ -27,7 +27,7 @@ export default function HeroSection() {
   return (
     <section
       id="hero"
-      className="relative flex min-h-[85vh] flex-col items-center justify-center overflow-x-clip px-6 pb-16 pt-32 text-center sm:min-h-screen sm:pb-20"
+      className="relative flex min-h-0 flex-col items-center justify-center overflow-x-clip px-6 pb-20 pt-28 text-center sm:min-h-[88vh] sm:pb-24 sm:pt-32 md:min-h-[85vh]"
     >
       <SectionBlob variant="coral" shape="circle" position="top-right" />
       <SectionBlob variant="violet" shape="blob" position="bottom-left" />
@@ -35,7 +35,7 @@ export default function HeroSection() {
       <MulticolorHeading
         as="h1"
         words="La guida sicura per chi ami."
-        className="relative z-10 mb-6 max-w-4xl text-5xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl md:text-7xl lg:text-8xl"
+        className="relative z-10 mb-6 max-w-4xl text-4xl font-extrabold leading-[1.05] tracking-tight sm:mb-6 sm:text-6xl md:text-7xl lg:text-8xl"
         startIndex={0}
         neutralWords={[0, 3, 4]}
         trigger="mount"
@@ -50,7 +50,7 @@ export default function HeroSection() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, duration: 0.6 }}
-        className="relative z-10 mb-12 max-w-2xl text-lg font-medium leading-relaxed text-slate-600 sm:text-xl md:text-2xl"
+        className="relative z-10 mb-10 max-w-2xl text-lg font-medium leading-relaxed text-slate-600 sm:mb-12 sm:text-xl md:text-2xl"
       >
         Non un catalogo di strutture — un&apos;analisi personalizzata della{' '}
         <span className="font-semibold text-[#E07A5F]">vostra</span> situazione,
@@ -61,11 +61,13 @@ export default function HeroSection() {
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.7, duration: 0.6 }}
-        className="relative z-10"
+        className="relative z-10 mt-2 flex justify-center"
         data-scroll-anchor="hero-cta"
         data-scroll-label="CTA Hero"
       >
-        <MagneticButton to="/wizard">Inizia l&apos;analisi gratuita</MagneticButton>
+        <MagneticButton to="/wizard" variant="outline-coral" readingLineCta>
+          Inizia ora →
+        </MagneticButton>
       </motion.div>
 
     </section>
@@ -134,8 +136,8 @@ function HomeNavLinks() {
         >
           Area B2B
         </Link>
-        <MagneticButton to="/wizard" className="!px-4 !py-2 !text-sm sm:!px-5 sm:!py-2.5">
-          Inizia ora
+        <MagneticButton to="/wizard" variant="outline-coral" className="!px-4 !py-2 !text-sm sm:!px-5 sm:!py-2.5">
+          Inizia ora →
         </MagneticButton>
       </div>
     </>

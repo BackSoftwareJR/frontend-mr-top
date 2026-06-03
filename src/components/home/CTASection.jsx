@@ -41,7 +41,9 @@ export default function CTASection() {
           prima di suggerirvi la strada giusta — senza cataloghi, senza fretta.
         </p>
 
-        <MagneticButton to="/wizard">Inizia l&apos;analisi gratuita</MagneticButton>
+        <MagneticButton to="/wizard" variant="outline-coral" readingLineCta>
+          Inizia ora →
+        </MagneticButton>
       </motion.div>
     </section>
   )

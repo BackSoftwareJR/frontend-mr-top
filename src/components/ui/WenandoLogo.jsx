@@ -183,15 +183,12 @@ function WenandoWordmark({ size = 'md', className = '' }) {
 
 export function WenandoMark({ className }) {
   return (
-    <picture>
-      <source srcSet="/wenando-logo.png" type="image/png" />
-      <img
-        src="/wenando-logo.svg"
-        alt=""
-        aria-hidden="true"
-        className={`shrink-0 object-contain ${className || 'h-9 w-9'}`}
-      />
-    </picture>
+    <img
+      src="/wenando-logo.png"
+      alt=""
+      aria-hidden="true"
+      className={`shrink-0 object-contain ${className || 'h-9 w-9'}`}
+    />
   )
 }
 
