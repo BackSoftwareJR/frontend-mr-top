@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { useIsMobile } from '../../utils/performanceTier'
 
 const TAG_MAP = {
   span: motion.span,
@@ -41,9 +42,23 @@ export default function AnimatedText({
   once = true,
   trigger = 'viewport',
 }) {
-  const MotionTag = TAG_MAP[as] || motion.span
+  const isMobile = useIsMobile()
+  const Tag = as
   const words = text.split(' ')
 
+  if (isMobile) {
+    return (
+      <Tag className={className}>
+        {words.map((word, index) => (
+          <span key={`${word}-${index}`} className="inline-block mr-[0.25em]">
+            {word}
+          </span>
+        ))}
+      </Tag>
+    )
+  }
+
+  const MotionTag = TAG_MAP[as] || motion.span
   const motionProps =
     trigger === 'mount'
       ? { initial: 'hidden', animate: 'visible' }

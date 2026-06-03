@@ -1,41 +1,45 @@
-import { motion, useReducedMotion } from 'framer-motion'
+import { lazy, Suspense } from 'react'
 import { HomePageContent } from '../components/home/HeroSection'
-import ScrollReadingLine from '../components/layout/ScrollReadingLine'
+import { useDeferUntilReady } from '../hooks/useDeferUntilReady'
 import { usePrefetchOnIdle } from '../hooks/usePrefetchOnIdle'
 import { useIsMobile } from '../utils/performanceTier'
 
-const pageVariants = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1 },
-  exit: { opacity: 0 },
+const ScrollReadingLineLazy = lazy(() => import('../components/layout/ScrollReadingLine'))
+const HomeDesktop = lazy(() => import('./HomeDesktop'))
+
+function DeferredMobileReadingLine() {
+  const ready = useDeferUntilReady({ loadDelayMs: 100, scrollTrigger: true })
+
+  if (!ready) return null
+
+  return (
+    <Suspense fallback={null}>
+      <ScrollReadingLineLazy />
+    </Suspense>
+  )
 }
 
 export default function Home() {
   const isMobile = useIsMobile()
-  const prefersReducedMotion = useReducedMotion()
 
   usePrefetchOnIdle(['/wizard'])
 
   if (isMobile) {
     return (
       <div className="relative min-h-screen">
-        <ScrollReadingLine />
+        <DeferredMobileReadingLine />
         <HomePageContent />
       </div>
     )
   }
 
   return (
-    <motion.div
-      variants={pageVariants}
-      initial={prefersReducedMotion ? false : 'initial'}
-      animate={prefersReducedMotion ? undefined : 'animate'}
-      exit={prefersReducedMotion ? undefined : 'exit'}
-      transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="relative min-h-screen"
-    >
-      <ScrollReadingLine />
-      <HomePageContent />
-    </motion.div>
+    <Suspense fallback={
+      <div className="relative min-h-screen">
+        <HomePageContent />
+      </div>
+    }>
+      <HomeDesktop />
+    </Suspense>
   )
 }

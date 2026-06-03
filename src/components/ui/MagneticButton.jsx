@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useMotionValue, useSpring } from 'framer-motion'
+import { useIsMobile } from '../../utils/performanceTier'
 
 const springConfig = { stiffness: 300, damping: 20, mass: 0.5 }
 const MotionLink = motion.create(Link)
@@ -14,6 +15,7 @@ export default function MagneticButton({
   type = 'button',
   readingLineCta = false,
 }) {
+  const isMobile = useIsMobile()
   const ref = useRef(null)
   const x = useMotionValue(0)
   const y = useMotionValue(0)
@@ -49,6 +51,22 @@ export default function MagneticButton({
 
   const readingLineClass = readingLineCta ? 'reading-line-cta' : ''
   const combinedClassName = `${baseStyles} ${variants[variant] || variants.primary} ${readingLineClass} ${className}`
+
+  if (isMobile) {
+    const content = <span className="relative z-10">{children}</span>
+    if (to) {
+      return (
+        <Link to={to} className={combinedClassName}>
+          {content}
+        </Link>
+      )
+    }
+    return (
+      <button type={type} onClick={onClick} className={combinedClassName}>
+        {content}
+      </button>
+    )
+  }
 
   const motionProps = {
     ref,

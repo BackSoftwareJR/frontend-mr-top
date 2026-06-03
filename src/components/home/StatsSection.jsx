@@ -179,6 +179,8 @@ export default function StatsSection() {
   const isMobile = useIsMobile()
   const prefersReducedMotion = useReducedMotion()
   const lightMotion = isMobile || prefersReducedMotion
+  const GridWrap = lightMotion ? 'div' : motion.div
+  const ItemWrap = lightMotion ? 'div' : motion.div
 
   return (
     <section
@@ -199,18 +201,21 @@ export default function StatsSection() {
           />
         </div>
 
-        <motion.div
+        <GridWrap
           className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
-          variants={containerVariants}
-          initial={lightMotion ? false : 'hidden'}
-          whileInView={lightMotion ? undefined : 'visible'}
-          viewport={{ once: true, amount: 0.3 }}
+          {...(lightMotion
+            ? {}
+            : {
+                variants: containerVariants,
+                initial: 'hidden',
+                whileInView: 'visible',
+                viewport: { once: true, amount: 0.3 },
+              })}
         >
           {STATS.map((stat) => (
-            <motion.div
+            <ItemWrap
               key={stat.label}
-              variants={lightMotion ? undefined : itemVariants}
-              initial={lightMotion ? false : undefined}
+              {...(lightMotion ? {} : { variants: itemVariants })}
               data-scroll-anchor={stat.anchor}
               data-scroll-label={stat.label}
             >
@@ -242,9 +247,9 @@ export default function StatsSection() {
                   <StatMark variant={stat.mark} />
                 </div>
               </GlassCard>
-            </motion.div>
+            </ItemWrap>
           ))}
-        </motion.div>
+        </GridWrap>
       </div>
     </section>
   )

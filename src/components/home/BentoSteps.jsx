@@ -69,6 +69,9 @@ export default function BentoSteps() {
   const isMobile = useIsMobile()
   const prefersReducedMotion = useReducedMotion()
   const lightMotion = isMobile || prefersReducedMotion
+  const SectionWrap = lightMotion ? 'div' : motion.div
+  const CardWrap = lightMotion ? 'div' : motion.div
+  const PostItWrap = lightMotion ? 'div' : motion.div
 
   return (
     <section
@@ -86,14 +89,21 @@ export default function BentoSteps() {
           className="-z-10 opacity-60"
         />
 
-        <motion.div
+        <SectionWrap
           className="relative z-10"
-          variants={containerVariants}
-          initial={lightMotion ? false : 'hidden'}
-          whileInView={lightMotion ? undefined : 'visible'}
-          viewport={{ once: true, amount: 0.25 }}
+          {...(lightMotion
+            ? {}
+            : {
+                variants: containerVariants,
+                initial: 'hidden',
+                whileInView: 'visible',
+                viewport: { once: true, amount: 0.25 },
+              })}
         >
-          <motion.div variants={lightMotion ? undefined : cardVariants} className="mb-12 text-center sm:mb-14">
+          <CardWrap
+            {...(lightMotion ? {} : { variants: cardVariants })}
+            className="mb-12 text-center sm:mb-14"
+          >
             <p className="mb-3 text-sm font-semibold tracking-widest text-slate-400 uppercase">
               Come funziona
             </p>
@@ -103,34 +113,33 @@ export default function BentoSteps() {
               className="text-2xl font-extrabold tracking-tight sm:text-3xl md:text-4xl"
               startIndex={1}
             />
-          </motion.div>
+          </CardWrap>
 
           <div className="grid gap-6 overflow-visible sm:grid-cols-3 sm:gap-8">
             {STEPS.map((step) => (
-              <motion.div
+              <CardWrap
                 key={step.title}
-                variants={lightMotion ? undefined : cardVariants}
-                initial={lightMotion ? false : undefined}
+                {...(lightMotion ? {} : { variants: cardVariants })}
                 className="overflow-visible px-1 py-2"
                 data-scroll-anchor={`bento-${step.title.toLowerCase()}`}
                 data-scroll-label={step.title}
               >
-                <motion.div
+                <PostItWrap
                   className={`group relative h-full border ${step.postItBorder} ${step.postItBg} rounded-sm p-6 sm:p-7`}
                   style={{
                     rotate: step.rotate,
                     boxShadow: step.postItShadow,
                   }}
-                  whileHover={
-                    lightMotion
-                      ? undefined
-                      : {
+                  {...(lightMotion
+                    ? {}
+                    : {
+                        whileHover: {
                           y: -5,
                           rotate: 0,
                           boxShadow: step.postItShadowHover,
-                        }
-                  }
-                  transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+                        },
+                        transition: { duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] },
+                      })}
                 >
                   <span
                     aria-hidden
@@ -154,11 +163,11 @@ export default function BentoSteps() {
                       {step.description}
                     </p>
                   </div>
-                </motion.div>
-              </motion.div>
+                </PostItWrap>
+              </CardWrap>
             ))}
           </div>
-        </motion.div>
+        </SectionWrap>
       </div>
     </section>
   )

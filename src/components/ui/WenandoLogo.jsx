@@ -186,6 +186,7 @@ function WenandoWordmark({ size = 'md', className = '' }) {
 export function WenandoMark({ className, width = 64, height = 64, fetchPriority }) {
   return (
     <picture>
+      <source srcSet="/wenando-logo-96.webp" type="image/webp" media="(max-width: 768px)" />
       <source srcSet="/wenando-logo-96.webp" type="image/webp" />
       <img
         src="/wenando-logo-96.png"

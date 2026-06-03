@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Quote } from 'lucide-react'
 import GlassCard from '../ui/GlassCard'
 import MulticolorHeading from '../ui/MulticolorHeading'
 import SectionBlob from '../ui/SectionBlob'
+import { useIsMobile } from '../../utils/performanceTier'
 
 const TESTIMONIALS = [
   {
@@ -49,6 +50,7 @@ const TESTIMONIALS = [
 ]
 
 export default function TestimonialsSection() {
+  const isMobile = useIsMobile()
   const [[index, direction], setSlide] = useState([0, 0])
 
   const paginate = useCallback((dir) => {
@@ -71,33 +73,40 @@ export default function TestimonialsSection() {
       <SectionBlob variant="amber" shape="circle" position="bottom-left" />
 
       <div className="relative z-10 mx-auto max-w-4xl">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mb-12 text-center"
-        >
-          <p className="mb-3 text-sm font-semibold tracking-widest text-slate-400 uppercase">
-            Storie di famiglie
-          </p>
-          <MulticolorHeading
-            as="h2"
-            words="Non siamo noi a dirlo"
-            className="text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl"
-            startIndex={3}
-          />
-        </motion.div>
+        {isMobile ? (
+          <div className="mb-12 text-center">
+            <p className="mb-3 text-sm font-semibold tracking-widest text-slate-400 uppercase">
+              Storie di famiglie
+            </p>
+            <MulticolorHeading
+              as="h2"
+              words="Non siamo noi a dirlo"
+              className="text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl"
+              startIndex={3}
+            />
+          </div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mb-12 text-center"
+          >
+            <p className="mb-3 text-sm font-semibold tracking-widest text-slate-400 uppercase">
+              Storie di famiglie
+            </p>
+            <MulticolorHeading
+              as="h2"
+              words="Non siamo noi a dirlo"
+              className="text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl"
+              startIndex={3}
+            />
+          </motion.div>
+        )}
 
         <div className="relative">
-          <AnimatePresence mode="wait" custom={direction}>
-            <motion.div
-              key={index}
-              custom={direction}
-              initial={{ opacity: 0, x: direction > 0 ? 40 : -40 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: direction > 0 ? -40 : 40 }}
-              transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
-            >
+          {isMobile ? (
+            <div key={index}>
               <GlassCard
                 hover={false}
                 className={`border-l-4 ${t.accent} ${t.cardTint} p-8 sm:p-10`}
@@ -113,8 +122,35 @@ export default function TestimonialsSection() {
                   <p className="text-sm text-slate-500">{t.role}</p>
                 </footer>
               </GlassCard>
-            </motion.div>
-          </AnimatePresence>
+            </div>
+          ) : (
+            <AnimatePresence mode="wait" custom={direction}>
+              <motion.div
+                key={index}
+                custom={direction}
+                initial={{ opacity: 0, x: direction > 0 ? 40 : -40 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: direction > 0 ? -40 : 40 }}
+                transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+              >
+                <GlassCard
+                  hover={false}
+                  className={`border-l-4 ${t.accent} ${t.cardTint} p-8 sm:p-10`}
+                >
+                  <div className={`mb-6 inline-flex rounded-2xl ${t.iconBg} p-3`}>
+                    <Quote className={`h-6 w-6 ${t.iconColor}`} strokeWidth={1.75} />
+                  </div>
+                  <blockquote className="mb-6 text-lg leading-relaxed text-slate-700 sm:text-xl">
+                    &ldquo;{t.quote}&rdquo;
+                  </blockquote>
+                  <footer>
+                    <p className="font-bold text-slate-800">{t.author}</p>
+                    <p className="text-sm text-slate-500">{t.role}</p>
+                  </footer>
+                </GlassCard>
+              </motion.div>
+            </AnimatePresence>
+          )}
 
           <div className="mt-6 flex items-center justify-center gap-4">
             <button

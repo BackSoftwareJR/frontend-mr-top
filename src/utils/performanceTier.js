@@ -21,6 +21,21 @@ export function useIsMobile() {
   return isMobile
 }
 
+export function isLowCoreDevice() {
+  if (typeof window === 'undefined') return false
+  return (navigator.hardwareConcurrency ?? 4) <= 2
+}
+
+export function useLowCoreDevice() {
+  const [lowCore, setLowCore] = useState(() => isLowCoreDevice())
+
+  useEffect(() => {
+    setLowCore(isLowCoreDevice())
+  }, [])
+
+  return lowCore
+}
+
 /** Heuristic for low-end phones — invisible to the user, reduces path math only */
 export function isConstrainedDevice() {
   if (typeof window === 'undefined') return false
@@ -34,7 +49,7 @@ export function isConstrainedDevice() {
     navigator.connection?.effectiveType === '2g' ||
     navigator.connection?.effectiveType === 'slow-2g'
 
-  return saveData || slowNet || cores <= 4
+  return saveData || slowNet || cores <= 4 || isLowCoreDevice()
 }
 
 export function useConstrainedDevice() {

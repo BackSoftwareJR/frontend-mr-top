@@ -31,7 +31,12 @@ import {
   SCROLL_REMAP_SAMPLES,
   measureReadingPathPoints,
 } from '../../data/readingPathSchema'
-import { useConstrainedDevice, useIsMobile } from '../../utils/performanceTier'
+import { useConstrainedDevice, useIsMobile, useLowCoreDevice } from '../../utils/performanceTier'
+import {
+  cancelScheduledIdle,
+  scheduleIdle,
+  supportsScrollTimeline,
+} from '../../utils/scheduleIdle'
 
 const LAYER_CLASS =
   'pointer-events-none fixed inset-0 z-[5] overflow-hidden [contain:layout]'
@@ -40,9 +45,10 @@ const MOBILE_LAYER_CLASS =
   'pointer-events-none fixed inset-0 z-[5] overflow-hidden [contain:strict] [transform:translateZ(0)]'
 
 const STROKE_OPACITY = 1
-const RESIZE_DEBOUNCE_MS = 150
+const RESIZE_DEBOUNCE_MS = 300
 const MOBILE_FILL_POLL_MS = 66
 const MOBILE_SCROLL_FRAME_MS = 1000 / 30
+const MOBILE_LOW_CORE_FRAME_MS = 1000 / 20
 const SCROLL_WILL_CHANGE_IDLE_MS = 150
 
 const MOBILE_FRAME_OUT = {
@@ -106,6 +112,8 @@ function useMobileReadingScrollFrame({
   dotCircleRef,
   pathProgressRef,
   frameTableRef,
+  scrollFrameMs = MOBILE_SCROLL_FRAME_MS,
+  skipStrokePaint = false,
 }) {
   const rafRef = useRef(null)
   const lastPaintAtRef = useRef(0)
@@ -136,7 +144,7 @@ function useMobileReadingScrollFrame({
       rafRef.current = null
 
       const now = performance.now()
-      if (now - lastPaintAtRef.current < MOBILE_SCROLL_FRAME_MS) {
+      if (now - lastPaintAtRef.current < scrollFrameMs) {
         rafRef.current = requestAnimationFrame(flush)
         return
       }
@@ -154,9 +162,11 @@ function useMobileReadingScrollFrame({
         group.style.transform = `translate3d(0, ${-scrollY}px, 0)`
       }
 
-      const path = visiblePathRef.current
-      if (path) {
-        path.style.strokeDashoffset = String(frame.strokeDashoffset)
+      if (!skipStrokePaint) {
+        const path = visiblePathRef.current
+        if (path) {
+          path.style.strokeDashoffset = String(frame.strokeDashoffset)
+        }
       }
 
       const dotGroup = dotGroupRef.current
@@ -198,6 +208,8 @@ function useMobileReadingScrollFrame({
     dotCircleRef,
     pathProgressRef,
     frameTableRef,
+    scrollFrameMs,
+    skipStrokePaint,
   ])
 }
 
@@ -252,8 +264,9 @@ function useDeferredSectionRemeasure(onRemeasure, enabled) {
   }, [onRemeasure, enabled])
 }
 
-function useDebouncedRemeasure(onRemeasure, delayMs = RESIZE_DEBOUNCE_MS) {
+function useDebouncedRemeasure(onRemeasure, delayMs = RESIZE_DEBOUNCE_MS, deferInitial = false) {
   const timerRef = useRef(null)
+  const idleRef = useRef(null)
 
   const schedule = useCallback(() => {
     window.clearTimeout(timerRef.current)
@@ -261,10 +274,14 @@ function useDebouncedRemeasure(onRemeasure, delayMs = RESIZE_DEBOUNCE_MS) {
   }, [onRemeasure, delayMs])
 
   useEffect(() => {
-    onRemeasure()
+    if (deferInitial) {
+      idleRef.current = scheduleIdle(onRemeasure, { timeout: 900 })
+    } else {
+      onRemeasure()
+    }
 
-    const t1 = window.setTimeout(onRemeasure, 120)
-    const t2 = window.setTimeout(onRemeasure, 600)
+    const t1 = window.setTimeout(onRemeasure, deferInitial ? 400 : 120)
+    const t2 = window.setTimeout(onRemeasure, deferInitial ? 900 : 600)
 
     window.addEventListener('load', onRemeasure, { passive: true })
 
@@ -272,13 +289,16 @@ function useDebouncedRemeasure(onRemeasure, delayMs = RESIZE_DEBOUNCE_MS) {
     observer.observe(document.documentElement)
 
     return () => {
+      if (idleRef.current !== null) cancelScheduledIdle(idleRef.current)
       window.clearTimeout(timerRef.current)
       window.clearTimeout(t1)
       window.clearTimeout(t2)
       window.removeEventListener('load', onRemeasure)
       observer.disconnect()
     }
-  }, [onRemeasure, schedule])
+  }, [onRemeasure, schedule, deferInitial])
+
+  return schedule
 }
 
 function useCtaAnchorRects() {
@@ -300,7 +320,7 @@ function useCtaAnchorRects() {
     setRects(next)
   }, [])
 
-  useDebouncedRemeasure(remeasure)
+  useDebouncedRemeasure(remeasure, RESIZE_DEBOUNCE_MS)
 
   return rects
 }
@@ -529,6 +549,7 @@ function ReadingPathLayer({
   ctaRects,
   isMobile,
   isConstrained,
+  isLowCore,
   simplifiedPath,
 }) {
   const measurePathRef = useRef(null)
@@ -544,6 +565,8 @@ function ReadingPathLayer({
   const [glowRanges, setGlowRanges] = useState([])
   const [statRanges, setStatRanges] = useState([])
   const [points, setPoints] = useState([])
+  const useScrollTimelineStroke = isMobile && supportsScrollTimeline()
+  const mobileScrollFrameMs = isLowCore ? MOBILE_LOW_CORE_FRAME_MS : MOBILE_SCROLL_FRAME_MS
 
   const remeasurePath = useCallback(() => {
     const nextPoints = measureReadingPathPoints()
@@ -552,7 +575,7 @@ function ReadingPathLayer({
     setPathRevision((revision) => revision + 1)
   }, [isMobile, simplifiedPath, isConstrained])
 
-  useDebouncedRemeasure(remeasurePath)
+  useDebouncedRemeasure(remeasurePath, RESIZE_DEBOUNCE_MS, isMobile)
   useDeferredSectionRemeasure(remeasurePath, isMobile)
 
   useEffect(() => {
@@ -643,6 +666,8 @@ function ReadingPathLayer({
     dotCircleRef,
     pathProgressRef,
     frameTableRef,
+    scrollFrameMs: mobileScrollFrameMs,
+    skipStrokePaint: useScrollTimelineStroke,
   })
 
   useMotionValueEvent(strokeDashoffset, 'change', (value) => {
@@ -676,7 +701,9 @@ function ReadingPathLayer({
         rawP,
         mobileFrameOutRef.current,
       )
-      visiblePathRef.current.style.strokeDashoffset = String(frame.strokeDashoffset)
+      if (!useScrollTimelineStroke) {
+        visiblePathRef.current.style.strokeDashoffset = String(frame.strokeDashoffset)
+      }
 
       if (scrollGroupRef.current) {
         scrollGroupRef.current.style.transform = `translate3d(0, ${-window.scrollY}px, 0)`
@@ -710,6 +737,7 @@ function ReadingPathLayer({
     pathProgressMobile,
     pathProgressDesktop,
     strokeDashoffset,
+    useScrollTimelineStroke,
   ])
 
   return (
@@ -757,6 +785,12 @@ function ReadingPathLayer({
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     opacity={STROKE_OPACITY}
+                    className={useScrollTimelineStroke ? 'reading-path-scroll-driven' : undefined}
+                    style={
+                      useScrollTimelineStroke
+                        ? { '--reading-path-length': String(pathLength) }
+                        : undefined
+                    }
                   />
                   {showCursor ? (
                     <g ref={dotGroupRef}>
@@ -831,18 +865,13 @@ function ReadingPathLayer({
   )
 }
 
-function ReadingLineLayer({ reducedMotion, isMobile, isConstrained }) {
+function DesktopReadingLineLayer({ reducedMotion, isConstrained }) {
   const { scrollY, scrollYProgress } = useScroll({
     offset: ['start start', 'end end'],
   })
   const staticProgress = useMotionValue(0)
-  const mobileScrollStubY = useMotionValue(0)
-  const mobileScrollStubProgress = useMotionValue(0)
   const progress = reducedMotion ? staticProgress : scrollYProgress
-  const layerScrollY = isMobile ? mobileScrollStubY : scrollY
-  const layerScrollProgress = isMobile ? mobileScrollStubProgress : progress
   const simplifiedPath = reducedMotion
-
   const viewport = useViewportSize()
   const ctaRects = useCtaAnchorRects()
   const [mounted, setMounted] = useState(false)
@@ -854,15 +883,16 @@ function ReadingLineLayer({ reducedMotion, isMobile, isConstrained }) {
   if (!mounted || typeof document === 'undefined') return null
 
   const layer = (
-    <div className={isMobile ? MOBILE_LAYER_CLASS : LAYER_CLASS} aria-hidden="true">
+    <div className={LAYER_CLASS} aria-hidden="true">
       <ReadingPathLayer
-        scrollY={layerScrollY}
-        scrollYProgress={layerScrollProgress}
+        scrollY={scrollY}
+        scrollYProgress={progress}
         viewport={viewport}
         showCursor={!reducedMotion}
         ctaRects={ctaRects}
-        isMobile={isMobile}
+        isMobile={false}
         isConstrained={isConstrained}
+        isLowCore={false}
         simplifiedPath={simplifiedPath}
       />
     </div>
@@ -871,15 +901,69 @@ function ReadingLineLayer({ reducedMotion, isMobile, isConstrained }) {
   return createPortal(layer, document.body)
 }
 
+function MobileReadingLineLayer({ reducedMotion, isConstrained, isLowCore }) {
+  const mobileScrollStubY = useMotionValue(0)
+  const mobileScrollStubProgress = useMotionValue(0)
+  const simplifiedPath = reducedMotion
+  const viewport = useViewportSize()
+  const ctaRects = useCtaAnchorRects()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted || typeof document === 'undefined') return null
+
+  const layer = (
+    <div className={MOBILE_LAYER_CLASS} aria-hidden="true">
+      <ReadingPathLayer
+        scrollY={mobileScrollStubY}
+        scrollYProgress={mobileScrollStubProgress}
+        viewport={viewport}
+        showCursor={!reducedMotion}
+        ctaRects={ctaRects}
+        isMobile
+        isConstrained={isConstrained}
+        isLowCore={isLowCore}
+        simplifiedPath={simplifiedPath}
+      />
+    </div>
+  )
+
+  return createPortal(layer, document.body)
+}
+
+function ReadingLineLayer({ reducedMotion, isMobile, isConstrained, isLowCore }) {
+  if (isMobile) {
+    return (
+      <MobileReadingLineLayer
+        reducedMotion={reducedMotion}
+        isConstrained={isConstrained}
+        isLowCore={isLowCore}
+      />
+    )
+  }
+
+  return (
+    <DesktopReadingLineLayer
+      reducedMotion={reducedMotion}
+      isConstrained={isConstrained}
+    />
+  )
+}
+
 export default function ScrollReadingLine() {
   const prefersReducedMotion = useReducedMotion()
   const isMobile = useIsMobile()
   const isConstrained = useConstrainedDevice()
+  const isLowCore = useLowCoreDevice()
   return (
     <ReadingLineLayer
       reducedMotion={!!prefersReducedMotion}
       isMobile={isMobile}
       isConstrained={isConstrained}
+      isLowCore={isLowCore}
     />
   )
 }
