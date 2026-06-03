@@ -67,7 +67,12 @@ const cardVariants = {
 
 export default function BentoSteps() {
   return (
-    <section className="relative overflow-x-clip px-6 py-20 sm:py-28">
+    <section
+      id="bento"
+      data-scroll-anchor="bento"
+      data-scroll-label="Come funziona"
+      className="relative overflow-x-clip px-6 py-20 sm:py-28"
+    >
       <div className="relative mx-auto w-full max-w-6xl overflow-visible">
         <SectionBlob variant="teal" shape="wave" position="center" className="-z-10" />
         <SectionBlob
@@ -111,6 +116,8 @@ export default function BentoSteps() {
                   <motion.div
                     key={step.title}
                     variants={cardVariants}
+                    data-scroll-anchor={`bento-${step.title.toLowerCase()}`}
+                    data-scroll-label={step.title}
                     className={`relative transition-transform duration-500 ${step.stagger}`}
                   >
                     <div

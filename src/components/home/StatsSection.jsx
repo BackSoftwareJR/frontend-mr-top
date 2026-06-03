@@ -63,7 +63,12 @@ const itemVariants = {
 
 export default function StatsSection() {
   return (
-    <section className="relative overflow-x-clip px-6 py-20 sm:py-24">
+    <section
+      id="stats"
+      data-scroll-anchor="stats"
+      data-scroll-label="Numeri"
+      className="relative overflow-x-clip px-6 py-20 sm:py-24"
+    >
       <SectionBlob variant="amber" shape="ring" position="top-right" />
 
       <div className="relative z-10 mx-auto max-w-6xl">

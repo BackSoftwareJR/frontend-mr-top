@@ -22,7 +22,12 @@ import SectionBlob from '../ui/SectionBlob'
 
 export default function HeroSection() {
   return (
-    <section className="relative flex min-h-[85vh] flex-col items-center justify-center overflow-x-clip px-6 pb-16 pt-32 text-center sm:min-h-screen sm:pb-20">
+    <section
+      id="hero"
+      data-scroll-anchor="hero"
+      data-scroll-label="Hero"
+      className="relative flex min-h-[85vh] flex-col items-center justify-center overflow-x-clip px-6 pb-16 pt-32 text-center sm:min-h-screen sm:pb-20"
+    >
       <SectionBlob variant="coral" shape="circle" position="top-right" />
       <SectionBlob variant="violet" shape="blob" position="bottom-left" />
 
@@ -51,6 +56,8 @@ export default function HeroSection() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.7, duration: 0.6 }}
         className="relative z-10"
+        data-scroll-anchor="hero-cta"
+        data-scroll-label="CTA Hero"
       >
         <MagneticButton to="/wizard">Inizia l&apos;analisi gratuita</MagneticButton>
       </motion.div>

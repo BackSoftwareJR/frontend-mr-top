@@ -61,7 +61,12 @@ export default function TestimonialsSection() {
   const t = TESTIMONIALS[index]
 
   return (
-    <section className="relative overflow-x-clip px-6 py-20 sm:py-28">
+    <section
+      id="testimonials"
+      data-scroll-anchor="testimonials"
+      data-scroll-label="Testimonianze"
+      className="relative overflow-x-clip px-6 py-20 sm:py-28"
+    >
       <SectionBlob variant="teal" shape="blob" position="top-right" />
       <SectionBlob variant="amber" shape="circle" position="bottom-left" />
 

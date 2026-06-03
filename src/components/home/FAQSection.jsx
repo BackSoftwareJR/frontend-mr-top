@@ -76,7 +76,12 @@ export default function FAQSection() {
   const [openIndex, setOpenIndex] = useState(null)
 
   return (
-    <section className="relative overflow-x-clip px-6 py-20 sm:py-28">
+    <section
+      id="faq"
+      data-scroll-anchor="faq"
+      data-scroll-label="FAQ"
+      className="relative overflow-x-clip px-6 py-20 sm:py-28"
+    >
       <SectionBlob variant="violet" shape="circle" position="top-left" />
       <SectionBlob variant="rose" shape="wave" position="bottom-right" />
 

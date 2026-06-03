@@ -54,7 +54,12 @@ const itemVariants = {
 
 export default function PersonalizedAnalysisSection() {
   return (
-    <section className="relative overflow-x-clip px-6 py-20 sm:py-28">
+    <section
+      id="personalized"
+      data-scroll-anchor="personalized"
+      data-scroll-label="Analisi personalizzata"
+      className="relative overflow-x-clip px-6 py-20 sm:py-28"
+    >
       <SectionBlob variant="violet" shape="blob" position="top-left" />
       <SectionBlob variant="rose" shape="circle" position="bottom-right" />
 
@@ -125,6 +130,8 @@ export default function PersonalizedAnalysisSection() {
           viewport={{ once: true }}
           transition={{ delay: 0.2 }}
           className="mt-14 text-center"
+          data-scroll-anchor="personalized-cta"
+          data-scroll-label="CTA Analisi"
         >
           <MagneticButton to="/wizard">
             Raccontaci la vostra situazione

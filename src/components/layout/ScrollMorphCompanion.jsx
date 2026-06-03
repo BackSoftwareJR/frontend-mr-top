@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   motion,
+  useMotionValue,
   useMotionValueEvent,
   useReducedMotion,
   useScroll,
@@ -9,28 +10,75 @@ import {
 } from 'framer-motion'
 import {
   BLOB_PATHS,
+  buildReadingPathD,
+  interpolateReadingPath,
   keyframeInputs,
   keyframeOutputs,
+  measureReadingWaypoints,
   MORPH_SPRING,
+  READING_PATH_WAYPOINTS,
   SCROLL_MORPH_KEYFRAMES,
 } from '../../data/scrollMorphSchema'
 
 const INPUT = keyframeInputs(SCROLL_MORPH_KEYFRAMES)
-const MAX_TRAIL_POINTS = 180
-const TRAIL_SAMPLE_MS = 48
 
 const COMPANION_LAYER_CLASS =
   'pointer-events-none fixed inset-0 z-[5] overflow-visible'
 
-function useMorphMotion(scrollYProgress) {
-  const x = useSpring(
-    useTransform(scrollYProgress, INPUT, keyframeOutputs(SCROLL_MORPH_KEYFRAMES, 'x')),
-    MORPH_SPRING,
+function useViewportSize() {
+  const [size, setSize] = useState({ width: 0, height: 0 })
+
+  useEffect(() => {
+    const update = () => {
+      setSize({ width: window.innerWidth, height: window.innerHeight })
+    }
+    update()
+    window.addEventListener('resize', update, { passive: true })
+    return () => window.removeEventListener('resize', update)
+  }, [])
+
+  return size
+}
+
+function useReadingWaypoints() {
+  const [waypoints, setWaypoints] = useState(READING_PATH_WAYPOINTS)
+
+  const remeasure = useCallback(() => {
+    setWaypoints(measureReadingWaypoints())
+  }, [])
+
+  useEffect(() => {
+    remeasure()
+    const t1 = window.setTimeout(remeasure, 120)
+    const t2 = window.setTimeout(remeasure, 600)
+
+    window.addEventListener('resize', remeasure, { passive: true })
+    window.addEventListener('load', remeasure, { passive: true })
+
+    return () => {
+      window.clearTimeout(t1)
+      window.clearTimeout(t2)
+      window.removeEventListener('resize', remeasure)
+      window.removeEventListener('load', remeasure)
+    }
+  }, [remeasure])
+
+  return waypoints
+}
+
+function useMorphMotion(scrollYProgress, waypoints) {
+  const waypointsRef = useRef(waypoints)
+  waypointsRef.current = waypoints
+
+  const pathX = useTransform(scrollYProgress, (p) =>
+    interpolateReadingPath(waypointsRef.current, p).xPercent,
   )
-  const y = useSpring(
-    useTransform(scrollYProgress, INPUT, keyframeOutputs(SCROLL_MORPH_KEYFRAMES, 'y')),
-    MORPH_SPRING,
+  const pathY = useTransform(scrollYProgress, (p) =>
+    interpolateReadingPath(waypointsRef.current, p).yPercent,
   )
+
+  const x = useSpring(pathX, MORPH_SPRING)
+  const y = useSpring(pathY, MORPH_SPRING)
   const scale = useSpring(
     useTransform(scrollYProgress, INPUT, keyframeOutputs(SCROLL_MORPH_KEYFRAMES, 'scale')),
     MORPH_SPRING,
@@ -56,20 +104,36 @@ function useMorphMotion(scrollYProgress) {
   const left = useTransform(x, (v) => `${v}%`)
   const top = useTransform(y, (v) => `${v}%`)
 
-  return { x, y, left, top, scale, rotate, pathD, fill, fillOpacity }
+  return { left, top, scale, rotate, pathD, fill, fillOpacity }
 }
 
-function buildTrailPath(points) {
-  if (points.length < 2) return ''
-  let d = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`
-  for (let i = 1; i < points.length; i += 1) {
-    d += ` L ${points[i].x.toFixed(1)} ${points[i].y.toFixed(1)}`
-  }
-  return d
-}
+function ReadingPathTrail({ waypoints, width, height, progress }) {
+  const ghostRef = useRef(null)
+  const [pathLength, setPathLength] = useState(0)
 
-function ScrollTrail({ points }) {
-  const pathD = buildTrailPath(points)
+  const pathD = useMemo(() => {
+    if (!width || !height) return ''
+    return buildReadingPathD(waypoints, width, height)
+  }, [waypoints, width, height])
+
+  useEffect(() => {
+    if (!ghostRef.current || !pathD) return undefined
+    const len = ghostRef.current.getTotalLength()
+    setPathLength(len)
+    return undefined
+  }, [pathD, width, height])
+
+  const dashOffset = useMotionValue(pathLength)
+  const smoothOffset = useSpring(dashOffset, { stiffness: 90, damping: 32, mass: 0.6 })
+
+  useMotionValueEvent(progress, 'change', (p) => {
+    dashOffset.set(pathLength * (1 - p))
+  })
+
+  useEffect(() => {
+    dashOffset.set(pathLength * (1 - progress.get()))
+  }, [pathLength, dashOffset, progress])
+
   if (!pathD) return null
 
   return (
@@ -79,60 +143,92 @@ function ScrollTrail({ points }) {
       overflow="visible"
     >
       <defs>
-        <linearGradient id="scroll-trail-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#E07A5F" stopOpacity="0.85" />
-          <stop offset="45%" stopColor="#9B8EC4" stopOpacity="0.75" />
-          <stop offset="100%" stopColor="#5CB8A8" stopOpacity="0.65" />
+        <linearGradient id="reading-path-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#E07A5F" stopOpacity="0.9" />
+          <stop offset="45%" stopColor="#9B8EC4" stopOpacity="0.85" />
+          <stop offset="100%" stopColor="#5CB8A8" stopOpacity="0.8" />
         </linearGradient>
-        <filter id="scroll-trail-glow" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
+        <filter id="reading-path-glow" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
       </defs>
+
+      {/* Ghost guide — full reading path */}
       <path
+        ref={ghostRef}
         d={pathD}
         fill="none"
-        stroke="url(#scroll-trail-gradient)"
-        strokeWidth="2.5"
+        stroke="url(#reading-path-gradient)"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity="0.45"
-        filter="url(#scroll-trail-glow)"
+        opacity="0.12"
       />
-      <path
+
+      {/* Active segment — drawn as user scrolls */}
+      <motion.path
         d={pathD}
         fill="none"
-        stroke="url(#scroll-trail-gradient)"
-        strokeWidth="1.25"
+        stroke="url(#reading-path-gradient)"
+        strokeWidth="2.75"
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity="0.7"
+        filter="url(#reading-path-glow)"
+        style={{
+          strokeDasharray: pathLength,
+          strokeDashoffset: smoothOffset,
+          opacity: 0.55,
+        }}
+      />
+
+      {/* Bright leading edge */}
+      <motion.path
+        d={pathD}
+        fill="none"
+        stroke="url(#reading-path-gradient)"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{
+          strokeDasharray: pathLength,
+          strokeDashoffset: smoothOffset,
+          opacity: 0.85,
+        }}
       />
     </svg>
   )
 }
 
 function StaticCompanion() {
-  const [center, setCenter] = useState(null)
-
-  useEffect(() => {
-    setCenter({
-      x: window.innerWidth * 0.82,
-      y: window.innerHeight * 0.18,
-    })
-  }, [])
+  const { width, height } = useViewportSize()
+  const pathD = useMemo(
+    () => (width && height ? buildReadingPathD(READING_PATH_WAYPOINTS, width, height) : ''),
+    [width, height],
+  )
 
   return (
     <div className={COMPANION_LAYER_CLASS} aria-hidden="true">
-      {center ? <ScrollTrail points={[center]} /> : null}
+      {pathD ? (
+        <svg className="absolute inset-0 h-full w-full" aria-hidden="true" overflow="visible">
+          <path
+            d={pathD}
+            fill="none"
+            stroke="#E07A5F"
+            strokeWidth="2"
+            strokeLinecap="round"
+            opacity="0.12"
+          />
+        </svg>
+      ) : null}
       <div
         className="absolute will-change-transform"
         style={{
-          left: '82%',
-          top: '18%',
+          left: '78%',
+          top: '14%',
           transform: 'translate(-50%, -50%)',
         }}
       >
@@ -150,7 +246,7 @@ function StaticCompanion() {
           <path
             d={BLOB_PATHS[0]}
             fill="#E07A5F"
-            opacity={0.38}
+            opacity={0.34}
             filter="url(#scroll-morph-blur-static)"
           />
         </svg>
@@ -164,49 +260,19 @@ function MorphCompanion() {
     offset: ['start start', 'end end'],
   })
 
-  const { x, y, left, top, scale, rotate, pathD, fill, fillOpacity } =
-    useMorphMotion(scrollYProgress)
-
-  const [trailPoints, setTrailPoints] = useState([])
-  const lastSampleRef = useRef(0)
-  const seededRef = useRef(false)
-
-  const sampleTrailPoint = useCallback(() => {
-    const px = (x.get() / 100) * window.innerWidth
-    const py = (y.get() / 100) * window.innerHeight
-
-    setTrailPoints((prev) => {
-      const last = prev[prev.length - 1]
-      if (last && Math.hypot(last.x - px, last.y - py) < 6) return prev
-      const next = [...prev, { x: px, y: py }]
-      return next.length > MAX_TRAIL_POINTS ? next.slice(-MAX_TRAIL_POINTS) : next
-    })
-  }, [x, y])
-
-  useEffect(() => {
-    if (seededRef.current) return undefined
-    seededRef.current = true
-    sampleTrailPoint()
-    return undefined
-  }, [sampleTrailPoint])
-
-  useMotionValueEvent(scrollYProgress, 'change', () => {
-    const now = performance.now()
-    if (now - lastSampleRef.current < TRAIL_SAMPLE_MS) return
-    lastSampleRef.current = now
-    sampleTrailPoint()
-  })
-
-  useMotionValueEvent(x, 'change', () => {
-    const now = performance.now()
-    if (now - lastSampleRef.current < TRAIL_SAMPLE_MS) return
-    lastSampleRef.current = now
-    sampleTrailPoint()
-  })
+  const waypoints = useReadingWaypoints()
+  const { width, height } = useViewportSize()
+  const { left, top, scale, rotate, pathD, fill, fillOpacity } =
+    useMorphMotion(scrollYProgress, waypoints)
 
   return (
     <div className={COMPANION_LAYER_CLASS} aria-hidden="true">
-      <ScrollTrail points={trailPoints} />
+      <ReadingPathTrail
+        waypoints={waypoints}
+        width={width}
+        height={height}
+        progress={scrollYProgress}
+      />
       <motion.div
         className="absolute will-change-transform"
         style={{
