@@ -1,6 +1,6 @@
 /**
  * Scroll reading line — document-space path through section anchors.
- * Hero dot → hero CTA orbit → bento → stats → … → final CTA.
+ * Hero dot → hero CTA orbit → bento → stats → … → final CTA orbit.
  */
 
 /** Nav morph spring (shared with sticky header) */
@@ -10,7 +10,7 @@ export const MORPH_SPRING = {
   mass: 0.85,
 }
 
-/** Narrative order for DOM anchors (orbit points injected after hero-cta) */
+/** Narrative order for DOM anchors (orbit points injected after CTAs) */
 export const ANCHOR_ORDER = [
   'hero-dot',
   'hero-cta',
@@ -25,6 +25,8 @@ export const ANCHOR_ORDER = [
   'faq',
   'cta-final',
 ]
+
+export const CTA_GLOW_SEGMENTS = ['hero-cta', 'cta-final']
 
 /** Fallback document-space points when anchors are not yet measured */
 export const FALLBACK_PATH_POINTS = [
@@ -57,35 +59,45 @@ export function measureDocumentPoint(el) {
 }
 
 /**
- * Smooth circuit around the hero CTA — 4 bezier-friendly samples on an ellipse
- * offset to the right/below so the line visibly loops the button.
+ * Smooth circuit around a CTA — bezier-friendly samples on an ellipse
+ * offset so the line loops the button without cutting through cards.
  */
-export function buildCtaOrbitPoints(ctaEl, entryPoint) {
+export function buildCtaOrbitPoints(ctaEl, entryPoint, options = {}) {
+  const { variant = 'hero' } = options
   const rect = ctaEl.getBoundingClientRect()
   const cx = rect.left + rect.width / 2 + window.scrollX
   const cy = rect.top + rect.height / 2 + window.scrollY
-  const rx = Math.max(rect.width, rect.height) * 0.62 + 36
-  const ry = rx * 0.72
+
+  const scale = variant === 'final' ? 0.58 : 0.62
+  const pad = variant === 'final' ? 44 : 40
+  const rx = Math.max(rect.width, rect.height) * scale + pad
+  const ry = rx * (variant === 'final' ? 0.68 : 0.7)
 
   const entryAngle = Math.atan2(entryPoint.y - cy, entryPoint.x - cx)
-  const startAngle = entryAngle - Math.PI * 0.55
+  const arcSpan = variant === 'final' ? Math.PI * 1.25 : Math.PI * 1.35
+  const startAngle =
+    entryAngle - (variant === 'final' ? Math.PI * 0.5 : Math.PI * 0.55)
 
   const points = []
   for (let i = 1; i <= ORBIT_SEGMENTS; i += 1) {
     const t = i / (ORBIT_SEGMENTS + 1)
-    const angle = startAngle + t * Math.PI * 1.35
+    const angle = startAngle + t * arcSpan
     points.push({
       x: cx + Math.cos(angle) * rx,
       y: cy + Math.sin(angle) * ry,
       synthetic: true,
+      glowSegment: variant === 'final' ? 'cta-final' : 'hero-cta',
     })
   }
 
-  const exitAngle = startAngle + Math.PI * 1.35
+  const exitAngle = startAngle + arcSpan
+  const exitYOffset = variant === 'final' ? 24 : 18
+  const exitShrink = variant === 'final' ? 0.88 : 0.92
   points.push({
-    x: cx + Math.cos(exitAngle) * rx * 0.92,
-    y: cy + Math.sin(exitAngle) * ry * 0.92 + 18,
+    x: cx + Math.cos(exitAngle) * rx * exitShrink,
+    y: cy + Math.sin(exitAngle) * ry * exitShrink + exitYOffset,
     synthetic: true,
+    glowSegment: variant === 'final' ? 'cta-final' : 'hero-cta',
   })
 
   return points
@@ -129,7 +141,64 @@ function denormalizeFallback(docWidth, docHeight) {
   }))
 }
 
-/** Measure ordered waypoints in document space, with CTA orbit after hero-cta */
+/** Map each waypoint to its closest length along an SVG path (0…totalLength) */
+export function measureWaypointLengths(pathEl, points) {
+  const total = pathEl.getTotalLength()
+  if (!total || !points.length) return []
+
+  const samples = Math.min(600, Math.max(80, Math.ceil(total / 1.5)))
+  const lengths = []
+
+  for (const pt of points) {
+    let bestLen = 0
+    let bestDist = Infinity
+    for (let s = 0; s <= samples; s += 1) {
+      const len = (s / samples) * total
+      const p = pathEl.getPointAtLength(len)
+      const d = (p.x - pt.x) ** 2 + (p.y - pt.y) ** 2
+      if (d < bestDist) {
+        bestDist = d
+        bestLen = len
+      }
+    }
+    lengths.push(bestLen)
+  }
+
+  return lengths
+}
+
+/** Progress ranges (0–1) where the scroll line visits each CTA orbit */
+export function computeCtaGlowRanges(pathEl, points) {
+  const total = pathEl?.getTotalLength?.() ?? 0
+  if (!total || !points.length) return []
+
+  const waypointLengths = measureWaypointLengths(pathEl, points)
+  const ranges = []
+
+  for (const segmentId of CTA_GLOW_SEGMENTS) {
+    const indices = points
+      .map((p, i) =>
+        p.anchorId === segmentId || p.glowSegment === segmentId ? i : -1,
+      )
+      .filter((i) => i >= 0)
+
+    if (!indices.length) continue
+
+    const startLen = Math.min(...indices.map((i) => waypointLengths[i] ?? 0))
+    const endLen = Math.max(...indices.map((i) => waypointLengths[i] ?? 0))
+    const pad = total * 0.018
+
+    ranges.push({
+      id: segmentId,
+      start: Math.max(0, (startLen - pad) / total),
+      end: Math.min(1, (endLen + pad) / total),
+    })
+  }
+
+  return ranges
+}
+
+/** Measure ordered waypoints in document space, with CTA orbits after hero/final CTAs */
 export function measureReadingPathPoints(fallback = FALLBACK_PATH_POINTS) {
   if (typeof document === 'undefined') return []
 
@@ -157,7 +226,13 @@ export function measureReadingPathPoints(fallback = FALLBACK_PATH_POINTS) {
 
     if (anchorId === 'hero-cta') {
       const entry = pathPoints[pathPoints.length - 2] ?? point
-      const orbit = buildCtaOrbitPoints(el, entry)
+      const orbit = buildCtaOrbitPoints(el, entry, { variant: 'hero' })
+      pathPoints.push(...orbit)
+    }
+
+    if (anchorId === 'cta-final') {
+      const entry = pathPoints[pathPoints.length - 2] ?? point
+      const orbit = buildCtaOrbitPoints(el, entry, { variant: 'final' })
       pathPoints.push(...orbit)
     }
   }
