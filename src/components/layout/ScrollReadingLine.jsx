@@ -10,10 +10,8 @@ import {
 import {
   buildProgressLookup,
   buildReadingPathD,
-  clampPointToViewport,
   computeCtaGlowRanges,
   CTA_GLOW_SEGMENTS,
-  documentToViewport,
   interpolateProgressLookup,
   measureReadingPathPoints,
 } from '../../data/readingPathSchema'
@@ -22,7 +20,9 @@ const LAYER_CLASS =
   'pointer-events-none fixed inset-0 z-[5] overflow-hidden'
 
 const STROKE_OPACITY = 0.62
-const VIEWPORT_MARGIN = 22
+/** Fixed reading head — path slides so progress point maps here */
+const CENTER_X_RATIO = 0.5
+const CENTER_Y_RATIO = 0.45
 const RESIZE_DEBOUNCE_MS = 150
 
 function useViewportSize() {
@@ -193,8 +193,6 @@ function ReadingPathLayer({
     return undefined
   }, [pathD, points])
 
-  const pathYOffset = useTransform(scrollY, (y) => -y)
-
   const strokeDashoffset = useTransform(scrollYProgress, (p) => {
     const len = lookupRef.current.totalLength || pathLength
     if (!len || p <= 0) return len
@@ -203,23 +201,24 @@ function ReadingPathLayer({
 
   const cursorOpacity = useTransform(scrollYProgress, (p) => (p > 0 ? 1 : 0))
 
-  const cursorLeft = useTransform(
-    [scrollYProgress, scrollY],
-    ([p, scrollOffset]) => {
-      if (p <= 0) return 0
-      const pt = interpolateProgressLookup(lookupRef.current, p)
-      const view = documentToViewport(pt, scrollOffset)
-      return clampPointToViewport(view, viewportRef.current, VIEWPORT_MARGIN).x - 6
-    },
-  )
+  /** Camera: translate path so point-at-progress sits under fixed center dot */
+  const pathTranslateX = useTransform(scrollYProgress, (p) => {
+    if (p <= 0) return 0
+    const pt = interpolateProgressLookup(lookupRef.current, p)
+    const { width } = viewportRef.current
+    if (!width) return 0
+    return width * CENTER_X_RATIO - pt.x
+  })
 
-  const cursorTop = useTransform(
+  const pathTranslateY = useTransform(
     [scrollYProgress, scrollY],
     ([p, scrollOffset]) => {
       if (p <= 0) return 0
       const pt = interpolateProgressLookup(lookupRef.current, p)
-      const view = documentToViewport(pt, scrollOffset)
-      return clampPointToViewport(view, viewportRef.current, VIEWPORT_MARGIN).y - 6
+      const { height } = viewportRef.current
+      if (!height) return 0
+      const centerY = height * CENTER_Y_RATIO
+      return centerY - pt.y + scrollOffset
     },
   )
 
@@ -254,7 +253,13 @@ function ReadingPathLayer({
             </defs>
 
             <g clipPath="url(#wenando-reading-viewport-clip)">
-              <motion.g style={{ y: pathYOffset }}>
+              <motion.g
+                style={{
+                  x: pathTranslateX,
+                  y: pathTranslateY,
+                  willChange: 'transform',
+                }}
+              >
                 <motion.path
                   d={pathD}
                   fill="none"
@@ -275,15 +280,13 @@ function ReadingPathLayer({
 
           {showCursor ? (
             <motion.div
-              className="pointer-events-none absolute h-3 w-3 rounded-full"
+              className="pointer-events-none fixed left-1/2 top-[45%] h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full"
               style={{
-                left: cursorLeft,
-                top: cursorTop,
                 opacity: cursorOpacity,
                 background:
                   'linear-gradient(180deg, #E07A5F 0%, #9B8EC4 45%, #5CB8A8 100%)',
                 boxShadow: '0 0 10px rgba(224,122,95,0.35)',
-                willChange: 'left, top, opacity',
+                willChange: 'opacity',
               }}
               aria-hidden="true"
             />
