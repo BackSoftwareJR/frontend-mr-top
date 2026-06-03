@@ -4,11 +4,11 @@ import { ACCENT_PALETTE } from './MulticolorHeading'
 
 const EASE = [0.25, 0.46, 0.45, 0.94]
 
-const BRAND_FONT = 'font-brand font-bold tracking-normal'
+const BRAND_FONT = 'font-brand font-semibold tracking-normal'
 
 const SIZE_STYLES = {
   nav: {
-    word: 'text-xl sm:text-2xl',
+    word: 'text-2xl sm:text-3xl',
     mark: 'h-14 w-14 sm:h-16 sm:w-16',
   },
   sm: { word: 'text-sm tracking-tight', mark: 'h-9 w-9' },
@@ -34,7 +34,7 @@ function StaticNavigandoWordmark({ styles, className }) {
   const letters = 'navigando'.split('')
   return (
     <span
-      className={`inline-flex items-baseline leading-none ${BRAND_FONT} ${styles.word} ${className}`}
+      className={`inline-flex items-baseline overflow-visible pb-0.5 leading-[1.2] ${BRAND_FONT} ${styles.word} ${className}`}
       aria-hidden="true"
     >
       {letters.map((char, i) => (
@@ -86,7 +86,7 @@ function NavigandoWordmark({ size = 'md', className = '' }) {
 
   return (
     <span
-      className={`inline-flex items-baseline leading-none ${BRAND_FONT} ${styles.word} ${className}`}
+      className={`inline-flex items-baseline overflow-visible pb-0.5 leading-[1.2] ${BRAND_FONT} ${styles.word} ${className}`}
       aria-hidden="true"
     >
       {/* n — coral */}
@@ -97,7 +97,7 @@ function NavigandoWordmark({ size = 'md', className = '' }) {
       {/* avig — width collapses to 0 so n meets an with no gap */}
       <motion.span
         layout
-        className="inline-flex overflow-hidden whitespace-nowrap"
+        className="inline-flex overflow-x-hidden overflow-y-visible whitespace-nowrap pb-0.5"
         initial={false}
         animate={{
           maxWidth: expanded ? '5ch' : 0,

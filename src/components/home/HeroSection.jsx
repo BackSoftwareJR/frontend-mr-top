@@ -107,9 +107,12 @@ function useNavMorph() {
 function HomeNavLinks() {
   return (
     <>
-      <Link to="/" className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+      <Link
+        to="/"
+        className="flex min-w-0 items-center gap-1 overflow-visible sm:gap-1.5"
+      >
         <WenandoMark className="h-14 w-14 shrink-0 sm:h-16 sm:w-16" />
-        <WenandoLogo size="nav" className="min-w-0" />
+        <WenandoLogo size="nav" className="min-w-0 overflow-visible" />
       </Link>
       <div className="flex items-center gap-2 sm:gap-3">
         <Link
@@ -138,7 +141,7 @@ function HomeNav() {
         transition={{ duration: 0.5 }}
         className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4"
       >
-        <nav className="flex w-full max-w-5xl items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white/80 px-3 py-1.5 shadow-sm backdrop-blur-2xl sm:px-4 sm:py-2">
+        <nav className="flex min-h-[56px] w-full max-w-5xl items-center justify-between gap-3 overflow-visible rounded-2xl border border-slate-200/80 bg-white/80 px-3 py-1 shadow-sm backdrop-blur-2xl sm:px-4 sm:py-1.5">
           <HomeNavLinks />
         </nav>
       </motion.header>
@@ -159,7 +162,7 @@ function HomeNav() {
     >
       <motion.nav
         style={{ borderRadius, maxWidth: navMaxWidth }}
-        className="flex w-full items-center justify-between gap-3 border border-slate-200/80 bg-white/80 px-3 py-1.5 shadow-sm backdrop-blur-2xl sm:px-4 sm:py-2"
+        className="flex min-h-[56px] w-full items-center justify-between gap-3 overflow-visible border border-slate-200/80 bg-white/80 px-3 py-1 shadow-sm backdrop-blur-2xl sm:px-4 sm:py-1.5"
       >
         <HomeNavLinks />
       </motion.nav>
