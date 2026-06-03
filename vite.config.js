@@ -4,6 +4,14 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [react({ jsxImportSource: 'react' }), tailwindcss()],
+  server: {
+    proxy: {
+      '/api': {
+        target: process.env.VITE_API_PROXY_TARGET ?? 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+    },
+  },
   resolve: {
     dedupe: ['react', 'react-dom', 'react/jsx-runtime'],
   },

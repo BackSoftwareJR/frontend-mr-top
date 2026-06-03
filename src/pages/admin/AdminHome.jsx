@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { TrendingUp } from 'lucide-react'
 import {
   adminMetrics,
@@ -7,6 +7,8 @@ import {
   revenueTimelineData,
   transactions,
 } from '../../data/mockAdmin'
+import { fetchDashboardStats } from '../../services/adminService'
+import { getBearerToken, isApiConfigured } from '../../services/apiClient'
 import AdminMetricCard from '../../components/admin/AdminMetricCard'
 import AdminDonutChart from '../../components/admin/AdminDonutChart'
 import AdminRecentTransactions from '../../components/admin/AdminRecentTransactions'
@@ -192,6 +194,34 @@ function LeadFlowChart({ data }) {
 }
 
 export default function AdminHome() {
+  const [metrics, setMetrics] = useState(adminMetrics)
+
+  useEffect(() => {
+    if (!isApiConfigured() || !getBearerToken()) return
+
+    let cancelled = false
+
+    fetchDashboardStats()
+      .then((apiMetrics) => {
+        if (cancelled) return
+        setMetrics((prev) => ({
+          ...prev,
+          mrr: apiMetrics.mrr,
+          activeLeadsToday: apiMetrics.activeLeadsToday,
+          pendingApprovals: apiMetrics.pendingApprovals,
+        }))
+      })
+      .catch((error) => {
+        if (import.meta.env.DEV) {
+          console.warn('[Wenando Admin] Dashboard stats API unavailable — mock fallback:', error)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const {
     mrr,
     activeLeadsToday,
@@ -200,7 +230,7 @@ export default function AdminHome() {
     churn,
     conversionRate,
     avgDealSize,
-  } = adminMetrics
+  } = metrics
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">

@@ -1,16 +1,14 @@
 import { Link } from 'react-router-dom'
-import { useAuth } from '../../context/AuthContext'
+
+/** B2C guest/family login (email OTP). B2B uses footer → /pro only. */
+export const CONSUMER_ACCESS_PATH = '/accedi'
 
 const linkClassName =
   'inline-flex min-h-[44px] items-center rounded-full px-4 py-2 text-sm font-medium tracking-tight text-slate-600 transition-colors hover:text-teal-700'
 
 export default function ConsumerAccediNavLink() {
-  const { isAuthenticated, userType } = useAuth()
-  const to =
-    isAuthenticated && userType === 'consumer' ? '/user' : '/accedi'
-
   return (
-    <Link to={to} className={linkClassName}>
+    <Link to={CONSUMER_ACCESS_PATH} className={linkClassName}>
       Accedi
     </Link>
   )

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import BudgetRangeSlider from './BudgetRangeSlider'
 import InfoDrawer, { InfoHelpButton } from '../ui/InfoDrawer'
 import { autonomyInfo } from '../../data/autonomyInfo'
+import { WIZARD_CONSENT_LABELS, WIZARD_CONSENT_UI } from '../../constants/wizardConsent'
 
 const MOCK_LOCATIONS = [
   { label: 'Milano (MI)', value: 'milano-mi' },
@@ -219,18 +221,56 @@ export function BudgetStep({ step, value, onChange, onNext, onBack }) {
   )
 }
 
-export function ContactStep({ step, value, onChange, onSubmit, onBack, canSubmit }) {
+const consentCheckboxClass =
+  'mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-teal-800 focus:ring-teal-800/20'
+
+const consentLinkClass =
+  'font-semibold text-teal-800 underline-offset-2 hover:underline'
+
+function ConsentCheckbox({ id, checked, onChange, children }) {
+  return (
+    <label
+      htmlFor={id}
+      className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200/50 bg-white/60 px-4 py-3 text-sm leading-snug text-slate-700 backdrop-blur-xl transition-colors hover:bg-white/80"
+    >
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className={consentCheckboxClass}
+      />
+      <span>{children}</span>
+    </label>
+  )
+}
+
+export function ContactStep({
+  step,
+  value,
+  onChange,
+  onSubmit,
+  onBack,
+  canSubmit,
+  consents,
+  onConsentsChange,
+}) {
   const formData = value || {}
 
   const updateField = (name, fieldValue) => {
     onChange({ ...formData, [name]: fieldValue })
   }
 
+  const handleSubmit = () => {
+    if (!canSubmit) return
+    onSubmit(consents)
+  }
+
   return (
     <div>
       <p className="mb-4 text-sm text-slate-500">Ti contatteremo solo con le opzioni più adatte</p>
 
-      <div className="mb-8 space-y-3">
+      <div className="mb-6 space-y-3">
         {step.fields.map((field, index) => (
           <motion.input
             key={field.name}
@@ -249,9 +289,52 @@ export function ContactStep({ step, value, onChange, onSubmit, onBack, canSubmit
         ))}
       </div>
 
+      <fieldset className="mb-8 space-y-2.5">
+        <legend className="sr-only">Consensi obbligatori e facoltativi</legend>
+        <ConsentCheckbox
+          id="consent-privacy"
+          checked={consents.privacy}
+          onChange={(v) => onConsentsChange({ ...consents, privacy: v })}
+        >
+          {WIZARD_CONSENT_UI.privacy_policy.prefix}
+          <Link
+            to={WIZARD_CONSENT_UI.privacy_policy.link.to}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={consentLinkClass}
+          >
+            {WIZARD_CONSENT_UI.privacy_policy.link.text}
+          </Link>
+          {WIZARD_CONSENT_UI.privacy_policy.suffix}
+        </ConsentCheckbox>
+        <ConsentCheckbox
+          id="consent-terms"
+          checked={consents.terms}
+          onChange={(v) => onConsentsChange({ ...consents, terms: v })}
+        >
+          {WIZARD_CONSENT_UI.terms_b2c.prefix}
+          <Link
+            to={WIZARD_CONSENT_UI.terms_b2c.link.to}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={consentLinkClass}
+          >
+            {WIZARD_CONSENT_UI.terms_b2c.link.text}
+          </Link>
+          {WIZARD_CONSENT_UI.terms_b2c.suffix}
+        </ConsentCheckbox>
+        <ConsentCheckbox
+          id="consent-partner"
+          checked={consents.partnerContact}
+          onChange={(v) => onConsentsChange({ ...consents, partnerContact: v })}
+        >
+          {WIZARD_CONSENT_LABELS.lead_sharing}
+        </ConsentCheckbox>
+      </fieldset>
+
       <StepNav
         onBack={onBack}
-        onPrimary={onSubmit}
+        onPrimary={handleSubmit}
         primaryLabel={step.submitLabel}
         primaryDisabled={!canSubmit}
       />
@@ -259,11 +342,19 @@ export function ContactStep({ step, value, onChange, onSubmit, onBack, canSubmit
   )
 }
 
-export function isContactComplete(step, value) {
+export function isContactFieldsComplete(step, value) {
   if (!value) return false
   return step.fields.every((field) => {
     if (!field.required) return true
     const fieldValue = value[field.name]
     return fieldValue && fieldValue.trim().length > 0
   })
+}
+
+export function isContactSubmitReady(step, value, consents) {
+  return (
+    isContactFieldsComplete(step, value) &&
+    consents?.privacy === true &&
+    consents?.terms === true
+  )
 }

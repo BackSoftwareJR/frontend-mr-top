@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-route
 import { AuthProvider } from './context/AuthContext'
 import { B2BProvider } from './context/B2BContext'
 import { B2BProtectedRoute, ConsumerProtectedRoute } from './components/auth/ProtectedRoute'
+import CookieBanner from './components/CookieBanner'
+import { usePlausibleAnalytics } from './hooks/usePlausibleAnalytics'
 import { useIsMobile } from './utils/performanceTier'
 
 const Home = lazy(() => import('./pages/Home'))
@@ -32,6 +34,20 @@ const ManagePartners = lazy(() => import('./pages/admin/ManagePartners'))
 const LeadRouter = lazy(() => import('./pages/admin/LeadRouter'))
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'))
 const DesktopRouteTransitions = lazy(() => import('./DesktopRouteTransitions'))
+const PrivacyPage = lazy(() => import('./pages/legal/PrivacyPage'))
+const CookiesPage = lazy(() => import('./pages/legal/CookiesPage'))
+const TermsPage = lazy(() => import('./pages/legal/TermsPage'))
+const TermsPartnersPage = lazy(() => import('./pages/legal/TermsPartnersPage'))
+
+function AppShell() {
+  usePlausibleAnalytics()
+  return (
+    <>
+      <AppRoutes />
+      <CookieBanner />
+    </>
+  )
+}
 
 function B2BShell() {
   return (
@@ -62,6 +78,10 @@ function AppRoutes() {
         <Route path="/wizard" element={<Wizard />} />
         <Route path="/results" element={<ResultsPage />} />
         <Route path="/accedi" element={<Accedi />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/cookies" element={<CookiesPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/terms-partners" element={<TermsPartnersPage />} />
         <Route path="/login" element={<Navigate to="/accedi" replace />} />
         <Route path="/dashboard" element={<Navigate to="/user" replace />} />
         <Route path="/user" element={<UserShell />}>
@@ -112,7 +132,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <AppShell />
       </AuthProvider>
     </BrowserRouter>
   )

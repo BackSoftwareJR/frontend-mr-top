@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Check, Eye, MapPin, X } from 'lucide-react'
 import { mockPartnerRegistrations } from '../../data/mockAdmin'
+import { approvePartner, rejectPartner } from '../../services/adminService'
+import { getBearerToken, isApiConfigured } from '../../services/apiClient'
 import {
   adminGlassCard,
   adminPageSubtitle,
@@ -91,14 +93,44 @@ export default function ManagePartners() {
     setTimeout(() => setToast(null), 2500)
   }
 
-  const handleApprove = (id) => {
+  const handleApprove = async (id) => {
+    const partner = partners.find((p) => p.id === id)
+    const companyId = partner?.companyId ?? id
+
+    if (isApiConfigured() && getBearerToken() && partner?.companyId) {
+      try {
+        await approvePartner(companyId)
+      } catch (error) {
+        if (!import.meta.env.DEV) {
+          showToast(error.message ?? 'Approvazione non riuscita')
+          return
+        }
+        console.warn('[Wenando Admin] Approve API failed — mock fallback:', error)
+      }
+    }
+
     setPartners((prev) =>
       prev.map((p) => (p.id === id ? { ...p, stato: 'Active' } : p)),
     )
     showToast('Partner approvato con successo')
   }
 
-  const handleReject = (id) => {
+  const handleReject = async (id) => {
+    const partner = partners.find((p) => p.id === id)
+    const companyId = partner?.companyId ?? id
+
+    if (isApiConfigured() && getBearerToken() && partner?.companyId) {
+      try {
+        await rejectPartner(companyId)
+      } catch (error) {
+        if (!import.meta.env.DEV) {
+          showToast(error.message ?? 'Rifiuto non riuscito')
+          return
+        }
+        console.warn('[Wenando Admin] Reject API failed — mock fallback:', error)
+      }
+    }
+
     setPartners((prev) => prev.filter((p) => p.id !== id))
     showToast('Registrazione rifiutata')
   }

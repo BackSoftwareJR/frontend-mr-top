@@ -42,9 +42,6 @@ export default function Accedi() {
     if (isAuthenticated && userType === 'consumer') {
       navigate('/user', { replace: true })
     }
-    if (isAuthenticated && userType === 'b2b') {
-      navigate('/pro/dashboard', { replace: true })
-    }
   }, [isAuthenticated, navigate, userType])
 
   useEffect(() => {

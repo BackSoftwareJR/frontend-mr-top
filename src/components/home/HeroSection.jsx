@@ -97,6 +97,32 @@ function HomeNav() {
 function HomeFooter() {
   return (
     <footer className="border-t border-black/5 px-6 py-12 text-center">
+      <div className="mb-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+        <Link
+          to="/privacy"
+          className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-800"
+        >
+          Privacy
+        </Link>
+        <span className="hidden text-slate-300 sm:inline" aria-hidden>
+          ·
+        </span>
+        <Link
+          to="/cookies"
+          className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-800"
+        >
+          Cookie
+        </Link>
+        <span className="hidden text-slate-300 sm:inline" aria-hidden>
+          ·
+        </span>
+        <Link
+          to="/terms"
+          className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-800"
+        >
+          Termini
+        </Link>
+      </div>
       <div className="mb-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
         <Link
           to="/admin"

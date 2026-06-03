@@ -11,8 +11,10 @@ import AutonomyStep, {
   LocationStep,
   BudgetStep,
   ContactStep,
-  isContactComplete,
+  isContactSubmitReady,
 } from '../components/wizard/WizardSteps'
+import { buildWizardConsentPayload } from '../constants/wizardConsent'
+import { submitLead } from '../services/leadService'
 
 const slideVariants = {
   enter: (direction) => ({
@@ -35,6 +37,13 @@ export default function Wizard() {
   const [direction, setDirection] = useState(1)
   const [answers, setAnswers] = useState({})
   const [analyzing, setAnalyzing] = useState(false)
+  const [wizardConsents, setWizardConsents] = useState({
+    privacy: false,
+    terms: false,
+    partnerContact: false,
+  })
+  const [submitError, setSubmitError] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
 
   const steps = wizardConfig.steps
   const step = steps[currentStep]
@@ -48,13 +57,47 @@ export default function Wizard() {
     if (currentStep < steps.length - 1) {
       setDirection(1)
       setCurrentStep((s) => s + 1)
-    } else {
+    }
+  }
+
+  const handleContactSubmit = async (consents) => {
+    const contactStep = steps.find((s) => s.type === 'contact-form')
+    if (!contactStep || !isContactSubmitReady(contactStep, answers[contactStep.id], consents)) {
+      return
+    }
+
+    setSubmitError(null)
+    setSubmitting(true)
+
+    const consentPayload = buildWizardConsentPayload(consents, answers)
+
+    try {
+      const result = await submitLead({ answers, consents })
+      setAnswers((prev) => ({
+        ...prev,
+        _consents: consents,
+        _consentPayload: consentPayload,
+        _leadUuid: result.lead?.uuid,
+        _leadPublicRef: result.lead?.public_ref,
+        _leadMock: Boolean(result._mock),
+      }))
       setAnalyzing(true)
+    } catch (error) {
+      console.error('[Wenando] Wizard lead submit failed:', error)
+      setSubmitError(error.message ?? 'Invio non riuscito. Riprova tra poco.')
+    } finally {
+      setSubmitting(false)
     }
   }
 
   const handleAnalysisComplete = useCallback(() => {
-    navigate('/results', { state: { answers }, replace: true })
+    navigate('/results', {
+      state: {
+        answers,
+        leadUuid: answers._leadUuid,
+      },
+      replace: true,
+    })
   }, [navigate, answers])
 
   const goBack = () => {
@@ -105,9 +148,11 @@ export default function Wizard() {
             step={step}
             value={answers[step.id]}
             onChange={(v) => updateAnswer(step.id, v)}
-            onSubmit={goNext}
+            onSubmit={handleContactSubmit}
             onBack={goBack}
-            canSubmit={isContactComplete(step, answers[step.id])}
+            consents={wizardConsents}
+            onConsentsChange={setWizardConsents}
+            canSubmit={isContactSubmitReady(step, answers[step.id], wizardConsents) && !submitting}
           />
         )
       default:
@@ -148,6 +193,11 @@ export default function Wizard() {
                 trigger="mount"
               />
               {renderStepContent()}
+              {submitError && (
+                <p className="mt-4 rounded-xl border border-red-200/60 bg-red-50/80 px-4 py-3 text-sm text-red-800" role="alert">
+                  {submitError}
+                </p>
+              )}
             </motion.div>
           </AnimatePresence>
         </div>
