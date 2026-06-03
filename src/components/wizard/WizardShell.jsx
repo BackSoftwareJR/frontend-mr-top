@@ -4,7 +4,7 @@ import { CheckCircle2 } from 'lucide-react'
 import GlassCard from '../ui/GlassCard'
 import MagneticButton from '../ui/MagneticButton'
 import MulticolorHeading from '../ui/MulticolorHeading'
-import WenandoLogo from '../ui/WenandoLogo'
+import { WenandoMark } from '../ui/WenandoLogo'
 
 export function WizardComplete() {
   return (
@@ -43,7 +43,9 @@ export function WizardHeader({ progress, onClose }) {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4 sm:px-6">
-        <WenandoLogo size="sm" />
+        <Link to="/" onClick={onClose} aria-label="Wenando home">
+          <WenandoMark className="h-8 w-8" />
+        </Link>
         <Link
           to="/"
           onClick={onClose}

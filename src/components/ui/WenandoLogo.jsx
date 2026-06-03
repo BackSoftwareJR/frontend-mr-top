@@ -3,25 +3,29 @@ import { motion, useReducedMotion } from 'framer-motion'
 const EASE = [0.25, 0.46, 0.45, 0.94]
 
 const SIZE_STYLES = {
+  nav: {
+    word: 'text-[15px] sm:text-base',
+    we: 'text-[15px] sm:text-base',
+    tag: 'text-[7px] sm:text-[8px] tracking-[0.18em]',
+    tagMargin: 'mt-0.5',
+  },
   sm: {
     word: 'text-sm',
     we: 'text-sm',
     tag: 'text-[9px] tracking-[0.22em]',
+    tagMargin: 'mt-1',
   },
   md: {
     word: 'text-base',
     we: 'text-base',
     tag: 'text-[10px] tracking-[0.25em]',
+    tagMargin: 'mt-1.5',
   },
   lg: {
     word: 'text-2xl sm:text-3xl',
     we: 'text-2xl sm:text-3xl',
     tag: 'text-xs tracking-[0.28em]',
-  },
-  hero: {
-    word: 'text-4xl sm:text-5xl md:text-6xl',
-    we: 'text-4xl sm:text-5xl md:text-6xl',
-    tag: 'text-xs sm:text-sm tracking-[0.32em]',
+    tagMargin: 'mt-2',
   },
 }
 
@@ -102,7 +106,7 @@ export default function WenandoLogo({
               ? { duration: 0 }
               : { duration: 0.7, delay: 1.15, ease: EASE }
           }
-          className={`mt-2 font-semibold text-slate-400 uppercase ${styles.tag}`}
+          className={`${styles.tagMargin || 'mt-2'} font-semibold text-slate-400 uppercase ${styles.tag}`}
         >
           navigando
         </motion.span>

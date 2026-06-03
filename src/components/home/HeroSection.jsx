@@ -19,15 +19,6 @@ export default function HeroSection() {
       <SectionBlob variant="coral" shape="circle" position="top-right" />
       <SectionBlob variant="violet" shape="blob" position="bottom-left" />
 
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="relative z-10 mb-8 inline-flex flex-col items-center gap-1 rounded-2xl border border-[#E07A5F]/20 bg-white/80 px-8 py-5 shadow-sm backdrop-blur-xl"
-      >
-        <WenandoLogo size="hero" showTagline align="center" />
-      </motion.div>
-
       <MulticolorHeading
         as="h1"
         words="La guida sicura per chi ami."
@@ -91,10 +82,10 @@ function HomeNav() {
       transition={{ duration: 0.5 }}
       className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4"
     >
-      <nav className="flex w-full max-w-3xl items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white/80 px-5 py-3 shadow-sm backdrop-blur-2xl">
-        <Link to="/" className="flex items-center gap-2.5">
-          <WenandoMark className="h-9 w-9" />
-          <WenandoLogo size="sm" />
+      <nav className="flex w-full max-w-4xl items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white/80 px-5 py-2.5 shadow-sm backdrop-blur-2xl">
+        <Link to="/" className="flex min-w-0 items-center gap-2.5">
+          <WenandoMark className="h-8 w-8 shrink-0" />
+          <WenandoLogo size="nav" showTagline className="min-w-0" />
         </Link>
         <div className="flex items-center gap-3">
           <Link
