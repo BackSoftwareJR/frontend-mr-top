@@ -1,6 +1,6 @@
 /**
  * Scroll reading line — document-space path through section anchors.
- * Hero dot → hero CTA orbit → bento → stats → … → final CTA orbit.
+ * Hero dot → hero CTA arc → bento → stats → … → final CTA arc.
  */
 
 /** Nav morph spring (shared with sticky header) */
@@ -47,8 +47,6 @@ export const FALLBACK_PATH_POINTS = [
   { x: 0.5, y: 0.96, normalized: true },
 ]
 
-const ORBIT_SEGMENTS = 4
-
 /** Center of an element in document coordinates */
 export function measureDocumentPoint(el) {
   const rect = el.getBoundingClientRect()
@@ -59,48 +57,66 @@ export function measureDocumentPoint(el) {
 }
 
 /**
- * Smooth circuit around a CTA — bezier-friendly samples on an ellipse
- * offset so the line loops the button without cutting through cards.
+ * Tight single-side arc around a CTA — approach from the left, sweep below, exit right.
+ * Three synthetic points only (no full orbit).
  */
 export function buildCtaOrbitPoints(ctaEl, entryPoint, options = {}) {
   const { variant = 'hero' } = options
   const rect = ctaEl.getBoundingClientRect()
   const cx = rect.left + rect.width / 2 + window.scrollX
   const cy = rect.top + rect.height / 2 + window.scrollY
+  const halfW = rect.width / 2
+  const halfH = rect.height / 2
 
-  const scale = variant === 'final' ? 0.58 : 0.62
-  const pad = variant === 'final' ? 44 : 40
-  const rx = Math.max(rect.width, rect.height) * scale + pad
-  const ry = rx * (variant === 'final' ? 0.68 : 0.7)
+  const glowSegment = variant === 'final' ? 'cta-final' : 'hero-cta'
 
-  const entryAngle = Math.atan2(entryPoint.y - cy, entryPoint.x - cx)
-  const arcSpan = variant === 'final' ? Math.PI * 1.25 : Math.PI * 1.35
-  const startAngle =
-    entryAngle - (variant === 'final' ? Math.PI * 0.5 : Math.PI * 0.55)
-
-  const points = []
-  for (let i = 1; i <= ORBIT_SEGMENTS; i += 1) {
-    const t = i / (ORBIT_SEGMENTS + 1)
-    const angle = startAngle + t * arcSpan
-    points.push({
-      x: cx + Math.cos(angle) * rx,
-      y: cy + Math.sin(angle) * ry,
-      synthetic: true,
-      glowSegment: variant === 'final' ? 'cta-final' : 'hero-cta',
-    })
+  if (variant === 'final') {
+    const gap = 32
+    return [
+      {
+        x: cx - halfW - gap * 0.15,
+        y: cy + halfH + gap * 0.45,
+        synthetic: true,
+        glowSegment,
+      },
+      {
+        x: cx + halfW * 0.15,
+        y: cy + halfH + gap * 0.95,
+        synthetic: true,
+        glowSegment,
+      },
+      {
+        x: cx + halfW + gap * 0.55,
+        y: cy + halfH + gap * 0.65 + 18,
+        synthetic: true,
+        glowSegment,
+      },
+    ]
   }
 
-  const exitAngle = startAngle + arcSpan
-  const exitYOffset = variant === 'final' ? 24 : 18
-  const exitShrink = variant === 'final' ? 0.88 : 0.92
-  points.push({
-    x: cx + Math.cos(exitAngle) * rx * exitShrink,
-    y: cy + Math.sin(exitAngle) * ry * exitShrink + exitYOffset,
-    synthetic: true,
-    glowSegment: variant === 'final' ? 'cta-final' : 'hero-cta',
-  })
+  const gap = 34
+  const approachFromLeft = entryPoint.x < cx
 
-  return points
+  return [
+    {
+      x: approachFromLeft ? cx - halfW - gap * 0.2 : cx - halfW * 0.35,
+      y: cy + halfH + gap * 0.35,
+      synthetic: true,
+      glowSegment,
+    },
+    {
+      x: cx + halfW * 0.05,
+      y: cy + halfH + gap,
+      synthetic: true,
+      glowSegment,
+    },
+    {
+      x: cx + halfW + gap * 0.45,
+      y: cy + halfH + gap * 0.55 + 14,
+      synthetic: true,
+      glowSegment,
+    },
+  ]
 }
 
 /** Catmull-Rom → cubic-bezier SVG path through pixel points */
@@ -132,6 +148,37 @@ export function buildCatmullRomPath(points) {
 export function buildReadingPathD(points) {
   if (!points.length) return ''
   return buildCatmullRomPath(points)
+}
+
+/** Sample an SVG path from length 0 through maxLength (document space) */
+export function samplePathToLength(pathEl, maxLength, step = 5) {
+  const total = pathEl.getTotalLength()
+  if (!total || maxLength <= 0) return []
+
+  const end = Math.min(maxLength, total)
+  const points = []
+  for (let len = 0; len < end; len += step) {
+    points.push(pathEl.getPointAtLength(len))
+  }
+  points.push(pathEl.getPointAtLength(end))
+  return points
+}
+
+/** Convert document-space point to viewport coordinates */
+export function documentToViewport(point, scrollY) {
+  return {
+    x: point.x,
+    y: point.y - scrollY,
+  }
+}
+
+/** Keep the reading head inside the viewport */
+export function clampPointToViewport(point, viewport, margin = 22) {
+  const { width, height } = viewport
+  return {
+    x: Math.max(margin, Math.min(width - margin, point.x)),
+    y: Math.max(margin, Math.min(height - margin, point.y)),
+  }
 }
 
 function denormalizeFallback(docWidth, docHeight) {
@@ -198,7 +245,7 @@ export function computeCtaGlowRanges(pathEl, points) {
   return ranges
 }
 
-/** Measure ordered waypoints in document space, with CTA orbits after hero/final CTAs */
+/** Measure ordered waypoints in document space, with CTA arcs after hero/final CTAs */
 export function measureReadingPathPoints(fallback = FALLBACK_PATH_POINTS) {
   if (typeof document === 'undefined') return []
 

@@ -2,52 +2,46 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   motion,
-  useMotionTemplate,
   useMotionValue,
+  useMotionValueEvent,
   useReducedMotion,
   useScroll,
-  useSpring,
   useTransform,
 } from 'framer-motion'
 import {
+  buildCatmullRomPath,
   buildReadingPathD,
+  clampPointToViewport,
   computeCtaGlowRanges,
   CTA_GLOW_SEGMENTS,
+  documentToViewport,
   measureReadingPathPoints,
+  samplePathToLength,
 } from '../../data/readingPathSchema'
 
 const LAYER_CLASS =
-  'pointer-events-none fixed inset-0 z-[5] overflow-visible'
-
-const CURSOR_SPRING = { stiffness: 420, damping: 42, mass: 0.35 }
+  'pointer-events-none fixed inset-0 z-[5] overflow-hidden'
 
 const STROKE_OPACITY = 0.62
+const PROGRESS_EPSILON = 0.0005
+const VIEWPORT_MARGIN = 22
 
-function useDocumentMetrics() {
-  const [metrics, setMetrics] = useState({ width: 0, height: 0 })
+function useViewportSize() {
+  const [size, setSize] = useState({ width: 0, height: 0 })
 
   useEffect(() => {
     const update = () => {
-      setMetrics({
-        width: document.documentElement.clientWidth,
-        height: document.documentElement.scrollHeight,
+      setSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
       })
     }
     update()
-
-    const ro = new ResizeObserver(update)
-    ro.observe(document.documentElement)
     window.addEventListener('resize', update, { passive: true })
-    window.addEventListener('load', update, { passive: true })
-
-    return () => {
-      ro.disconnect()
-      window.removeEventListener('resize', update)
-      window.removeEventListener('load', update)
-    }
+    return () => window.removeEventListener('resize', update)
   }, [])
 
-  return metrics
+  return size
 }
 
 function useReadingPathPoints() {
@@ -125,7 +119,7 @@ function CtaGlowOverlays({ scrollYProgress, glowRanges, ctaRects }) {
 
         const cx = rect.left + rect.width / 2
         const cy = rect.top + rect.height / 2
-        const size = Math.max(rect.width, rect.height) * 1.35 + 48
+        const size = Math.max(rect.width, rect.height) * 1.2 + 36
 
         return (
           <CtaGlowRing
@@ -144,7 +138,7 @@ function CtaGlowOverlays({ scrollYProgress, glowRanges, ctaRects }) {
 
 function CtaGlowRing({ scrollYProgress, range, cx, cy, size }) {
   const glowOpacity = useTransform(scrollYProgress, (p) => {
-    if (p < range.start || p > range.end) return 0
+    if (p <= PROGRESS_EPSILON || p < range.start || p > range.end) return 0
     const mid = (range.start + range.end) / 2
     const half = (range.end - range.start) / 2 || 0.01
     const t = 1 - Math.min(1, Math.abs(p - mid) / half)
@@ -175,99 +169,130 @@ function CtaGlowRing({ scrollYProgress, range, cx, cy, size }) {
 
 function ReadingPathSvg({
   points,
-  width,
-  height,
+  scrollY,
   scrollYProgress,
-  smoothProgress,
+  viewport,
   showCursor,
   onGlowRanges,
 }) {
-  const pathRef = useRef(null)
+  const measurePathRef = useRef(null)
   const [pathLength, setPathLength] = useState(0)
+  const [visiblePathD, setVisiblePathD] = useState('')
+  const [cursorPos, setCursorPos] = useState(null)
 
   const pathD = useMemo(() => buildReadingPathD(points), [points])
 
   useEffect(() => {
-    if (!pathRef.current || !pathD) return undefined
-    const len = pathRef.current.getTotalLength()
+    if (!measurePathRef.current || !pathD) return undefined
+    const len = measurePathRef.current.getTotalLength()
     setPathLength(len)
-    onGlowRanges?.(computeCtaGlowRanges(pathRef.current, points))
+    onGlowRanges?.(computeCtaGlowRanges(measurePathRef.current, points))
     return undefined
-  }, [pathD, width, height, points, onGlowRanges])
+  }, [pathD, points, onGlowRanges])
 
-  const dashOffset = useTransform(scrollYProgress, (p) =>
-    pathLength > 0 ? pathLength * (1 - p) : pathLength,
+  const updateVisiblePath = useCallback(
+    (progress, scrollOffset) => {
+      const pathEl = measurePathRef.current
+      if (!pathEl || pathLength <= 0 || progress <= PROGRESS_EPSILON) {
+        setVisiblePathD('')
+        setCursorPos(null)
+        return
+      }
+
+      const activeLength = pathLength * progress
+      const docSamples = samplePathToLength(pathEl, activeLength)
+      if (docSamples.length < 2) {
+        setVisiblePathD('')
+        setCursorPos(null)
+        return
+      }
+
+      const viewportPoints = docSamples.map((pt) =>
+        documentToViewport(pt, scrollOffset),
+      )
+      setVisiblePathD(buildCatmullRomPath(viewportPoints))
+
+      const headDoc = pathEl.getPointAtLength(activeLength)
+      const headView = documentToViewport(headDoc, scrollOffset)
+      setCursorPos(
+        clampPointToViewport(headView, viewport, VIEWPORT_MARGIN),
+      )
+    },
+    [pathLength, viewport],
   )
 
-  const cursorX = useTransform(smoothProgress, (p) => {
-    if (!pathRef.current || pathLength <= 0) return 0
-    return pathRef.current.getPointAtLength(pathLength * p).x
+  useMotionValueEvent(scrollYProgress, 'change', (p) => {
+    updateVisiblePath(p, scrollY.get())
   })
 
-  const cursorY = useTransform(smoothProgress, (p) => {
-    if (!pathRef.current || pathLength <= 0) return 0
-    return pathRef.current.getPointAtLength(pathLength * p).y
+  useMotionValueEvent(scrollY, 'change', (y) => {
+    updateVisiblePath(scrollYProgress.get(), y)
   })
 
-  const cursorTransform = useMotionTemplate`translate(${cursorX}px, ${cursorY}px)`
+  useEffect(() => {
+    updateVisiblePath(scrollYProgress.get(), scrollY.get())
+  }, [pathLength, pathD, viewport, scrollY, scrollYProgress, updateVisiblePath])
 
-  if (!pathD || !width || !height) return null
+  if (!pathD || !viewport.width || !viewport.height) return null
+
+  const showStroke = visiblePathD.length > 0
 
   return (
-    <svg
-      className="absolute left-0 top-0 overflow-visible"
-      width={width}
-      height={height}
-      aria-hidden="true"
-    >
-      <defs>
-        <linearGradient id="wenando-reading-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#E07A5F" stopOpacity="1" />
-          <stop offset="45%" stopColor="#9B8EC4" stopOpacity="1" />
-          <stop offset="100%" stopColor="#5CB8A8" stopOpacity="1" />
-        </linearGradient>
-        <filter id="wenando-reading-glow" x="-30%" y="-30%" width="160%" height="160%">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
+    <>
+      <svg
+        className="pointer-events-none absolute h-0 w-0 overflow-hidden"
+        aria-hidden="true"
+      >
+        <path ref={measurePathRef} d={pathD} fill="none" />
+      </svg>
 
-      <path
-        ref={pathRef}
-        d={pathD}
-        fill="none"
-        stroke="none"
-        visibility="hidden"
-      />
+      <svg
+        className="absolute inset-0 h-full w-full"
+        width={viewport.width}
+        height={viewport.height}
+        aria-hidden="true"
+      >
+        <defs>
+          <clipPath id="wenando-reading-viewport-clip">
+            <rect x="0" y="0" width={viewport.width} height={viewport.height} />
+          </clipPath>
+          <linearGradient id="wenando-reading-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#E07A5F" stopOpacity="1" />
+            <stop offset="45%" stopColor="#9B8EC4" stopOpacity="1" />
+            <stop offset="100%" stopColor="#5CB8A8" stopOpacity="1" />
+          </linearGradient>
+          <filter id="wenando-reading-glow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
 
-      <motion.path
-        d={pathD}
-        fill="none"
-        stroke="url(#wenando-reading-gradient)"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        filter="url(#wenando-reading-glow)"
-        style={{
-          strokeDasharray: pathLength,
-          strokeDashoffset: dashOffset,
-          opacity: STROKE_OPACITY,
-        }}
-      />
+        <g clipPath="url(#wenando-reading-viewport-clip)">
+          {showStroke ? (
+            <path
+              d={visiblePathD}
+              fill="none"
+              stroke="url(#wenando-reading-gradient)"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              filter="url(#wenando-reading-glow)"
+              opacity={STROKE_OPACITY}
+            />
+          ) : null}
 
-      {showCursor && pathLength > 0 ? (
-        <motion.g
-          style={{ transform: cursorTransform }}
-          transform="translate(-6, -6)"
-        >
-          <circle cx="6" cy="6" r="6" fill="url(#wenando-reading-gradient)" opacity="0.95" />
-          <circle cx="6" cy="6" r="11" fill="#E07A5F" opacity="0.22" />
-        </motion.g>
-      ) : null}
-    </svg>
+          {showCursor && cursorPos ? (
+            <g transform={`translate(${cursorPos.x - 6}, ${cursorPos.y - 6})`}>
+              <circle cx="6" cy="6" r="6" fill="url(#wenando-reading-gradient)" opacity="0.95" />
+              <circle cx="6" cy="6" r="11" fill="#E07A5F" opacity="0.22" />
+            </g>
+          ) : null}
+        </g>
+      </svg>
+    </>
   )
 }
 
@@ -275,13 +300,11 @@ function ReadingLineLayer({ reducedMotion }) {
   const { scrollY, scrollYProgress } = useScroll({
     offset: ['start start', 'end end'],
   })
-  const staticProgress = useMotionValue(1)
+  const staticProgress = useMotionValue(0)
   const progress = reducedMotion ? staticProgress : scrollYProgress
-  const smoothProgress = useSpring(progress, CURSOR_SPRING)
-  const scrollOffsetY = useTransform(scrollY, (y) => -y)
 
   const points = useReadingPathPoints()
-  const { width, height } = useDocumentMetrics()
+  const viewport = useViewportSize()
   const ctaRects = useCtaAnchorRects()
   const [glowRanges, setGlowRanges] = useState([])
   const [mounted, setMounted] = useState(false)
@@ -305,23 +328,14 @@ function ReadingLineLayer({ reducedMotion }) {
           ctaRects={ctaRects}
         />
       ) : null}
-      <motion.div
-        className="absolute left-0 top-0 w-full will-change-transform"
-        style={{
-          height: height || '100%',
-          y: scrollOffsetY,
-        }}
-      >
-        <ReadingPathSvg
-          points={points}
-          width={width}
-          height={height}
-          scrollYProgress={progress}
-          smoothProgress={reducedMotion ? progress : smoothProgress}
-          showCursor={!reducedMotion}
-          onGlowRanges={handleGlowRanges}
-        />
-      </motion.div>
+      <ReadingPathSvg
+        points={points}
+        scrollY={scrollY}
+        scrollYProgress={progress}
+        viewport={viewport}
+        showCursor={!reducedMotion}
+        onGlowRanges={handleGlowRanges}
+      />
     </div>
   )
 
