@@ -2,7 +2,11 @@
  * B2B partner registration & onboarding state (localStorage mock).
  */
 
-import { normalizeEmail, saveSession, getSession } from './authService'
+import { saveSession, getSession } from './authService'
+
+function normalizeEmail(email) {
+  return email.trim().toLowerCase()
+}
 
 const REGISTRATION_KEY = 'wenando-b2b-registration'
 const ONBOARDING_KEY = 'wenando-b2b-onboarding'
@@ -123,8 +127,4 @@ export function submitOnboardingForReview(email) {
       onboardingStatus: 'pending_review',
     })
   }
-}
-
-export function normalizeEmail(email) {
-  return email.trim().toLowerCase()
 }
