@@ -8,6 +8,7 @@ import {
 } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { MORPH_SPRING } from '../../data/readingPathSchema'
+import { useIsMobile } from '../../utils/performanceTier'
 import MagneticButton from '../ui/MagneticButton'
 import MulticolorHeading from '../ui/MulticolorHeading'
 import WenandoLogo, { WenandoMark } from '../ui/WenandoLogo'
@@ -23,6 +24,9 @@ import SectionBlob from '../ui/SectionBlob'
 
 export default function HeroSection() {
   const heroDotRef = useRef(null)
+  const isMobile = useIsMobile()
+  const prefersReducedMotion = useReducedMotion()
+  const lightMotion = isMobile || prefersReducedMotion
 
   return (
     <section
@@ -56,30 +60,49 @@ export default function HeroSection() {
         }}
       />
 
-      <motion.p
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5, duration: 0.6 }}
-        className="relative z-10 mb-10 max-w-2xl text-lg font-medium leading-relaxed text-slate-600 sm:mb-12 sm:text-xl md:text-2xl"
-      >
-        Non un catalogo di strutture — un&apos;analisi personalizzata della{' '}
-        <span className="font-semibold text-[#E07A5F]">vostra</span> situazione,
-        con l&apos;empatia di chi vi ascolta davvero.
-      </motion.p>
+      {lightMotion ? (
+        <p className="hero-fade-in relative z-10 mb-10 max-w-2xl text-lg font-medium leading-relaxed text-slate-600 sm:mb-12 sm:text-xl md:text-2xl">
+          Non un catalogo di strutture — un&apos;analisi personalizzata della{' '}
+          <span className="font-semibold text-[#E07A5F]">vostra</span> situazione,
+          con l&apos;empatia di chi vi ascolta davvero.
+        </p>
+      ) : (
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.6 }}
+          className="relative z-10 mb-10 max-w-2xl text-lg font-medium leading-relaxed text-slate-600 sm:mb-12 sm:text-xl md:text-2xl"
+        >
+          Non un catalogo di strutture — un&apos;analisi personalizzata della{' '}
+          <span className="font-semibold text-[#E07A5F]">vostra</span> situazione,
+          con l&apos;empatia di chi vi ascolta davvero.
+        </motion.p>
+      )}
 
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7, duration: 0.6 }}
-        className="relative z-10 mt-2 flex justify-center"
-        data-scroll-anchor="hero-cta"
-        data-scroll-label="CTA Hero"
-      >
-        <MagneticButton to="/wizard" variant="outline-coral" readingLineCta>
-          Inizia ora →
-        </MagneticButton>
-      </motion.div>
-
+      {lightMotion ? (
+        <div
+          className="hero-fade-in-delay relative z-10 mt-2 flex justify-center"
+          data-scroll-anchor="hero-cta"
+          data-scroll-label="CTA Hero"
+        >
+          <MagneticButton to="/wizard" variant="outline-coral" readingLineCta>
+            Inizia ora →
+          </MagneticButton>
+        </div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7, duration: 0.6 }}
+          className="relative z-10 mt-2 flex justify-center"
+          data-scroll-anchor="hero-cta"
+          data-scroll-label="CTA Hero"
+        >
+          <MagneticButton to="/wizard" variant="outline-coral" readingLineCta>
+            Inizia ora →
+          </MagneticButton>
+        </motion.div>
+      )}
     </section>
   )
 }
@@ -156,20 +179,16 @@ function HomeNavLinks() {
 
 function HomeNav() {
   const prefersReducedMotion = useReducedMotion()
+  const isMobile = useIsMobile()
   const { borderRadius, headerTop, headerPadX, navMaxWidth } = useNavMorph()
 
-  if (prefersReducedMotion) {
+  if (prefersReducedMotion || isMobile) {
     return (
-      <motion.header
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4"
-      >
+      <header className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4">
         <nav className="flex min-h-[56px] w-full max-w-5xl items-center justify-between gap-3 overflow-visible rounded-2xl border border-slate-200/80 bg-white/80 px-3 py-1 shadow-sm backdrop-blur-2xl sm:px-4 sm:py-1.5">
           <HomeNavLinks />
         </nav>
-      </motion.header>
+      </header>
     )
   }
 

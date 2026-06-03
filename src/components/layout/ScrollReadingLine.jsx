@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, startTransition, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   motion,
@@ -21,7 +21,7 @@ import {
   DOT_SIZE,
   getPathTipFromLookup,
   HERO_SCROLL_ZONE_END,
-  interpolateMobileScrollFrame,
+  applyMobileScrollFrame,
   MOBILE_SCROLL_REMAP_SAMPLES,
   pathVisibleLength,
   READING_STROKE_WIDTH,
@@ -44,12 +44,25 @@ const MOBILE_SYNC_PROGRESS_EPSILON = 0.002
 const MOBILE_FILL_SYNC_FRAME_SKIP = 3
 const SCROLL_WILL_CHANGE_IDLE_MS = 150
 
-function getDocumentScrollYProgress() {
-  const max = Math.max(
+const MOBILE_FRAME_OUT = {
+  pathProgress: 0,
+  strokeDashoffset: 0,
+  dotX: 0,
+  dotY: 0,
+  dotOpacity: 0,
+}
+
+let cachedScrollMax = 1
+
+function refreshDocumentScrollMax() {
+  cachedScrollMax = Math.max(
     document.documentElement.scrollHeight - window.innerHeight,
     1,
   )
-  return Math.min(1, Math.max(0, window.scrollY / max))
+}
+
+function getDocumentScrollYProgress() {
+  return Math.min(1, Math.max(0, window.scrollY / cachedScrollMax))
 }
 
 /** Pause mobile rAF when narrative anchors are off-screen */
@@ -98,9 +111,21 @@ function useMobileReadingScrollFrame({
   const lastSyncProgressRef = useRef(-1)
   const frameCountRef = useRef(0)
   const scrollIdleTimerRef = useRef(null)
+  const frameOutRef = useRef({
+    pathProgress: 0,
+    strokeDashoffset: 0,
+    dotX: 0,
+    dotY: 0,
+    dotOpacity: 0,
+  })
 
   useEffect(() => {
     if (!enabled) return undefined
+
+    refreshDocumentScrollMax()
+    const onScrollMaxChange = () => refreshDocumentScrollMax()
+    window.addEventListener('resize', onScrollMaxChange, { passive: true })
+    window.addEventListener('load', onScrollMaxChange, { passive: true })
 
     const setDotWillChange = (active) => {
       const dotGroup = dotGroupRef.current
@@ -116,7 +141,7 @@ function useMobileReadingScrollFrame({
 
       const table = frameTableRef.current
       const rawP = getDocumentScrollYProgress()
-      const frame = interpolateMobileScrollFrame(table, rawP)
+      const frame = applyMobileScrollFrame(table, rawP, frameOutRef.current)
       const scrollY = window.scrollY
 
       const group = scrollGroupRef.current
@@ -145,7 +170,9 @@ function useMobileReadingScrollFrame({
 
       if (shouldSync) {
         lastSyncProgressRef.current = frame.pathProgress
-        pathProgressMv.set(frame.pathProgress)
+        startTransition(() => {
+          pathProgressMv.set(frame.pathProgress)
+        })
       }
     }
 
@@ -524,7 +551,8 @@ function ReadingPathLayer({
 }) {
   const measurePathRef = useRef(null)
   const lookupRef = useRef({ totalLength: 0, samples: [] })
-  const frameTableRef = useRef([])
+  const frameTableRef = useRef(new Float32Array(0))
+  const mobileFrameOutRef = useRef({ ...MOBILE_FRAME_OUT })
   const remapTableRef = useRef([])
   const zoneConfigRef = useRef({ pathEnd: 0, scrollEnd: HERO_SCROLL_ZONE_END })
   const [pathD, setPathD] = useState('')
@@ -593,7 +621,7 @@ function ReadingPathLayer({
         zoneConfigRef.current,
       )
     } else {
-      frameTableRef.current = []
+      frameTableRef.current = new Float32Array(0)
     }
 
     return undefined
@@ -623,7 +651,7 @@ function ReadingPathLayer({
   const anchorsVisibleRef = useReadingAnchorsVisible(isMobile && showCursor)
 
   useMobileReadingScrollFrame({
-    enabled: isMobile && showCursor && pathLength > 0,
+    enabled: isMobile && showCursor && pathLength > 0 && frameTableRef.current.length > 0,
     anchorsVisibleRef,
     scrollGroupRef,
     visiblePathRef,
@@ -659,7 +687,11 @@ function ReadingPathLayer({
 
     if (isMobile) {
       const rawP = getDocumentScrollYProgress()
-      const frame = interpolateMobileScrollFrame(frameTableRef.current, rawP)
+      const frame = applyMobileScrollFrame(
+        frameTableRef.current,
+        rawP,
+        mobileFrameOutRef.current,
+      )
       visiblePathRef.current.style.strokeDashoffset = String(frame.strokeDashoffset)
 
       if (scrollGroupRef.current) {

@@ -375,3 +375,30 @@ input[type="range"].glass-range.range-overlay::-moz-range-thumb {
 ::-webkit-scrollbar-thumb:hover {
   background: rgb(148 163 184 / 0.8);
 }
+
+@media (max-width: 768px) {
+  .section-deferred {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 520px;
+  }
+
+  .hero-fade-in {
+    animation: hero-fade-in 0.55s ease 0.45s both;
+  }
+
+  .hero-fade-in-delay {
+    animation: hero-fade-in 0.55s ease 0.65s both;
+  }
+}
+
+@keyframes hero-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

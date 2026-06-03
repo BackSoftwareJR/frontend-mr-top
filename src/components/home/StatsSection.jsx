@@ -209,7 +209,8 @@ export default function StatsSection() {
           {STATS.map((stat) => (
             <motion.div
               key={stat.label}
-              variants={itemVariants}
+              variants={lightMotion ? undefined : itemVariants}
+              initial={lightMotion ? false : undefined}
               data-scroll-anchor={stat.anchor}
               data-scroll-label={stat.label}
             >

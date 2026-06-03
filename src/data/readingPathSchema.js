@@ -44,6 +44,9 @@ export const CONSTRAINED_PROGRESS_LOOKUP_SAMPLES = 24
 /** Precomputed scroll→frame table resolution (mobile rAF hot path) */
 export const MOBILE_SCROLL_FRAME_SAMPLES = 64
 
+/** Float32 packing: pathProgress, strokeDashoffset, dotX, dotY, dotOpacity */
+export const MOBILE_FRAME_STRIDE = 5
+
 /** Fewer wavy-vertical cubics on mobile (same amplitude, coarser chain) */
 export const MOBILE_WAVY_VERTICAL_SEGMENTS = 2
 
@@ -1545,7 +1548,7 @@ export function interpolateProgressLookup(lookup, progress) {
 
 /**
  * Precompute scroll progress → stroke/dot frame values once per path measure.
- * Mobile rAF only binary-searches this table — no path math per frame.
+ * Packed Float32Array — mobile rAF reads via applyMobileScrollFrame with zero allocations.
  */
 export function buildMobileScrollFrameTable(
   lookup,
@@ -1554,9 +1557,11 @@ export function buildMobileScrollFrameTable(
   zoneConfig,
   sampleCount = MOBILE_SCROLL_FRAME_SAMPLES,
 ) {
-  if (!lookup?.samples?.length || !pathLength) return []
+  if (!lookup?.samples?.length || !pathLength) return new Float32Array(0)
 
-  const table = []
+  const count = sampleCount + 1
+  const table = new Float32Array(count * MOBILE_FRAME_STRIDE)
+
   for (let i = 0; i <= sampleCount; i += 1) {
     const scrollProgress = i / sampleCount
     const pathProgress = resolveReadingPathProgress(
@@ -1570,56 +1575,96 @@ export function buildMobileScrollFrameTable(
         ? pathLength
         : pathLength - pathVisibleLength(pathLength, pathProgress, READING_STROKE_WIDTH)
     const tip = getPathTipFromLookup(lookup, pathProgress)
+    const offset = i * MOBILE_FRAME_STRIDE
 
-    table.push({
-      scrollProgress,
-      pathProgress,
-      strokeDashoffset,
-      dotX: tip.x,
-      dotY: tip.y,
-      dotOpacity: pathProgress > 0.001 ? 1 : 0,
-    })
+    table[offset] = pathProgress
+    table[offset + 1] = strokeDashoffset
+    table[offset + 2] = tip.x
+    table[offset + 3] = tip.y
+    table[offset + 4] = pathProgress > 0.001 ? 1 : 0
   }
 
   return table
 }
 
-/** Interpolate a precomputed mobile scroll frame at raw document scroll progress */
-export function interpolateMobileScrollFrame(table, scrollProgress) {
+const EMPTY_MOBILE_SCROLL_FRAME = Object.freeze({
+  pathProgress: 0,
+  strokeDashoffset: 0,
+  dotX: 0,
+  dotY: 0,
+  dotOpacity: 0,
+})
+
+function readMobileScrollFrameAt(table, index, out) {
+  const offset = index * MOBILE_FRAME_STRIDE
+  out.pathProgress = table[offset]
+  out.strokeDashoffset = table[offset + 1]
+  out.dotX = table[offset + 2]
+  out.dotY = table[offset + 3]
+  out.dotOpacity = table[offset + 4]
+  return out
+}
+
+function copyMobileScrollFrame(from, out) {
+  out.pathProgress = from.pathProgress
+  out.strokeDashoffset = from.strokeDashoffset
+  out.dotX = from.dotX
+  out.dotY = from.dotY
+  out.dotOpacity = from.dotOpacity
+  return out
+}
+
+/**
+ * Write interpolated mobile scroll frame into `out` — zero allocations in rAF hot path.
+ * Returns `out` for chaining.
+ */
+export function applyMobileScrollFrame(table, scrollProgress, out) {
   if (!table.length) {
-    return {
-      pathProgress: 0,
-      strokeDashoffset: 0,
-      dotX: 0,
-      dotY: 0,
-      dotOpacity: 0,
-    }
+    return copyMobileScrollFrame(EMPTY_MOBILE_SCROLL_FRAME, out)
   }
 
-  if (scrollProgress <= 0) return table[0]
-  if (scrollProgress >= 1) return table[table.length - 1]
+  const count = table.length / MOBILE_FRAME_STRIDE
+  const lastIndex = count - 1
+
+  if (scrollProgress <= 0) return readMobileScrollFrameAt(table, 0, out)
+  if (scrollProgress >= 1) return readMobileScrollFrameAt(table, lastIndex, out)
 
   let lo = 0
-  let hi = table.length - 1
+  let hi = lastIndex
   while (lo < hi - 1) {
     const mid = (lo + hi) >> 1
-    if (table[mid].scrollProgress <= scrollProgress) lo = mid
+    const midScroll = mid / lastIndex
+    if (midScroll <= scrollProgress) lo = mid
     else hi = mid
   }
 
-  const a = table[lo]
-  const b = table[hi]
-  const span = b.scrollProgress - a.scrollProgress || 1
-  const u = (scrollProgress - a.scrollProgress) / span
+  const loScroll = lo / lastIndex
+  const hiScroll = hi / lastIndex
+  const span = hiScroll - loScroll || 1
+  const u = (scrollProgress - loScroll) / span
 
-  return {
-    scrollProgress,
-    pathProgress: a.pathProgress + (b.pathProgress - a.pathProgress) * u,
-    strokeDashoffset: a.strokeDashoffset + (b.strokeDashoffset - a.strokeDashoffset) * u,
-    dotX: a.dotX + (b.dotX - a.dotX) * u,
-    dotY: a.dotY + (b.dotY - a.dotY) * u,
-    dotOpacity: u < 0.5 ? a.dotOpacity : b.dotOpacity,
-  }
+  const loOffset = lo * MOBILE_FRAME_STRIDE
+  const hiOffset = hi * MOBILE_FRAME_STRIDE
+
+  out.pathProgress = table[loOffset] + (table[hiOffset] - table[loOffset]) * u
+  out.strokeDashoffset =
+    table[loOffset + 1] + (table[hiOffset + 1] - table[loOffset + 1]) * u
+  out.dotX = table[loOffset + 2] + (table[hiOffset + 2] - table[loOffset + 2]) * u
+  out.dotY = table[loOffset + 3] + (table[hiOffset + 3] - table[loOffset + 3]) * u
+  out.dotOpacity = u < 0.5 ? table[loOffset + 4] : table[hiOffset + 4]
+
+  return out
+}
+
+/** @deprecated Prefer applyMobileScrollFrame with a reusable out object */
+export function interpolateMobileScrollFrame(table, scrollProgress, out) {
+  return applyMobileScrollFrame(table, scrollProgress, out ?? {
+    pathProgress: 0,
+    strokeDashoffset: 0,
+    dotX: 0,
+    dotY: 0,
+    dotOpacity: 0,
+  })
 }
 
 /** Convert document-space point to viewport coordinates */

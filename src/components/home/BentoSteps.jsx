@@ -93,7 +93,7 @@ export default function BentoSteps() {
           whileInView={lightMotion ? undefined : 'visible'}
           viewport={{ once: true, amount: 0.25 }}
         >
-          <motion.div variants={cardVariants} className="mb-12 text-center sm:mb-14">
+          <motion.div variants={lightMotion ? undefined : cardVariants} className="mb-12 text-center sm:mb-14">
             <p className="mb-3 text-sm font-semibold tracking-widest text-slate-400 uppercase">
               Come funziona
             </p>
@@ -109,7 +109,8 @@ export default function BentoSteps() {
             {STEPS.map((step) => (
               <motion.div
                 key={step.title}
-                variants={cardVariants}
+                variants={lightMotion ? undefined : cardVariants}
+                initial={lightMotion ? false : undefined}
                 className="overflow-visible px-1 py-2"
                 data-scroll-anchor={`bento-${step.title.toLowerCase()}`}
                 data-scroll-label={step.title}

@@ -139,6 +139,16 @@ Second pass targets **scroll jank on phones only** (`max-width: 768px`). Desktop
 | **J. content-visibility** | `.section-deferred` on below-fold sections; `IntersectionObserver` triggers path remeasure when sections paint |
 | **K. Mobile animation diet** | Hero copy/CTA → CSS keyframes; nav morph off on mobile; Bento/Stats/MulticolorHeading skip blur/stagger; page fade skipped on mobile |
 | **L. Idle prefetch** | `usePrefetchOnIdle(['/wizard'])` on home |
+| **M. Float32 frame table** | `buildMobileScrollFrameTable` packs stroke/dot into `Float32Array`; `applyMobileScrollFrame` mutates reusable out object — zero GC in scroll rAF |
+| **N. startTransition fill sync** | CTA/stat `pathProgress` updates wrapped in `startTransition` so scroll paint stays urgent |
+
+### Mobile round 4 backlog
+
+1. **Lift shared scroll provider** — single `useScroll` for `HomeNav` morph + reading line; remove duplicate Framer subscriptions on mobile.
+2. **Logo asset diet** — generate ~96 px WebP/AVIF from `wenando-logo.png` (233 KB) with `<picture>`; keep PNG fallback.
+3. **Batch CTA/stat style writes** — one `requestAnimationFrame` pass for all `--reading-fill` updates instead of per-button loops when throttled.
+4. **Self-host Fredoka subset** — drop Google Fonts round-trip for hero wordmark if LCP still regresses on 3G.
+5. **Real-device scroll profile** — record Performance traces on iPhone SE / Galaxy A13 at 430px; tune `MOBILE_SCROLL_FRAME_SAMPLES` vs jank before lowering further.
 
 ### Before / after (mobile scroll path)
 
