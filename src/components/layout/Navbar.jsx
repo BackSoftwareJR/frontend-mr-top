@@ -6,66 +6,45 @@ import Button from '../ui/Button'
 export default function Navbar() {
   const location = useLocation()
 
-  const navLinks = [
-    { to: '/#come-funziona', label: 'Come Funziona', isHash: true },
-    { to: '/blog', label: 'Blog / Guide', isHash: false },
-  ]
-
-  const handleHashClick = (e, to) => {
+  const handleHashClick = (e) => {
     if (location.pathname !== '/') {
       return
     }
     e.preventDefault()
-    const id = to.split('#')[1]
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+    document.getElementById('come-funziona')?.scrollIntoView({ behavior: 'smooth' })
   }
 
   return (
     <motion.header
-      initial={{ y: -20, opacity: 0 }}
+      initial={{ y: -24, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5, ease: 'easeOut' }}
+      transition={{ duration: 0.55, ease: [0.25, 0.46, 0.45, 0.94] }}
       className="fixed top-4 left-0 right-0 z-50 px-4 sm:px-6"
     >
-      <nav className="mx-auto flex max-w-5xl items-center justify-between rounded-full border border-white/60 bg-white/70 px-5 py-3 shadow-lg shadow-slate-200/40 backdrop-blur-md">
-        <Link to="/" className="flex items-center gap-2.5 group">
+      <nav className="mx-auto flex max-w-5xl items-center justify-between rounded-full border border-glass-border bg-glass px-5 py-3 shadow-peach backdrop-blur-xl">
+        <Link to="/" className="group flex items-center gap-2.5">
           <motion.div
-            whileHover={{ rotate: [0, -8, 8, 0] }}
-            transition={{ duration: 0.5 }}
-            className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-800 text-white shadow-md shadow-teal-900/20"
+            whileHover={{ rotate: [0, -10, 10, 0], scale: 1.05 }}
+            transition={{ duration: 0.45 }}
+            className="flex h-11 w-11 items-center justify-center rounded-[1.25rem] bg-gradient-to-br from-coral to-coral-deep text-white shadow-coral"
           >
-            <HeartHandshake className="h-5 w-5" strokeWidth={2} />
+            <HeartHandshake className="h-5 w-5" strokeWidth={2.25} />
           </motion.div>
-          <span className="text-lg font-bold tracking-tight text-slate-900 group-hover:text-teal-800 transition-colors">
+          <span className="text-lg font-extrabold tracking-tight text-warm-text transition-colors group-hover:text-coral">
             CareAdvisor
           </span>
         </Link>
 
-        <div className="hidden items-center gap-8 md:flex">
-          {navLinks.map((link) =>
-            link.isHash ? (
-              <a
-                key={link.to}
-                href={link.to}
-                onClick={(e) => handleHashClick(e, link.to)}
-                className="text-sm font-medium text-slate-600 transition-colors hover:text-teal-800"
-              >
-                {link.label}
-              </a>
-            ) : (
-              <Link
-                key={link.to}
-                to={link.to}
-                className="text-sm font-medium text-slate-600 transition-colors hover:text-teal-800"
-              >
-                {link.label}
-              </Link>
-            ),
-          )}
-        </div>
+        <a
+          href="/#come-funziona"
+          onClick={handleHashClick}
+          className="hidden text-sm font-semibold text-warm-muted transition-colors hover:text-teal-warm md:block"
+        >
+          Come Funziona
+        </a>
 
         <Link to="/wizard">
-          <Button pulse className="hidden sm:inline-flex px-5 py-2.5 text-xs sm:text-sm">
+          <Button pulse className="hidden px-5 py-2.5 text-xs sm:inline-flex sm:text-sm">
             Ricevi un Consiglio Gratuito
           </Button>
         </Link>

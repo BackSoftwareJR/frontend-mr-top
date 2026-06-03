@@ -1,9 +1,27 @@
 import { motion } from 'framer-motion'
 
 const variants = {
-  primary: 'bg-teal-800 text-white shadow-lg shadow-teal-900/20 hover:bg-teal-900 hover:shadow-xl hover:shadow-teal-900/25',
-  secondary: 'bg-white/80 text-teal-800 border border-teal-100 shadow-md shadow-slate-200/50 hover:bg-white hover:border-teal-200',
-  sage: 'bg-emerald-100 text-emerald-800 shadow-md shadow-emerald-200/40 hover:bg-emerald-200',
+  primary:
+    'bg-coral text-white shadow-coral hover:bg-coral-deep hover:shadow-[0_16px_40px_-8px_rgb(255_107_74/0.55)]',
+  secondary:
+    'bg-glass text-teal-warm border border-glass-border shadow-teal hover:bg-white/80 hover:text-teal-deep',
+  sunny:
+    'bg-sunny text-warm-text shadow-[0_12px_32px_-8px_rgb(255_233_168/0.7)] hover:bg-sunny-soft',
+  teal:
+    'bg-teal-warm text-white shadow-teal hover:bg-teal-deep',
+}
+
+const pulseShadows = {
+  primary: [
+    '0 12px 32px -8px rgb(255 107 74 / 0.4)',
+    '0 16px 44px -6px rgb(255 107 74 / 0.55)',
+    '0 12px 32px -8px rgb(255 107 74 / 0.4)',
+  ],
+  teal: [
+    '0 12px 32px -8px rgb(45 155 142 / 0.3)',
+    '0 16px 44px -6px rgb(45 155 142 / 0.45)',
+    '0 12px 32px -8px rgb(45 155 142 / 0.3)',
+  ],
 }
 
 export default function Button({
@@ -13,30 +31,26 @@ export default function Button({
   pulse = false,
   ...props
 }) {
+  const pulseKey = variant === 'teal' ? 'teal' : 'primary'
+
   return (
     <motion.button
-      whileHover={{ scale: 1.03, y: -1 }}
-      whileTap={{ scale: 0.98 }}
+      whileHover={{ scale: 1.04, y: -2 }}
+      whileTap={{ scale: 0.97 }}
       animate={
         pulse
-          ? {
-              boxShadow: [
-                '0 10px 25px -5px rgb(15 118 110 / 0.2)',
-                '0 10px 35px -5px rgb(15 118 110 / 0.35)',
-                '0 10px 25px -5px rgb(15 118 110 / 0.2)',
-              ],
-            }
+          ? { boxShadow: pulseShadows[pulseKey] }
           : undefined
       }
       transition={
         pulse
-          ? { duration: 2.5, repeat: Infinity, ease: 'easeInOut' }
-          : { type: 'spring', stiffness: 400, damping: 25 }
+          ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' }
+          : { type: 'spring', stiffness: 420, damping: 22 }
       }
       className={`
         inline-flex items-center justify-center gap-2 rounded-full px-6 py-3
-        text-sm font-semibold tracking-wide transition-colors duration-200
-        focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2
+        text-sm font-bold tracking-wide transition-colors duration-200
+        focus:outline-none focus-visible:ring-2 focus-visible:ring-coral/50 focus-visible:ring-offset-2 focus-visible:ring-offset-cream
         ${variants[variant]} ${className}
       `}
       {...props}

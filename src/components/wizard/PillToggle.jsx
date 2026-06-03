@@ -10,15 +10,15 @@ export default function PillToggle({ options, selected, onSelect }) {
             key={option.value}
             type="button"
             onClick={() => onSelect(option.value)}
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.97 }}
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.96 }}
             className={`
-              rounded-full px-6 py-3.5 text-sm font-semibold transition-colors duration-200
-              focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2
+              rounded-full px-7 py-4 text-sm font-bold transition-colors duration-200
+              focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-warm/50 focus-visible:ring-offset-2 focus-visible:ring-offset-cream
               ${
                 isSelected
-                  ? 'bg-teal-800 text-white shadow-lg shadow-teal-900/20'
-                  : 'bg-white text-slate-700 shadow-md shadow-slate-200/50 hover:bg-teal-50 hover:text-teal-800'
+                  ? 'bg-gradient-to-r from-coral to-coral-deep text-white shadow-coral'
+                  : 'border-2 border-peach/50 bg-glass text-warm-text shadow-peach hover:border-teal-warm/40 hover:bg-peach-soft/80'
               }
             `}
           >

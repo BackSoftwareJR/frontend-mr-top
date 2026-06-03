@@ -6,21 +6,27 @@ import Button from '../ui/Button'
 
 const slideVariants = {
   enter: (direction) => ({
-    x: direction > 0 ? 80 : -80,
-    y: direction > 0 ? 20 : -20,
+    x: direction > 0 ? 100 : -100,
+    y: direction > 0 ? 24 : -24,
     opacity: 0,
+    scale: 0.96,
   }),
   center: {
     x: 0,
     y: 0,
     opacity: 1,
+    scale: 1,
   },
   exit: (direction) => ({
-    x: direction > 0 ? -80 : 80,
-    y: direction > 0 ? -20 : 20,
+    x: direction > 0 ? -100 : 100,
+    y: direction > 0 ? -24 : 24,
     opacity: 0,
+    scale: 0.96,
   }),
 }
+
+const inputClass =
+  'w-full rounded-[2rem] border-2 border-peach/40 bg-glass py-4 text-warm-text shadow-peach placeholder:text-warm-muted/60 backdrop-blur-sm focus:border-teal-warm focus:outline-none focus:ring-4 focus:ring-teal-warm/20'
 
 export default function WizardStep({
   step,
@@ -39,7 +45,7 @@ export default function WizardStep({
     switch (step.type) {
       case 'icon-cards':
         return (
-          <div className="grid gap-4 sm:grid-cols-1">
+          <div className="grid gap-4">
             {step.options.map((option) => (
               <IconCardOption
                 key={option.value}
@@ -47,7 +53,7 @@ export default function WizardStep({
                 selected={value === option.value}
                 onSelect={(v) => {
                   onChange(v)
-                  setTimeout(onNext, 350)
+                  setTimeout(onNext, 380)
                 }}
               />
             ))}
@@ -57,12 +63,12 @@ export default function WizardStep({
       case 'text-input':
         return (
           <div className="space-y-3">
-            <label htmlFor={step.id} className="block text-sm font-medium text-slate-700">
+            <label htmlFor={step.id} className="block text-sm font-bold text-warm-text">
               {step.inputLabel}
             </label>
             <div className="relative">
               {StepIcon && (
-                <StepIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-teal-700" />
+                <StepIcon className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-teal-warm" />
               )}
               <input
                 id={step.id}
@@ -70,7 +76,7 @@ export default function WizardStep({
                 value={value || ''}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={step.placeholder}
-                className="w-full rounded-2xl border border-slate-200 bg-white py-4 pl-12 pr-4 text-slate-900 shadow-md shadow-slate-200/40 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                className={`${inputClass} pl-14 pr-5`}
               />
             </div>
           </div>
@@ -97,7 +103,7 @@ export default function WizardStep({
               <div key={field.name}>
                 <label
                   htmlFor={field.name}
-                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                  className="mb-1.5 block text-sm font-bold text-warm-text"
                 >
                   {field.label}
                 </label>
@@ -108,7 +114,7 @@ export default function WizardStep({
                   onChange={(e) => updateField(field.name, e.target.value)}
                   placeholder={field.placeholder}
                   required={field.required}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-900 shadow-md shadow-slate-200/40 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  className={`${inputClass} px-5 py-3.5`}
                 />
               </div>
             ))}
@@ -130,17 +136,23 @@ export default function WizardStep({
       initial="enter"
       animate="center"
       exit="exit"
-      transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+      transition={{ duration: 0.42, ease: [0.25, 0.46, 0.45, 0.94] }}
       className="w-full max-w-xl"
     >
       <div className="mb-8">
         {StepIcon && step.type !== 'text-input' && (
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-50 text-teal-800">
-            <StepIcon className="h-6 w-6" strokeWidth={1.75} />
-          </div>
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="mb-4 flex h-14 w-14 items-center justify-center rounded-[1.25rem] bg-gradient-to-br from-sunny to-peach text-coral shadow-peach"
+          >
+            <StepIcon className="h-7 w-7" strokeWidth={2} />
+          </motion.div>
         )}
-        <h2 className="mb-2 text-2xl font-bold text-slate-900 sm:text-3xl">{step.question}</h2>
-        <p className="text-slate-600">{step.subtitle}</p>
+        <h2 className="mb-2 text-2xl font-extrabold text-warm-text sm:text-3xl">
+          {step.question}
+        </h2>
+        <p className="font-medium text-warm-muted">{step.subtitle}</p>
       </div>
 
       {renderInput()}
@@ -148,14 +160,16 @@ export default function WizardStep({
       {showNavButtons && (
         <div className="mt-10 flex items-center justify-between gap-4">
           {!isFirst ? (
-            <button
+            <motion.button
               type="button"
               onClick={onBack}
-              className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+              whileHover={{ x: -2 }}
+              whileTap={{ scale: 0.97 }}
+              className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold text-warm-muted transition-colors hover:bg-peach-soft hover:text-warm-text"
             >
               <ArrowLeft className="h-4 w-4" />
               Indietro
-            </button>
+            </motion.button>
           ) : (
             <div />
           )}
