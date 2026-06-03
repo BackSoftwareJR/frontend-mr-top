@@ -22,6 +22,47 @@ export const ONBOARDING_STEP_LABELS = [
 
 const APPROVED_EMAILS = new Set(['partner@care.it'])
 
+export const AUTO_DEMO_FLAG = 'wenando-b2b-run-autodemo'
+
+export const DEMO_REGISTRATION = {
+  email: 'demo.partner@wenando.it',
+  organizationName: 'Casa Serena Demo',
+  legalName: 'Casa Serena S.r.l.',
+}
+
+export const DEMO_ONBOARDING_DATA = {
+  vat: 'IT12345678901',
+  sdi: 'ABC1234',
+  visura: 'visura-camerale-demo.pdf',
+  identityDoc: 'documento-identita-demo.pdf',
+  dynamic: {
+    sector: 'rsa',
+    capacity: '24',
+    nonSelfSufficient: true,
+    nightStaff: true,
+    notes: 'Struttura dimostrativa — dati precompilati per il tour onboarding.',
+  },
+  schedule: {
+    mon: { open: true, slots: '09:00-12:00, 15:00-18:00' },
+    tue: { open: true, slots: '09:00-12:00, 15:00-18:00' },
+    wed: { open: true, slots: '09:00-12:00, 15:00-18:00' },
+    thu: { open: true, slots: '09:00-18:00' },
+    fri: { open: true, slots: '09:00-17:00' },
+    sat: { open: false, slots: '' },
+    sun: { open: false, slots: '' },
+  },
+  trustAnswers: {
+    emergency:
+      'Allerta personale notturno, valutazione parametri vitali, contatto medico di turno e familiari entro 15 minuti. Documentazione su registro eventi avversi.',
+    fall:
+      '1) Non spostare fino a valutazione 2) Infermiere responsabile + medico 3) Compilazione scheda incidente e comunicazione familiari.',
+    family:
+      'Linea dedicata H24 con escalation al coordinatore; risposta entro 30 minuti per urgenze certificate.',
+    quality:
+      'Audit mensili interni, NPS familiari trimestrale, KPI su tempi risposta emergenze.',
+  },
+}
+
 function readJson(key, fallback) {
   try {
     const raw = localStorage.getItem(key)
@@ -44,7 +85,86 @@ export function getOnboardingStatus(email) {
 
   const store = readJson(ONBOARDING_KEY, {})
   const entry = store[normalized]
+  if (entry?.status === 'approved') return 'approved'
   return entry?.status ?? (session?.onboardingStatus || null)
+}
+
+export function enableAutoDemo() {
+  localStorage.setItem(AUTO_DEMO_FLAG, '1')
+}
+
+export function restartAutoDemoTour() {
+  try {
+    sessionStorage.removeItem('wenando-b2b-tour-step')
+  } catch {
+    /* ignore */
+  }
+}
+
+export function isAutoDemoEnabled() {
+  return localStorage.getItem(AUTO_DEMO_FLAG) === '1'
+}
+
+export function clearAutoDemo() {
+  localStorage.removeItem(AUTO_DEMO_FLAG)
+}
+
+export function seedDemoOnboardingData(email) {
+  const normalized = normalizeEmail(email)
+  saveOnboardingData(normalized, DEMO_ONBOARDING_DATA)
+  setOnboardingStatus(normalized, 'in_progress')
+  return DEMO_ONBOARDING_DATA
+}
+
+export function approvePartner(email) {
+  const normalized = normalizeEmail(email)
+  APPROVED_EMAILS.add(normalized)
+  setOnboardingStatus(normalized, 'approved')
+
+  const session = getSession()
+  if (session?.email === normalized) {
+    saveSession({
+      email: normalized,
+      type: 'b2b',
+      name: session.name,
+      onboardingStatus: 'approved',
+    })
+  }
+}
+
+/** Registra partner demo, precompila onboarding e avvia tour automatico (da zero). */
+export function startAutoDemoPartner() {
+  const { email, organizationName, legalName } = DEMO_REGISTRATION
+  registerB2BPartner({ email, organizationName, legalName })
+  seedDemoOnboardingData(email)
+  enableAutoDemo()
+  restartAutoDemoTour()
+  return normalizeEmail(email)
+}
+
+/** Riprende demo dopo refresh: mantiene step e sessione se presenti. */
+export function resumeAutoDemoPartner(email) {
+  const normalized = normalizeEmail(email || getSession()?.email || DEMO_REGISTRATION.email)
+  const session = getSession()
+
+  if (!session || session.type !== 'b2b') {
+    return startAutoDemoPartner()
+  }
+
+  const status = getOnboardingStatus(normalized)
+  if (status === 'approved') {
+    return { email: normalized, status: 'approved' }
+  }
+
+  enableAutoDemo()
+  if (!getOnboardingData(normalized).vat) {
+    seedDemoOnboardingData(normalized)
+  }
+  if (status !== 'pending_review') {
+    setOnboardingStatus(normalized, 'in_progress')
+  }
+
+  return { email: normalized, status: status || 'in_progress' }
 }
 
 export function getB2BRedirectPath(session = getSession()) {

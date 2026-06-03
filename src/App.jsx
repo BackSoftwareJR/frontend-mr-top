@@ -21,6 +21,9 @@ const SmartCRM = lazy(() => import('./pages/b2b/SmartCRM'))
 const Calendario = lazy(() => import('./pages/b2b/Calendario'))
 const Fatturazione = lazy(() => import('./pages/b2b/Fatturazione'))
 const ProAccedi = lazy(() => import('./pages/b2b/ProAccedi'))
+const B2BPortal = lazy(() => import('./pages/b2b/B2BPortal'))
+const B2BRegister = lazy(() => import('./pages/b2b/Register'))
+const B2BOnboarding = lazy(() => import('./pages/b2b/Onboarding'))
 const AdminLayout = lazy(() => import('./components/admin/AdminLayout'))
 const AdminHome = lazy(() => import('./pages/admin/AdminHome'))
 const AdminPortfolio = lazy(() => import('./pages/admin/AdminPortfolio'))
@@ -69,7 +72,10 @@ function AppRoutes() {
           <Route path="profilo" element={<UserProfile />} />
         </Route>
         <Route path="/pro">
+          <Route index element={<B2BPortal />} />
+          <Route path="registrati" element={<B2BRegister />} />
           <Route path="accedi" element={<ProAccedi />} />
+          <Route path="onboarding" element={<B2BOnboarding />} />
           <Route element={<B2BShell />}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<DashboardHome />} />

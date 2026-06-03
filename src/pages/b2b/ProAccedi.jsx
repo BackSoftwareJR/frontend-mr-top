@@ -11,6 +11,7 @@ import {
   getResendCooldown,
   validateEmailForPortal,
 } from '../../services/authService'
+import { getB2BRedirectPath, getOnboardingStatus } from '../../services/b2bOnboardingService'
 
 const STEPS = { EMAIL: 'email', CAPTCHA: 'captcha', CODE: 'code' }
 
@@ -24,7 +25,7 @@ function maskEmail(email) {
 export default function ProAccedi() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { isAuthenticated, userType, requestCode, login } = useAuth()
+  const { isAuthenticated, userType, userEmail, requestCode, login } = useAuth()
 
   const [step, setStep] = useState(STEPS.EMAIL)
   const [email, setEmail] = useState('')
@@ -35,13 +36,18 @@ export default function ProAccedi() {
   const [error, setError] = useState('')
   const [resendCooldown, setResendCooldown] = useState(0)
 
-  const redirectTarget = location.state?.from || '/pro/dashboard'
+  const redirectTarget = location.state?.from
 
   useEffect(() => {
     if (isAuthenticated && userType === 'b2b') {
-      navigate(redirectTarget, { replace: true })
+      const status = getOnboardingStatus(userEmail)
+      const target =
+        status === 'approved' && redirectTarget?.startsWith('/pro/')
+          ? redirectTarget
+          : getB2BRedirectPath()
+      navigate(target, { replace: true })
     }
-  }, [isAuthenticated, navigate, redirectTarget, userType])
+  }, [isAuthenticated, navigate, redirectTarget, userEmail, userType])
 
   useEffect(() => {
     if (resendCooldown <= 0) return
@@ -110,7 +116,11 @@ export default function ProAccedi() {
       return
     }
 
-    navigate(result.redirectTo || redirectTarget, { replace: true })
+    const target =
+      getOnboardingStatus(result.session?.email) === 'approved' && redirectTarget
+        ? redirectTarget
+        : getB2BRedirectPath(result.session)
+    navigate(target, { replace: true })
   }
 
   const handleResend = async () => {
@@ -279,6 +289,11 @@ export default function ProAccedi() {
           Demo partner: <span className="font-medium text-charcoal">partner@care.it</span>
         </p>
         <p className="mt-2 text-center text-xs text-charcoal-muted">
+          Nuovo partner?{' '}
+          <Link to="/pro/registrati" className={b2bLink}>
+            Registrati
+          </Link>
+          {' · '}
           Sei un utente?{' '}
           <Link to="/accedi" className={b2bLink}>
             Accedi qui

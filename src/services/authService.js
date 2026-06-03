@@ -81,7 +81,7 @@ export function validateEmailForPortal(email, portal) {
     return {
       ok: false,
       error:
-        'Questa email è registrata come partner. Accedi tramite /pro/accedi.',
+        'Questa email è registrata come partner. Accedi tramite l\'area B2B (/pro).',
     }
   }
 

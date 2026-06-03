@@ -108,10 +108,10 @@ function HomeFooter() {
           ·
         </span>
         <Link
-          to="/pro/accedi"
+          to="/pro"
           className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-800"
         >
-          Accedi B2B
+          Area B2B
         </Link>
       </div>
       <p className="text-sm text-slate-500">

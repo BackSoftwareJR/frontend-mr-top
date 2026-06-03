@@ -28,6 +28,14 @@ export function AuthProvider({ children }) {
     setSession(null)
   }, [])
 
+  const refreshSession = useCallback(() => {
+    setSession(getSession())
+  }, [])
+
+  const establishSession = useCallback((nextSession) => {
+    setSession(nextSession ?? getSession())
+  }, [])
+
   const value = useMemo(
     () => ({
       session,
@@ -38,8 +46,10 @@ export function AuthProvider({ children }) {
       login,
       requestCode,
       logout,
+      refreshSession,
+      establishSession,
     }),
-    [session, login, requestCode, logout]
+    [session, login, requestCode, logout, refreshSession, establishSession]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
