@@ -15,7 +15,7 @@ import SectionBlob from '../ui/SectionBlob'
 
 export default function HeroSection() {
   return (
-    <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 pb-24 pt-32 text-center">
+    <section className="relative flex min-h-[85vh] flex-col items-center justify-center overflow-x-clip px-6 pb-16 pt-32 text-center sm:min-h-screen sm:pb-20">
       <SectionBlob variant="coral" shape="circle" position="top-right" />
       <SectionBlob variant="violet" shape="blob" position="bottom-left" />
 
@@ -48,9 +48,6 @@ export default function HeroSection() {
         <MagneticButton to="/wizard">Inizia l&apos;analisi gratuita</MagneticButton>
       </motion.div>
 
-      <div className="relative z-10 w-full">
-        <BentoSteps />
-      </div>
     </section>
   )
 }
@@ -62,6 +59,7 @@ export function HomePageContent() {
       <div className="relative z-10">
         <HomeNav />
         <HeroSection />
+        <BentoSteps />
         <StatsSection />
         <PersonalizedAnalysisSection />
         <TestimonialsSection />

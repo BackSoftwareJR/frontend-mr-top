@@ -30,22 +30,23 @@ export default function SectionBlob({
   const isRing = shape === 'ring'
 
   const positionClasses = {
-    'top-right': 'top-0 right-0 translate-x-1/4 -translate-y-1/4',
-    'top-left': 'top-0 left-0 -translate-x-1/4 -translate-y-1/4',
-    'bottom-right': 'bottom-0 right-0 translate-x-1/4 translate-y-1/4',
-    'bottom-left': 'bottom-0 left-0 -translate-x-1/4 translate-y-1/4',
-    center: 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2',
+    'top-right': 'top-0 right-0 translate-x-[15%] -translate-y-[15%]',
+    'top-left': 'top-0 left-0 -translate-x-[15%] -translate-y-[15%]',
+    'bottom-right': 'bottom-0 right-0 translate-x-[15%] translate-y-[15%]',
+    'bottom-left': 'bottom-0 left-0 -translate-x-[15%] translate-y-[15%]',
+    center: 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 scale-90',
   }
 
   return (
     <div
-      className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}
+      className={`pointer-events-none absolute inset-0 overflow-visible ${className}`}
       aria-hidden="true"
     >
       <svg
         viewBox="0 0 600 400"
-        className={`absolute h-[70%] w-[70%] max-h-[480px] max-w-[480px] sm:h-[80%] sm:w-[80%] ${positionClasses[position] || positionClasses['top-right']}`}
+        className={`absolute h-[65%] w-[65%] max-h-[440px] max-w-[440px] sm:h-[75%] sm:w-[75%] ${positionClasses[position] || positionClasses['top-right']}`}
         preserveAspectRatio="xMidYMid meet"
+        overflow="visible"
       >
         {isRing ? (
           <ellipse

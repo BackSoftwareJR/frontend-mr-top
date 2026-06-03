@@ -54,7 +54,7 @@ const itemVariants = {
 
 export default function PersonalizedAnalysisSection() {
   return (
-    <section className="relative overflow-hidden px-6 py-28">
+    <section className="relative overflow-x-clip px-6 py-20 sm:py-28">
       <SectionBlob variant="violet" shape="blob" position="top-left" />
       <SectionBlob variant="rose" shape="circle" position="bottom-right" />
 
@@ -103,9 +103,9 @@ export default function PersonalizedAnalysisSection() {
                   className={`h-full border ${point.border} ${point.cardTint} p-7 sm:p-8`}
                 >
                   <div
-                    className={`mb-5 inline-flex rounded-2xl ${point.iconBg} p-3.5`}
+                    className={`mb-5 inline-flex size-14 items-center justify-center overflow-visible rounded-2xl ${point.iconBg} p-3.5`}
                   >
-                    <Icon className={`h-6 w-6 ${point.iconColor}`} strokeWidth={1.75} />
+                    <Icon className={`size-6 shrink-0 ${point.iconColor}`} strokeWidth={1.75} />
                   </div>
                   <h3 className="mb-2 text-lg font-bold text-slate-800">
                     {point.title}

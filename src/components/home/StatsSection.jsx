@@ -63,7 +63,7 @@ const itemVariants = {
 
 export default function StatsSection() {
   return (
-    <section className="relative overflow-hidden px-6 py-20">
+    <section className="relative overflow-x-clip px-6 py-20 sm:py-24">
       <SectionBlob variant="amber" shape="ring" position="top-right" />
 
       <div className="relative z-10 mx-auto max-w-6xl">
@@ -92,9 +92,9 @@ export default function StatsSection() {
                   className={`border ${stat.border} ${stat.cardTint} p-6 text-center`}
                 >
                   <div
-                    className={`mx-auto mb-4 inline-flex rounded-2xl ${stat.iconBg} p-3`}
+                    className={`mx-auto mb-4 inline-flex size-14 items-center justify-center overflow-visible rounded-2xl ${stat.iconBg} p-3.5`}
                   >
-                    <Icon className={`h-6 w-6 ${stat.iconColor}`} strokeWidth={1.75} />
+                    <Icon className={`size-6 shrink-0 ${stat.iconColor}`} strokeWidth={1.75} />
                   </div>
                   <p className={`text-3xl font-extrabold ${stat.valueColor}`}>
                     {stat.value}

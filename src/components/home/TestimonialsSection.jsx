@@ -61,7 +61,7 @@ export default function TestimonialsSection() {
   const t = TESTIMONIALS[index]
 
   return (
-    <section className="relative overflow-hidden px-6 py-28">
+    <section className="relative overflow-x-clip px-6 py-20 sm:py-28">
       <SectionBlob variant="teal" shape="blob" position="top-right" />
       <SectionBlob variant="amber" shape="circle" position="bottom-left" />
 

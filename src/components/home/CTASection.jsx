@@ -6,7 +6,7 @@ import MagneticButton from '../ui/MagneticButton'
 
 export default function CTASection() {
   return (
-    <section className="relative overflow-hidden px-6 py-24">
+    <section className="relative overflow-x-clip px-6 py-20 sm:py-24">
       <SectionBlob variant="coral" shape="wave" position="bottom-left" />
       <SectionBlob variant="amber" shape="ring" position="top-right" />
 

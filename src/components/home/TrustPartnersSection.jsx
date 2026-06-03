@@ -32,7 +32,7 @@ const BADGE_BGS = [
 
 export default function TrustPartnersSection() {
   return (
-    <section className="relative overflow-hidden border-y border-slate-200/50 bg-gradient-to-b from-white/60 via-[#E9A84A]/[0.03] to-white/60 px-6 py-20 backdrop-blur-sm">
+    <section className="relative overflow-x-clip border-y border-slate-200/50 bg-gradient-to-b from-white/60 via-[#E9A84A]/[0.03] to-white/60 px-6 py-20 backdrop-blur-sm">
       <SectionBlob variant="amber" shape="ring" position="center" />
 
       <div className="relative z-10 mx-auto max-w-6xl">

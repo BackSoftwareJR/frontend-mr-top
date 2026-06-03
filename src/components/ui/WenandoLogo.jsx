@@ -67,7 +67,7 @@ function NavigandoWordmark({ size = 'md', className = '' }) {
       </motion.span>
 
       <motion.span
-        className="inline-flex items-baseline overflow-hidden"
+        className="inline-flex items-baseline overflow-visible"
         initial={{ width: '0.35em' }}
         animate={{ width: 'auto' }}
         transition={{
@@ -119,7 +119,7 @@ export default function WenandoLogo({
 
   return (
     <div
-      className={`inline-flex ${alignClass} ${className}`}
+      className={`inline-flex min-w-0 overflow-visible ${alignClass} ${className}`}
       aria-label="Wenando navigando"
       role="img"
     >
