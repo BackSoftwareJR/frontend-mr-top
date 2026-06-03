@@ -35,6 +35,26 @@ export const CTA_GLOW_SEGMENTS = ['hero-cta', 'personalized-cta', 'cta-final']
 /** Precomputed samples along path for cursor interpolation (no per-frame getPointAtLength) */
 export const PROGRESS_LOOKUP_SAMPLES = 192
 
+/** Lighter lookup on mobile — visually identical at display scale */
+export const MOBILE_PROGRESS_LOOKUP_SAMPLES = 48
+
+/** Fewer samples on constrained devices (old phones) */
+export const CONSTRAINED_PROGRESS_LOOKUP_SAMPLES = 32
+
+/** Fewer wavy-vertical cubics on mobile (same amplitude, coarser chain) */
+export const MOBILE_WAVY_VERTICAL_SEGMENTS = 2
+
+export function resolveProgressLookupSampleCount({ isMobile = false, isConstrained = false } = {}) {
+  if (isConstrained) return CONSTRAINED_PROGRESS_LOOKUP_SAMPLES
+  if (isMobile) return MOBILE_PROGRESS_LOOKUP_SAMPLES
+  return PROGRESS_LOOKUP_SAMPLES
+}
+
+export function resolveWavyVerticalSegmentCount({ isMobile = false } = {}) {
+  if (isMobile) return MOBILE_WAVY_VERTICAL_SEGMENTS
+  return WAVY_VERTICAL_SEGMENTS
+}
+
 /** Vertical drop from hero period anchor toward the hero CTA (~5rem) */
 export const HERO_VERTICAL_DROP = 80
 
@@ -65,6 +85,8 @@ export const PERIOD_ANCHOR_X_OFFSET = 0
 
 /** Scroll → path remap table resolution */
 export const SCROLL_REMAP_SAMPLES = 96
+
+export const MOBILE_SCROLL_REMAP_SAMPLES = 48
 
 /** Scroll → path progress shaping (fallback only when remap table is empty) */
 export const PATH_REVEAL_CURVE = [0, 0, 1, 1]
@@ -497,7 +519,12 @@ export function mapScrollToPathProgress(scrollProgress) {
  * Build scroll → path remap so the dot (on the path) stays inside the viewport.
  * Returns monotonic samples: [{ scrollProgress, pathProgress }].
  */
-export function buildScrollPathRemap(lookup, viewportHeight, margin = DOT_VIEWPORT_MARGIN) {
+export function buildScrollPathRemap(
+  lookup,
+  viewportHeight,
+  margin = DOT_VIEWPORT_MARGIN,
+  sampleCount = SCROLL_REMAP_SAMPLES,
+) {
   const { samples } = lookup
   if (!samples.length || !viewportHeight) return []
 
@@ -510,8 +537,8 @@ export function buildScrollPathRemap(lookup, viewportHeight, margin = DOT_VIEWPO
   const remap = [{ scrollProgress: 0, pathProgress: 0 }]
   let pathIdx = 0
 
-  for (let i = 1; i <= SCROLL_REMAP_SAMPLES; i += 1) {
-    const scrollProgress = i / SCROLL_REMAP_SAMPLES
+  for (let i = 1; i <= sampleCount; i += 1) {
+    const scrollProgress = i / sampleCount
     const scrollY = scrollProgress * maxScroll
 
     let bestIdx = pathIdx
@@ -996,7 +1023,12 @@ function buildStatsPassThroughSuffix(passPoints, fromPoint) {
 /**
  * Wavy vertical drop — chained cubics with alternating horizontal sway (no axis-aligned L).
  */
-export function buildWavyVerticalSuffix(from, to, amplitude = WAVY_VERTICAL_AMPLITUDE) {
+export function buildWavyVerticalSuffix(
+  from,
+  to,
+  amplitude = WAVY_VERTICAL_AMPLITUDE,
+  segmentCount = WAVY_VERTICAL_SEGMENTS,
+) {
   const dx = to.x - from.x
   const dy = to.y - from.y
   if (Math.abs(dy) < 2 && Math.abs(dx) < 2) return ''
@@ -1006,10 +1038,9 @@ export function buildWavyVerticalSuffix(from, to, amplitude = WAVY_VERTICAL_AMPL
     Math.max(40, Math.abs(dy) * 0.1),
     Math.abs(dx) * 0.42 + amplitude * 0.55,
   )
+  const baseSegments = segmentCount ?? WAVY_VERTICAL_SEGMENTS
   const segments =
-    Math.abs(dy) > 360
-      ? WAVY_VERTICAL_SEGMENTS
-      : Math.max(2, WAVY_VERTICAL_SEGMENTS - 1)
+    Math.abs(dy) > 360 ? baseSegments : Math.max(2, baseSegments - 1)
 
   let d = ''
   let px = from.x
@@ -1056,14 +1087,23 @@ export function buildWavyHorizontalSuffix(from, to, amplitude = WAVY_HORIZONTAL_
 }
 
 /** Smooth connector between descent end and stats entry — S-curve, no 90° corner */
-function buildWavyConnectorSuffix(from, to) {
+function buildWavyConnectorSuffix(
+  from,
+  to,
+  wavyVerticalSegments = WAVY_VERTICAL_SEGMENTS,
+) {
   const dx = to.x - from.x
   const dy = to.y - from.y
   if (Math.hypot(dx, dy) < 2) return ''
 
   const verticalBias = Math.abs(dy) / (Math.hypot(dx, dy) || 1)
   if (verticalBias > 0.55) {
-    return buildWavyVerticalSuffix(from, to, WAVY_VERTICAL_AMPLITUDE * 0.72)
+    return buildWavyVerticalSuffix(
+      from,
+      to,
+      WAVY_VERTICAL_AMPLITUDE * 0.72,
+      wavyVerticalSegments,
+    )
   }
 
   const amp = Math.min(WAVY_HORIZONTAL_AMPLITUDE, Math.abs(dx) * 0.06)
@@ -1073,8 +1113,13 @@ function buildWavyConnectorSuffix(from, to) {
 }
 
 /** Vertical drop from hero exit toward stats row — wavy S-curve descent */
-function buildVerticalDescentSuffix(from, to) {
-  return buildWavyVerticalSuffix(from, to)
+function buildVerticalDescentSuffix(
+  from,
+  to,
+  amplitude = WAVY_VERTICAL_AMPLITUDE,
+  segmentCount = WAVY_VERTICAL_SEGMENTS,
+) {
+  return buildWavyVerticalSuffix(from, to, amplitude, segmentCount)
 }
 
 /** Single cubic segment on an ellipse arc (no straight L segments) */
@@ -1117,7 +1162,7 @@ function buildOrbitExitTail(orbitPoints) {
 }
 
 /** Wavy cubic chain between section anchors (tangent-continuous, no sharp Catmull corners) */
-function buildSmoothSectionSuffix(points, startIndex = 0) {
+function buildSmoothSectionSuffix(points, startIndex = 0, wavyVerticalSegments = WAVY_VERTICAL_SEGMENTS) {
   if (points.length < startIndex + 2) return ''
 
   let d = ''
@@ -1129,9 +1174,14 @@ function buildSmoothSectionSuffix(points, startIndex = 0) {
 
     const verticalBias = Math.abs(to.y - from.y) / span
     if (verticalBias > 0.58) {
-      d += buildWavyVerticalSuffix(from, to, WAVY_VERTICAL_AMPLITUDE * 0.88)
+      d += buildWavyVerticalSuffix(
+        from,
+        to,
+        WAVY_VERTICAL_AMPLITUDE * 0.88,
+        wavyVerticalSegments,
+      )
     } else {
-      d += buildWavyConnectorSuffix(from, to)
+      d += buildWavyConnectorSuffix(from, to, wavyVerticalSegments)
     }
   }
 
@@ -1252,9 +1302,11 @@ function buildOrbitBezierSuffix(orbitPoints, fromPoint) {
 }
 
 /** Build SVG path: hero pass-through + final CTA orbit, Catmull-Rom elsewhere */
-export function buildReadingPathD(points) {
+export function buildReadingPathD(points, { isMobile = false } = {}) {
   if (!points.length) return ''
   if (points.length === 1) return `M ${fmt(points[0].x)} ${fmt(points[0].y)}`
+
+  const wavyVerticalSegments = resolveWavyVerticalSegmentCount({ isMobile })
 
   let d = `M ${fmt(points[0].x)} ${fmt(points[0].y)}`
   let i = 1
@@ -1303,7 +1355,7 @@ export function buildReadingPathD(points) {
         if (Math.abs(from.x - to.x) > 8) {
           d += buildStatsBridgeBezierSuffix(from, to)
         } else {
-          d += buildVerticalDescentSuffix(from, to)
+          d += buildVerticalDescentSuffix(from, to, WAVY_VERTICAL_AMPLITUDE, wavyVerticalSegments)
         }
       }
       i += 1
@@ -1361,10 +1413,10 @@ export function buildReadingPathD(points) {
     if (chunk.length >= 2 && chunk[0].orbit) {
       d += buildSectionConnector(chunk[0], chunk[1])
       if (chunk.length > 2) {
-        d += buildSmoothSectionSuffix(chunk.slice(1), 0)
+        d += buildSmoothSectionSuffix(chunk.slice(1), 0, wavyVerticalSegments)
       }
     } else {
-      d += buildSmoothSectionSuffix(chunk, 0)
+      d += buildSmoothSectionSuffix(chunk, 0, wavyVerticalSegments)
     }
 
     i = chunkEnd
@@ -1389,6 +1441,17 @@ export function buildProgressLookup(pathEl, sampleCount = PROGRESS_LOOKUP_SAMPLE
   }
 
   return { totalLength, samples }
+}
+
+/**
+ * Dot position from precomputed lookup — avoids per-frame SVG getPointAtLength.
+ * Lookup samples are uniform in path progress (0…1), matching pathTipCenterLength.
+ */
+export function getPathTipFromLookup(lookup, progress) {
+  if (!lookup?.samples?.length || progress <= 0) {
+    return lookup?.samples?.[0] ?? { x: -9999, y: -9999 }
+  }
+  return interpolateProgressLookup(lookup, Math.max(0, Math.min(1, progress)))
 }
 
 /**
