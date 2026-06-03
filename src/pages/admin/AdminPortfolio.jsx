@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { AlertTriangle, MapPin, Shield, TrendingUp, Wallet } from 'lucide-react'
 import {
   portfolioAllocation,
@@ -5,6 +6,12 @@ import {
   portfolioSummary,
   riskIndicators,
 } from '../../data/mockAdmin'
+import {
+  fetchPortfolioAllocationWithFallback,
+  fetchPortfolioPartnersWithFallback,
+  fetchPortfolioSummaryWithFallback,
+  fetchRiskIndicatorsWithFallback,
+} from '../../services/adminService'
 import AdminDonutChart from '../../components/admin/AdminDonutChart'
 import PartnerSparkline from '../../components/admin/PartnerSparkline'
 import {
@@ -96,7 +103,31 @@ function PartnerHoldingCard({ partner }) {
 }
 
 export default function AdminPortfolio() {
-  const topPerformers = [...portfolioPartners]
+  const [summary, setSummary] = useState(portfolioSummary)
+  const [allocation, setAllocation] = useState(portfolioAllocation)
+  const [partners, setPartners] = useState(portfolioPartners)
+  const [risks, setRisks] = useState(riskIndicators)
+
+  useEffect(() => {
+    let cancelled = false
+    fetchPortfolioSummaryWithFallback().then((data) => {
+      if (!cancelled) setSummary(data)
+    })
+    fetchPortfolioAllocationWithFallback().then((data) => {
+      if (!cancelled) setAllocation(data)
+    })
+    fetchPortfolioPartnersWithFallback().then((data) => {
+      if (!cancelled) setPartners(data)
+    })
+    fetchRiskIndicatorsWithFallback().then((data) => {
+      if (!cancelled) setRisks(data)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const topPerformers = [...partners]
     .sort((a, b) => b.revenueShare - a.revenueShare)
     .slice(0, 3)
 
@@ -116,16 +147,16 @@ export default function AdminPortfolio() {
             <p className="text-xs font-medium uppercase tracking-wider">AUM totale</p>
           </div>
           <p className="mt-2 text-2xl font-semibold text-white sm:text-3xl">
-            {portfolioSummary.totalAum}
+            {summary.totalAum}
           </p>
-          <p className="mt-1 text-xs text-emerald-400">{portfolioSummary.monthlyGrowth} mese</p>
+          <p className="mt-1 text-xs text-emerald-400">{summary.monthlyGrowth} mese</p>
         </div>
         <div className={`${adminGlassCard} p-4 sm:p-5`}>
           <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
             Revenue gestito
           </p>
           <p className="mt-2 text-2xl font-semibold text-white sm:text-3xl">
-            {portfolioSummary.revenueUnderManagement}
+            {summary.revenueUnderManagement}
           </p>
           <p className="mt-1 text-xs text-zinc-500">MRR corrente</p>
         </div>
@@ -134,7 +165,7 @@ export default function AdminPortfolio() {
             Contratti attivi
           </p>
           <p className="mt-2 text-2xl font-semibold text-white sm:text-3xl">
-            {portfolioSummary.activeContracts}
+            {summary.activeContracts}
           </p>
         </div>
         <div className={`${adminGlassCard} p-4 sm:p-5`}>
@@ -142,7 +173,7 @@ export default function AdminPortfolio() {
             Esposizione media
           </p>
           <p className="mt-2 text-2xl font-semibold text-white sm:text-3xl">
-            {portfolioSummary.avgExposure}
+            {summary.avgExposure}
           </p>
         </div>
       </div>
@@ -151,12 +182,12 @@ export default function AdminPortfolio() {
         <AdminDonutChart
           title="Allocazione per categoria"
           subtitle="Mix revenue per tipo struttura"
-          segments={portfolioAllocation.bySector}
+          segments={allocation.bySector}
         />
         <AdminDonutChart
           title="Allocazione per tier"
           subtitle="Enterprise · Growth · Starter"
-          segments={portfolioAllocation.byTier}
+          segments={allocation.byTier}
         />
       </div>
 
@@ -186,7 +217,7 @@ export default function AdminPortfolio() {
       <section>
         <h2 className="mb-3 text-sm font-semibold text-white">Holdings partner B2B</h2>
         <div className="grid gap-4 sm:grid-cols-2">
-          {portfolioPartners.map((partner) => (
+          {partners.map((partner) => (
             <PartnerHoldingCard key={partner.id} partner={partner} />
           ))}
         </div>
@@ -195,7 +226,7 @@ export default function AdminPortfolio() {
       <section>
         <h2 className="mb-3 text-sm font-semibold text-white">Rischio ed esposizione</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {riskIndicators.map((ind) => (
+          {risks.map((ind) => (
             <RiskIndicatorCard key={ind.label} indicator={ind} />
           ))}
         </div>

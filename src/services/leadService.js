@@ -1,4 +1,7 @@
-import apiClient, { unwrapApiData } from './apiClient'
+import apiClient, { isApiConfigured, unwrapApiData, withDevMockFallback } from './apiClient'
+import { mapApiMatch } from './userService'
+import { getDiagnosis } from '../data/autonomyInfo'
+import { getMatchesForLocation, mockAdvisor } from '../data/mockMatches'
 import { recordWizardConsents, getSessionId } from './consentService'
 import { CONSENT_TEXT_HASH } from '../constants/wizardConsent'
 import { LEGAL_VERSION } from '../constants/legalVersions'
@@ -64,6 +67,55 @@ export async function submitLead({ answers, consents }) {
     }
     throw error
   }
+}
+
+function createMockLeadResults(answers) {
+  const locationLabel = answers?.location?.label || 'la tua zona'
+  return {
+    diagnosis: getDiagnosis(answers?.autonomy),
+    matches: getMatchesForLocation(locationLabel),
+    advisor: mockAdvisor,
+    _mock: true,
+  }
+}
+
+/**
+ * GET /b2c/leads/{uuid}/results
+ * @param {string} leadUuid
+ * @param {Record<string, unknown>} [answers] — for dev mock fallback
+ */
+export async function fetchLeadResults(leadUuid, answers) {
+  const response = await apiClient.get(`/b2c/leads/${leadUuid}/results`)
+  const data = unwrapApiData(response)
+
+  return {
+    diagnosis: data.diagnosis ?? getDiagnosis(answers?.autonomy),
+    matches: Array.isArray(data.matches) ? data.matches.map(mapApiMatch) : [],
+    advisor: data.advisor ?? mockAdvisor,
+  }
+}
+
+/**
+ * GET /b2c/leads/{uuid}/status
+ * @param {string} leadUuid
+ */
+export async function fetchLeadStatus(leadUuid) {
+  const response = await apiClient.get(`/b2c/leads/${leadUuid}/status`)
+  return unwrapApiData(response)
+}
+
+export function fetchLeadResultsWithFallback(leadUuid, answers) {
+  if (!leadUuid) {
+    return Promise.resolve(createMockLeadResults(answers))
+  }
+  if (!isApiConfigured()) {
+    return Promise.resolve(createMockLeadResults(answers))
+  }
+  return withDevMockFallback(
+    () => fetchLeadResults(leadUuid, answers),
+    () => createMockLeadResults(answers),
+    'Lead results',
+  )
 }
 
 /** @deprecated Use submitLead */

@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useState } from 'react
 import {
   clearSession,
   getSession,
+  logoutSession,
   sendLoginCode,
   verifyLoginCode,
 } from '../services/authService'
@@ -12,19 +13,19 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(() => getSession())
 
   const login = useCallback(async (email, code) => {
-    const result = verifyLoginCode(email, code)
+    const result = await verifyLoginCode(email, code)
     if (result.ok) {
       setSession(result.session)
     }
     return result
   }, [])
 
-  const requestCode = useCallback(async (email, captchaPayload) => {
-    return sendLoginCode(email, captchaPayload)
+  const requestCode = useCallback(async (email, captchaPayload, portal = 'consumer') => {
+    return sendLoginCode(email, captchaPayload, portal)
   }, [])
 
-  const logout = useCallback(() => {
-    clearSession()
+  const logout = useCallback(async () => {
+    await logoutSession()
     setSession(null)
   }, [])
 
@@ -49,7 +50,7 @@ export function AuthProvider({ children }) {
       refreshSession,
       establishSession,
     }),
-    [session, login, requestCode, logout, refreshSession, establishSession]
+    [session, login, requestCode, logout, refreshSession, establishSession],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

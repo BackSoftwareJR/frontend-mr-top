@@ -19,7 +19,7 @@ import {
   clearAutoDemo,
   DEMO_ONBOARDING_DATA,
   DEMO_REGISTRATION,
-  registerB2BPartner,
+  registerB2BPartnerAsync,
   restartAutoDemoTour,
   saveOnboardingData,
 } from '../../services/b2bOnboardingService'
@@ -33,7 +33,7 @@ export default function Register() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
 
@@ -51,12 +51,20 @@ export default function Register() {
     clearAutoDemo()
     restartAutoDemoTour()
 
-    const session = registerB2BPartner({ email: normalized, organizationName, legalName })
-    saveOnboardingData(normalized, DEMO_ONBOARDING_DATA)
-    establishSession(session)
-
-    setLoading(false)
-    navigate('/pro/onboarding', { replace: true })
+    try {
+      const session = await registerB2BPartnerAsync({
+        email: normalized,
+        organizationName,
+        legalName,
+      })
+      saveOnboardingData(normalized, DEMO_ONBOARDING_DATA)
+      establishSession(session)
+      navigate('/pro/onboarding', { replace: true })
+    } catch (err) {
+      setError(err.message ?? 'Registrazione non riuscita.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

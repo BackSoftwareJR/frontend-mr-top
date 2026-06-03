@@ -1,10 +1,18 @@
 /**
- * Mock auth service — swap sendCode/verifyCode for real API calls in production.
- * Captcha: wire VITE_HCAPTCHA_SITE_KEY or VITE_RECAPTCHA_SITE_KEY for production
- * (see HumanVerification.jsx).
+ * Auth — OTP via API when VITE_API_URL is set; localStorage mock fallback in dev when API is down.
  */
 
-const SESSION_KEY = 'wenando-auth-session'
+import { AUTH_TOKEN_KEY, isApiConfigured } from './apiClient'
+import {
+  clearAuthStorage,
+  fetchResendCooldown,
+  logoutApi,
+  requestOtpWithFallback,
+  verifyOtpWithFallback,
+} from './authApiService'
+
+export const SESSION_KEY = 'wenando-auth-session'
+
 const OTP_STORE_KEY = 'wenando-auth-otp'
 const RATE_LIMIT_KEY = 'wenando-auth-rate-limit'
 
@@ -17,6 +25,7 @@ const MIN_FORM_DURATION_MS = 2000
 export const MOCK_USERS = {
   'partner@care.it': { type: 'b2b', name: 'Care Partner S.r.l.' },
   'user@example.com': { type: 'consumer', name: 'Mario Rossi' },
+  'admin@wenando.it': { type: 'superadmin', name: 'Super Admin' },
 }
 
 function normalizeEmail(email) {
@@ -62,12 +71,20 @@ function recordSendAttempt(email) {
 }
 
 export function getRedirectForUserType(type) {
+  if (type === 'superadmin') return '/admin'
   return type === 'b2b' ? '/pro/dashboard' : '/user'
 }
 
 export function validateEmailForPortal(email, portal) {
   const normalized = normalizeEmail(email)
   const profile = resolveUserType(normalized)
+
+  if (portal === 'admin' && profile.type !== 'superadmin') {
+    return {
+      ok: false,
+      error: 'Accesso riservato agli amministratori della piattaforma.',
+    }
+  }
 
   if (portal === 'partner' && profile.type !== 'b2b') {
     return {
@@ -77,11 +94,13 @@ export function validateEmailForPortal(email, portal) {
     }
   }
 
-  if (portal === 'consumer' && profile.type === 'b2b') {
+  if (portal === 'consumer' && (profile.type === 'b2b' || profile.type === 'superadmin')) {
     return {
       ok: false,
       error:
-        'Questa email è registrata come partner. Accedi tramite l\'area B2B (/pro).',
+        profile.type === 'b2b'
+          ? 'Questa email è registrata come partner. Accedi tramite l\'area B2B (/pro).'
+          : 'Questa email è riservata all\'area amministrativa.',
     }
   }
 
@@ -99,14 +118,17 @@ export function getSession() {
 }
 
 export function clearSession() {
-  localStorage.removeItem(SESSION_KEY)
+  clearAuthStorage()
 }
 
-export function saveSession({ email, type, name }) {
+export function saveSession({ email, type, name, token, onboardingStatus, userId }) {
   const session = {
     email,
     type,
     name,
+    token: token ?? null,
+    userId: userId ?? null,
+    onboardingStatus: onboardingStatus ?? null,
     authenticatedAt: Date.now(),
     expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
   }
@@ -119,6 +141,9 @@ export function resolveUserType(email) {
   const known = MOCK_USERS[normalized]
   if (known) return known
 
+  if (normalized.endsWith('@wenando.it') || normalized.includes('admin')) {
+    return { type: 'superadmin', name: 'Admin' }
+  }
   if (normalized.endsWith('@care.it') || normalized.includes('partner')) {
     return { type: 'b2b', name: normalized.split('@')[0] }
   }
@@ -155,7 +180,7 @@ export function validateCaptcha({ honeypot, challengeAnswer, expectedChallenge, 
   return { ok: true }
 }
 
-export function sendLoginCode(email, captchaPayload) {
+function mockSendLoginCode(email, captchaPayload) {
   const normalized = normalizeEmail(email)
   if (!normalized || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
     return { ok: false, error: 'Inserisci un indirizzo email valido.' }
@@ -167,7 +192,7 @@ export function sendLoginCode(email, captchaPayload) {
   const rateEntry = getRateLimitEntry(normalized)
   if (rateEntry.attempts >= MAX_SEND_ATTEMPTS) {
     const minutesLeft = Math.ceil(
-      (RATE_LIMIT_WINDOW_MS - (Date.now() - rateEntry.windowStart)) / 60000
+      (RATE_LIMIT_WINDOW_MS - (Date.now() - rateEntry.windowStart)) / 60000,
     )
     return {
       ok: false,
@@ -198,16 +223,7 @@ export function sendLoginCode(email, captchaPayload) {
   }
 }
 
-export function getResendCooldown(email) {
-  const normalized = normalizeEmail(email)
-  const otpStore = readJson(OTP_STORE_KEY, {})
-  const entry = otpStore[normalized]
-  if (!entry?.lastSentAt) return 0
-  const elapsed = Date.now() - entry.lastSentAt
-  return Math.max(0, RESEND_COOLDOWN_MS - elapsed)
-}
-
-export function verifyLoginCode(email, code) {
+function mockVerifyLoginCode(email, code) {
   const normalized = normalizeEmail(email)
   const otpStore = readJson(OTP_STORE_KEY, {})
   const entry = otpStore[normalized]
@@ -230,10 +246,15 @@ export function verifyLoginCode(email, code) {
   writeJson(OTP_STORE_KEY, otpStore)
 
   const profile = resolveUserType(normalized)
+  const devToken = import.meta.env.DEV ? `dev-mock-${profile.type}-${normalized}` : null
+  if (devToken) {
+    localStorage.setItem(AUTH_TOKEN_KEY, devToken)
+  }
   const session = saveSession({
     email: normalized,
     type: profile.type,
     name: profile.name,
+    token: devToken,
   })
 
   return {
@@ -241,4 +262,41 @@ export function verifyLoginCode(email, code) {
     session,
     redirectTo: getRedirectForUserType(profile.type),
   }
+}
+
+/**
+ * @param {string} email
+ * @param {Record<string, unknown>} captchaPayload
+ * @param {'consumer' | 'partner' | 'admin'} [portal='consumer']
+ */
+export async function sendLoginCode(email, captchaPayload, portal = 'consumer') {
+  return requestOtpWithFallback(email, portal, captchaPayload, () =>
+    mockSendLoginCode(email, captchaPayload),
+  )
+}
+
+export async function getResendCooldown(email) {
+  if (isApiConfigured()) {
+    try {
+      return await fetchResendCooldown(email)
+    } catch {
+      // fall through to local store
+    }
+  }
+
+  const normalized = normalizeEmail(email)
+  const otpStore = readJson(OTP_STORE_KEY, {})
+  const entry = otpStore[normalized]
+  if (!entry?.lastSentAt) return 0
+  const elapsed = Date.now() - entry.lastSentAt
+  return Math.max(0, RESEND_COOLDOWN_MS - elapsed)
+}
+
+export async function verifyLoginCode(email, code) {
+  return verifyOtpWithFallback(email, code, () => mockVerifyLoginCode(email, code))
+}
+
+export async function logoutSession() {
+  await logoutApi()
+  clearSession()
 }

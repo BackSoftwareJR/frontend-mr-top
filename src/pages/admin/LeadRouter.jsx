@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Mail, Phone, X } from 'lucide-react'
 import { adminPartnersList, mockAdminLeads } from '../../data/mockAdmin'
+import { assignAdminLead, fetchAdminLeadsWithFallback } from '../../services/adminService'
+import { isApiConfigured } from '../../services/apiClient'
 import {
   adminGlassCard,
   adminPageSubtitle,
@@ -180,12 +182,34 @@ export default function LeadRouter() {
   const [selectedLead, setSelectedLead] = useState(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
 
+  useEffect(() => {
+    let cancelled = false
+    fetchAdminLeadsWithFallback().then((data) => {
+      if (!cancelled && data.length) setLeads(data)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const openLead = (lead) => {
     setSelectedLead(lead)
     setDrawerOpen(true)
   }
 
-  const handleAssignPartner = (leadId, partner) => {
+  const handleAssignPartner = async (leadId, partner) => {
+    if (isApiConfigured() && partner) {
+      try {
+        await assignAdminLead(leadId, partner)
+      } catch (error) {
+        if (!import.meta.env.DEV) {
+          console.error('[Wenando Admin] Assign lead failed:', error)
+          return
+        }
+        console.warn('[Wenando Admin] Assign API — mock fallback:', error)
+      }
+    }
+
     setLeads((prev) =>
       prev.map((l) =>
         l.id === leadId

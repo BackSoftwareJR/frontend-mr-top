@@ -1,7 +1,13 @@
 /**
- * B2B partner registration & onboarding state (localStorage mock).
+ * B2B partner registration & onboarding — API when configured, localStorage mock fallback in dev.
  */
 
+import apiClient, {
+  AUTH_TOKEN_KEY,
+  isApiConfigured,
+  unwrapApiData,
+  withDevMockFallback,
+} from './apiClient'
 import { saveSession, getSession } from './authService'
 
 function normalizeEmail(email) {
@@ -247,4 +253,164 @@ export function submitOnboardingForReview(email) {
       onboardingStatus: 'pending_review',
     })
   }
+}
+
+function mapOnboardingDataFromApi(data) {
+  if (!data) return {}
+  return {
+    vat: data.vat,
+    sdi: data.sdi,
+    visura: data.visura,
+    identityDoc: data.identity_doc ?? data.identityDoc,
+    dynamic: data.dynamic ?? {},
+    schedule: data.schedule ?? {},
+    trustAnswers: data.trust_answers ?? data.trustAnswers ?? {},
+  }
+}
+
+function mapOnboardingDataToApi(patch) {
+  return {
+    vat: patch.vat,
+    sdi: patch.sdi,
+    visura: patch.visura,
+    identity_doc: patch.identityDoc,
+    dynamic: patch.dynamic,
+    schedule: patch.schedule,
+    trust_answers: patch.trustAnswers,
+  }
+}
+
+async function fetchOnboardingFromApi() {
+  const response = await apiClient.get('/b2b/onboarding')
+  const data = unwrapApiData(response)
+  return {
+    status: data.status ?? 'in_progress',
+    step: data.step,
+    data: mapOnboardingDataFromApi(data.data),
+  }
+}
+
+async function patchOnboardingToApi(patch) {
+  const response = await apiClient.patch('/b2b/onboarding', {
+    data: mapOnboardingDataToApi(patch),
+  })
+  const data = unwrapApiData(response)
+  return {
+    status: data.status,
+    data: mapOnboardingDataFromApi(data.data),
+  }
+}
+
+async function submitOnboardingToApi() {
+  const response = await apiClient.post('/b2b/onboarding/submit')
+  return unwrapApiData(response)
+}
+
+async function fetchOnboardingStatusFromApi() {
+  const response = await apiClient.get('/b2b/onboarding/status')
+  const data = unwrapApiData(response)
+  return data.status ?? null
+}
+
+async function registerB2BPartnerApi({ email, organizationName, legalName }) {
+  const response = await apiClient.post('/b2b/register', {
+    email: email.trim().toLowerCase(),
+    organization_name: organizationName.trim(),
+    legal_name: legalName.trim(),
+  })
+  const data = unwrapApiData(response)
+  const token = data.token ?? data.session?.token
+  if (token) {
+    localStorage.setItem(AUTH_TOKEN_KEY, token)
+  }
+
+  const session = saveSession({
+    email: data.user?.email ?? email.trim().toLowerCase(),
+    type: 'b2b',
+    name: data.company?.organization_name ?? organizationName.trim(),
+    token,
+    onboardingStatus: data.company?.vetting_status ?? 'in_progress',
+    userId: data.user?.id,
+  })
+
+  return session
+}
+
+export async function registerB2BPartnerAsync(params) {
+  if (!isApiConfigured()) {
+    return registerB2BPartner(params)
+  }
+  return withDevMockFallback(
+    () => registerB2BPartnerApi(params),
+    () => registerB2BPartner(params),
+    'B2B register',
+  )
+}
+
+export async function getOnboardingStatusAsync(email) {
+  const session = getSession()
+  const normalized = normalizeEmail(email || session?.email || '')
+
+  if (isApiConfigured() && getSession()?.token) {
+    try {
+      const status = await fetchOnboardingStatusFromApi()
+      if (status) return status
+    } catch (error) {
+      if (!import.meta.env.DEV) throw error
+      console.warn('[Wenando B2B] Onboarding status API — mock fallback:', error)
+    }
+  }
+
+  return getOnboardingStatus(normalized)
+}
+
+export async function loadOnboardingDataAsync(email) {
+  const normalized = normalizeEmail(email || getSession()?.email || '')
+
+  if (isApiConfigured() && getSession()?.token) {
+    try {
+      const result = await fetchOnboardingFromApi()
+      if (result.data && Object.keys(result.data).length > 0) {
+        saveOnboardingData(normalized, result.data)
+        if (result.status) setOnboardingStatus(normalized, result.status)
+        return result.data
+      }
+    } catch (error) {
+      if (!import.meta.env.DEV) throw error
+      console.warn('[Wenando B2B] Onboarding load API — mock fallback:', error)
+    }
+  }
+
+  return getOnboardingData(normalized)
+}
+
+export async function saveOnboardingDataAsync(email, patch) {
+  const normalized = normalizeEmail(email || getSession()?.email || '')
+  saveOnboardingData(normalized, patch)
+
+  if (isApiConfigured() && getSession()?.token) {
+    try {
+      await patchOnboardingToApi(patch)
+    } catch (error) {
+      if (!import.meta.env.DEV) throw error
+      console.warn('[Wenando B2B] Onboarding save API — mock fallback:', error)
+    }
+  }
+
+  return getOnboardingData(normalized)
+}
+
+export async function submitOnboardingForReviewAsync(email) {
+  const normalized = normalizeEmail(email || getSession()?.email || '')
+
+  if (isApiConfigured() && getSession()?.token) {
+    try {
+      await submitOnboardingToApi()
+    } catch (error) {
+      if (!import.meta.env.DEV) throw error
+      console.warn('[Wenando B2B] Onboarding submit API — mock fallback:', error)
+    }
+  }
+
+  submitOnboardingForReview(normalized)
 }

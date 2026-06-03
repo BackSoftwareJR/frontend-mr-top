@@ -7,8 +7,12 @@ import {
   revenueTimelineData,
   transactions,
 } from '../../data/mockAdmin'
-import { fetchDashboardStats } from '../../services/adminService'
-import { getBearerToken, isApiConfigured } from '../../services/apiClient'
+import {
+  fetchDashboardStatsWithFallback,
+  fetchLeadFlowWithFallback,
+  fetchPortfolioAllocationWithFallback,
+  fetchRevenueTimelineWithFallback,
+} from '../../services/adminService'
 import AdminMetricCard from '../../components/admin/AdminMetricCard'
 import AdminDonutChart from '../../components/admin/AdminDonutChart'
 import AdminRecentTransactions from '../../components/admin/AdminRecentTransactions'
@@ -195,27 +199,34 @@ function LeadFlowChart({ data }) {
 
 export default function AdminHome() {
   const [metrics, setMetrics] = useState(adminMetrics)
+  const [leadFlow, setLeadFlow] = useState(leadFlowChartData)
+  const [revenueTimeline, setRevenueTimeline] = useState(revenueTimelineData)
+  const [allocation, setAllocation] = useState(portfolioAllocation)
 
   useEffect(() => {
-    if (!isApiConfigured() || !getBearerToken()) return
-
     let cancelled = false
 
-    fetchDashboardStats()
-      .then((apiMetrics) => {
-        if (cancelled) return
-        setMetrics((prev) => ({
-          ...prev,
-          mrr: apiMetrics.mrr,
-          activeLeadsToday: apiMetrics.activeLeadsToday,
-          pendingApprovals: apiMetrics.pendingApprovals,
-        }))
-      })
-      .catch((error) => {
-        if (import.meta.env.DEV) {
-          console.warn('[Wenando Admin] Dashboard stats API unavailable — mock fallback:', error)
-        }
-      })
+    fetchDashboardStatsWithFallback().then((apiMetrics) => {
+      if (cancelled) return
+      setMetrics((prev) => ({
+        ...prev,
+        ...apiMetrics,
+        activePartners: apiMetrics.activePartners ?? prev.activePartners,
+        churn: apiMetrics.churn ?? prev.churn,
+        conversionRate: apiMetrics.conversionRate ?? prev.conversionRate,
+        avgDealSize: apiMetrics.avgDealSize ?? prev.avgDealSize,
+      }))
+    })
+
+    fetchLeadFlowWithFallback().then((data) => {
+      if (!cancelled) setLeadFlow(data)
+    })
+    fetchRevenueTimelineWithFallback().then((data) => {
+      if (!cancelled) setRevenueTimeline(data)
+    })
+    fetchPortfolioAllocationWithFallback().then((data) => {
+      if (!cancelled) setAllocation(data)
+    })
 
     return () => {
       cancelled = true
@@ -262,26 +273,26 @@ export default function AdminHome() {
           <AdminDonutChart
             title="Per settore"
             subtitle="Allocazione revenue B2B"
-            segments={portfolioAllocation.bySector}
+            segments={allocation.bySector}
           />
           <AdminDonutChart
             title="Per regione"
             subtitle="Distribuzione geografica"
-            segments={portfolioAllocation.byRegion}
+            segments={allocation.byRegion}
           />
           <AdminDonutChart
             title="Per tier partner"
             subtitle="Enterprise · Growth · Starter"
-            segments={portfolioAllocation.byTier}
+            segments={allocation.byTier}
           />
         </div>
       </section>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <LeadFlowChart data={leadFlowChartData} />
+          <LeadFlowChart data={leadFlow} />
         </div>
-        <AdminRevenueTimeline data={revenueTimelineData} />
+        <AdminRevenueTimeline data={revenueTimeline} />
       </div>
 
       <AdminRecentTransactions transactions={transactions} />

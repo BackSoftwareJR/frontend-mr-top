@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation, Navigate } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
-import { ArrowLeft, Check, X as XIcon } from 'lucide-react'
+import { ArrowLeft, Check, Loader2, X as XIcon } from 'lucide-react'
 import AuroraBackground from '../components/layout/AuroraBackground'
 import SectionBlob from '../components/ui/SectionBlob'
 import GlassCard from '../components/ui/GlassCard'
@@ -16,6 +16,10 @@ import {
   autonomyLabels,
 } from '../data/autonomyInfo'
 import { getMatchesForLocation, mockAdvisor } from '../data/mockMatches'
+import { fetchLeadResultsWithFallback } from '../services/leadService'
+import { fetchSavedMatchIdsWithFallback, toggleSavedMatchApi } from '../services/userService'
+import { getBearerToken, isApiConfigured } from '../services/apiClient'
+import { getSavedMatchIds, isMatchSaved, toggleSavedMatch } from '../utils/savedMatches'
 
 const spring = { type: 'spring', stiffness: 400, damping: 28 }
 
@@ -131,21 +135,84 @@ export default function ResultsPage() {
   const location = useLocation()
   const prefersReducedMotion = useReducedMotion()
   const answers = location.state?.answers
+  const leadUuid = location.state?.leadUuid ?? answers?._leadUuid
+
   const [selectedMatch, setSelectedMatch] = useState(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [bookingOpen, setBookingOpen] = useState(false)
+  const [loading, setLoading] = useState(Boolean(leadUuid))
+  const [diagnosis, setDiagnosis] = useState(null)
+  const [matches, setMatches] = useState([])
+  const [advisor, setAdvisor] = useState(mockAdvisor)
+  const [savedIds, setSavedIds] = useState(() => getSavedMatchIds())
+
+  useEffect(() => {
+    if (!answers?.autonomy) return
+
+    let cancelled = false
+
+    async function loadResults() {
+      setLoading(true)
+      try {
+        const result = await fetchLeadResultsWithFallback(leadUuid, answers)
+        if (cancelled) return
+        setDiagnosis(result.diagnosis ?? getDiagnosis(answers.autonomy))
+        setMatches(
+          result.matches?.length
+            ? result.matches
+            : getMatchesForLocation(answers.location?.label || 'la tua zona'),
+        )
+        setAdvisor(result.advisor ?? mockAdvisor)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    loadResults()
+    return () => {
+      cancelled = true
+    }
+  }, [answers, leadUuid])
+
+  useEffect(() => {
+    if (!isApiConfigured() || !getBearerToken()) return
+    fetchSavedMatchIdsWithFallback().then(setSavedIds).catch(() => {})
+  }, [])
 
   if (!answers?.autonomy) {
     return <Navigate to="/wizard" replace />
   }
 
-  const diagnosis = getDiagnosis(answers.autonomy)
+  const resolvedDiagnosis = diagnosis ?? getDiagnosis(answers.autonomy)
   const autonomyLabel = autonomyLabels[answers.autonomy] || answers.autonomy
   const locationLabel = answers.location?.label || 'la tua zona'
-  const matches = getMatchesForLocation(locationLabel)
   const primaryColumn =
-    diagnosis.primary === 'RSA' ? 'rsa' : 'domiciliare'
+    resolvedDiagnosis.primary === 'RSA' ? 'rsa' : 'domiciliare'
   const userName = answers.contact?.nome || ''
+
+  const handleSaveMatch = async (match, isSaved) => {
+    if (isApiConfigured() && getBearerToken()) {
+      try {
+        const saved = await toggleSavedMatchApi({
+          companyId: match.companyId ?? match.id,
+          leadMatchId: match.id,
+        })
+        setSavedIds((prev) =>
+          saved
+            ? [...new Set([...prev, String(match.id)])]
+            : prev.filter((id) => id !== String(match.id)),
+        )
+        return
+      } catch (error) {
+        if (!import.meta.env.DEV) {
+          console.error('[Wenando] Save match failed:', error)
+          return
+        }
+      }
+    }
+    toggleSavedMatch(match.id)
+    setSavedIds(getSavedMatchIds())
+  }
 
   const openDetails = (match) => {
     setSelectedMatch(match)
@@ -192,6 +259,12 @@ export default function ResultsPage() {
       </header>
 
       <main className="relative z-10 mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-16">
+        {leadUuid && (
+          <p className="mb-4 font-mono text-[10px] uppercase tracking-wider text-slate-400">
+            Rif. {leadUuid.slice(0, 8)}…
+          </p>
+        )}
+
         <motion.div
           initial={prefersReducedMotion ? false : { opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -206,91 +279,97 @@ export default function ResultsPage() {
           </h1>
         </motion.div>
 
-        <motion.div
-          variants={motionContainerVariants}
-          initial={prefersReducedMotion ? false : 'hidden'}
-          animate="visible"
-          className="space-y-16 sm:space-y-20"
-        >
-          {/* Section A: Educational Diagnosis */}
-          <motion.section variants={motionSectionVariants}>
-            <GlassCard
-              hover={false}
-              className="border-white/20 bg-white/70 p-6 shadow-none sm:p-9"
-            >
-              <div className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-teal-800">
-                La nostra analisi
-              </div>
-              <h2 className="mb-4 max-w-2xl text-lg font-semibold leading-snug text-slate-800 sm:text-xl">
-                Per un&apos;autonomia {autonomyLabel.toLowerCase()}, consigliamo{' '}
-                <span className="text-teal-800">{diagnosis.recommendation}</span>.
-              </h2>
-              <p className="max-w-2xl text-sm leading-relaxed text-slate-600">
-                {diagnosis.summary}
-              </p>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center gap-3 py-24 text-slate-500">
+            <Loader2 className="h-8 w-8 animate-spin text-teal-800" />
+            <p className="text-sm">Caricamento risultati…</p>
+          </div>
+        ) : (
+          <motion.div
+            variants={motionContainerVariants}
+            initial={prefersReducedMotion ? false : 'hidden'}
+            animate="visible"
+            className="space-y-16 sm:space-y-20"
+          >
+            <motion.section variants={motionSectionVariants}>
+              <GlassCard
+                hover={false}
+                className="border-white/20 bg-white/70 p-6 shadow-none sm:p-9"
+              >
+                <div className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-teal-800">
+                  La nostra analisi
+                </div>
+                <h2 className="mb-4 max-w-2xl text-lg font-semibold leading-snug text-slate-800 sm:text-xl">
+                  Per un&apos;autonomia {autonomyLabel.toLowerCase()}, consigliamo{' '}
+                  <span className="text-teal-800">{resolvedDiagnosis.recommendation}</span>.
+                </h2>
+                <p className="max-w-2xl text-sm leading-relaxed text-slate-600">
+                  {resolvedDiagnosis.summary}
+                </p>
 
-              <ComparisonTable primaryColumn={primaryColumn} />
+                <ComparisonTable primaryColumn={primaryColumn} />
 
-              <div className="mt-6 flex flex-wrap gap-2">
-                <span className="rounded-full border border-teal-800/20 bg-teal-800/[0.06] px-3 py-1 text-xs font-medium text-teal-800">
-                  Consigliato: {diagnosis.primary}
+                <div className="mt-6 flex flex-wrap gap-2">
+                  <span className="rounded-full border border-teal-800/20 bg-teal-800/[0.06] px-3 py-1 text-xs font-medium text-teal-800">
+                    Consigliato: {resolvedDiagnosis.primary}
+                  </span>
+                  <span className="rounded-full border border-slate-200/80 bg-white/60 px-3 py-1 text-xs font-medium text-slate-500">
+                    Alternativa: {resolvedDiagnosis.secondary}
+                  </span>
+                </div>
+              </GlassCard>
+            </motion.section>
+
+            <motion.section variants={motionSectionVariants}>
+              <div className="mb-7 flex items-end justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-800 sm:text-xl">
+                    Le migliori opzioni
+                  </h2>
+                  <p className="mt-1.5 text-sm text-slate-500">
+                    Selezionate in base alle tue risposte
+                  </p>
+                </div>
+                <span className="hidden shrink-0 text-xs font-medium text-slate-400 sm:block">
+                  Top {matches.length}
                 </span>
-                <span className="rounded-full border border-slate-200/80 bg-white/60 px-3 py-1 text-xs font-medium text-slate-500">
-                  Alternativa: {diagnosis.secondary}
-                </span>
               </div>
-            </GlassCard>
-          </motion.section>
 
-          {/* Section B: Matches */}
-          <motion.section variants={motionSectionVariants}>
-            <div className="mb-7 flex items-end justify-between gap-4">
-              <div>
+              <div
+                className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [-ms-overflow-style:none] sm:mx-0 sm:grid sm:snap-none sm:grid-cols-3 sm:gap-5 sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden"
+                role="list"
+                aria-label={`${matches.length} opzioni consigliate`}
+              >
+                {matches.map((match, index) => (
+                  <MatchCard
+                    key={match.id}
+                    match={match}
+                    index={index}
+                    onDetails={openDetails}
+                    onSave={handleSaveMatch}
+                    initialSaved={savedIds.includes(String(match.id)) || isMatchSaved(match.id)}
+                  />
+                ))}
+              </div>
+            </motion.section>
+
+            <motion.section variants={motionSectionVariants}>
+              <div className="mb-7">
                 <h2 className="text-lg font-semibold text-slate-800 sm:text-xl">
-                  Le migliori opzioni
+                  Un consulente che capisce
                 </h2>
                 <p className="mt-1.5 text-sm text-slate-500">
-                  Selezionate in base alle tue risposte
+                  Parla con qualcuno che ha già affrontato questa scelta.
                 </p>
               </div>
-              <span className="hidden shrink-0 text-xs font-medium text-slate-400 sm:block">
-                Top {matches.length}
-              </span>
-            </div>
 
-            <div
-              className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [-ms-overflow-style:none] sm:mx-0 sm:grid sm:snap-none sm:grid-cols-3 sm:gap-5 sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden"
-              role="list"
-              aria-label={`${matches.length} opzioni consigliate`}
-            >
-              {matches.map((match, index) => (
-                <MatchCard
-                  key={match.id}
-                  match={match}
-                  index={index}
-                  onDetails={openDetails}
-                />
-              ))}
-            </div>
-          </motion.section>
-
-          {/* Section C: Peer Consultant */}
-          <motion.section variants={motionSectionVariants}>
-            <div className="mb-7">
-              <h2 className="text-lg font-semibold text-slate-800 sm:text-xl">
-                Un consulente che capisce
-              </h2>
-              <p className="mt-1.5 text-sm text-slate-500">
-                Parla con qualcuno che ha già affrontato questa scelta.
-              </p>
-            </div>
-
-            <AdvisorCard
-              advisor={mockAdvisor}
-              onBookCall={() => setBookingOpen(true)}
-            />
-          </motion.section>
-        </motion.div>
+              <AdvisorCard
+                advisor={advisor}
+                onBookCall={() => setBookingOpen(true)}
+              />
+            </motion.section>
+          </motion.div>
+        )}
       </main>
 
       <MatchDetailsDrawer
@@ -303,7 +382,8 @@ export default function ResultsPage() {
         open={bookingOpen}
         onClose={() => setBookingOpen(false)}
         defaultName={userName}
-        advisorName={mockAdvisor.name}
+        advisorName={advisor.name}
+        leadUuid={leadUuid}
       />
     </div>
   )

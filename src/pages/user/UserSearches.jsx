@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import {
@@ -12,7 +13,7 @@ import {
   Ticket,
 } from 'lucide-react'
 import GlassCard from '../../components/ui/GlassCard'
-import { getUserSearches } from '../../data/mockUserSearches'
+import { fetchUserSearchesWithFallback } from '../../services/userService'
 
 const spring = { type: 'spring', stiffness: 400, damping: 28 }
 
@@ -262,8 +263,23 @@ function EmptyState() {
 
 export default function UserSearches() {
   const navigate = useNavigate()
-  const searches = getUserSearches()
+  const [searches, setSearches] = useState([])
+  const [loading, setLoading] = useState(true)
   const prefersReducedMotion = useReducedMotion()
+
+  useEffect(() => {
+    let cancelled = false
+    fetchUserSearchesWithFallback()
+      .then((data) => {
+        if (!cancelled) setSearches(data)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const motionVariants = prefersReducedMotion
     ? { hidden: { opacity: 1 }, visible: { opacity: 1 } }
@@ -275,7 +291,12 @@ export default function UserSearches() {
 
   const handleOpen = (search) => {
     if (search.status === 'completed' && search.answers) {
-      navigate('/results', { state: { answers: search.answers } })
+      navigate('/results', {
+        state: {
+          answers: search.answers,
+          leadUuid: search.leadUuid,
+        },
+      })
       return
     }
     navigate('/user/home')
@@ -304,7 +325,9 @@ export default function UserSearches() {
         </div>
       </motion.header>
 
-      {searches.length === 0 ? (
+      {loading ? (
+        <p className="text-center text-sm text-slate-500">Caricamento ricerche…</p>
+      ) : searches.length === 0 ? (
         <EmptyState />
       ) : (
         <motion.ol

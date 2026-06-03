@@ -3,6 +3,8 @@ import { motion, useReducedMotion } from 'framer-motion'
 import { ChevronRight, LogOut, User } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { getLatestSearch } from '../../data/mockUserSearches'
+import { updateUserProfile } from '../../services/userService'
+import { isApiConfigured } from '../../services/apiClient'
 
 const spring = { type: 'spring', stiffness: 400, damping: 28 }
 
@@ -26,7 +28,7 @@ function ProfileRow({ label, value, isLast }) {
 }
 
 export default function UserProfile() {
-  const { userName, userEmail, logout } = useAuth()
+  const { userName, userEmail, logout, refreshSession } = useAuth()
   const latest = getLatestSearch()
   const phone = latest?.answers?.contact?.telefono
   const prefersReducedMotion = useReducedMotion()
@@ -106,7 +108,17 @@ export default function UserProfile() {
       <motion.div whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }} transition={spring}>
         <Link
           to="/accedi"
-          onClick={logout}
+          onClick={async () => {
+            if (isApiConfigured()) {
+              try {
+                await updateUserProfile({ name: displayName, phone: phone ?? undefined })
+                refreshSession()
+              } catch {
+                // profile sync is best-effort before logout
+              }
+            }
+            await logout()
+          }}
           className="inline-flex min-h-[3rem] items-center gap-2 rounded-xl px-1 py-3 text-sm font-medium text-rose-600/90 transition-colors hover:text-rose-700"
         >
           <LogOut className="h-4 w-4" strokeWidth={2} aria-hidden />

@@ -5,13 +5,20 @@ import { isMatchSaved, toggleSavedMatch } from '../../utils/savedMatches'
 
 const spring = { type: 'spring', stiffness: 400, damping: 28 }
 
-export default function MatchCard({ match, index = 0, onSave, onDetails }) {
-  const [saved, setSaved] = useState(() => isMatchSaved(match.id))
+export default function MatchCard({ match, index = 0, onSave, onDetails, initialSaved }) {
+  const [saved, setSaved] = useState(() =>
+    initialSaved !== undefined ? initialSaved : isMatchSaved(match.id),
+  )
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (onSave) {
+      const nextSaved = !saved
+      setSaved(nextSaved)
+      await onSave(match, nextSaved)
+      return
+    }
     const isSaved = toggleSavedMatch(match.id)
     setSaved(isSaved)
-    onSave?.(match, isSaved)
   }
 
   return (

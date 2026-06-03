@@ -48,7 +48,7 @@ function resolveLoginPath() {
   }
 
   if (path.startsWith('/admin')) {
-    return '/admin'
+    return '/admin/login'
   }
 
   try {
@@ -137,5 +137,24 @@ apiClient.interceptors.response.use(
     )
   },
 )
+
+/**
+ * Run API call; in dev when API is configured but unreachable, use mock fallback.
+ * @template T
+ * @param {() => Promise<T>} apiFn
+ * @param {() => T | Promise<T>} mockFn
+ * @param {string} [label]
+ */
+export async function withDevMockFallback(apiFn, mockFn, label = 'API') {
+  try {
+    return await apiFn()
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.warn(`[Wenando] ${label} unavailable — using mock fallback:`, error)
+      return mockFn()
+    }
+    throw error
+  }
+}
 
 export default apiClient

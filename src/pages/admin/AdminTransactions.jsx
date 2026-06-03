@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp, Download, Search } from 'lucide-react'
 import { transactions, transactionVolumeSummary } from '../../data/mockAdmin'
+import { fetchAdminTransactionsWithFallback } from '../../services/adminService'
 import TransactionDetailDrawer from '../../components/admin/TransactionDetailDrawer'
 import TransactionStatusBadge from '../../components/admin/TransactionStatusBadge'
 import { adminGlassCard, adminPageSubtitle, adminPageTitle } from '../../components/admin/adminStyles'
@@ -16,11 +17,11 @@ function SortIcon({ column, sortKey, sortDir }) {
   )
 }
 
-function VolumeStrip() {
+function VolumeStrip({ summary }) {
   const items = [
-    { label: 'Oggi', ...transactionVolumeSummary.today },
-    { label: 'Settimana', ...transactionVolumeSummary.week },
-    { label: 'Mese', ...transactionVolumeSummary.month },
+    { label: 'Oggi', ...summary.today },
+    { label: 'Settimana', ...summary.week },
+    { label: 'Mese', ...summary.month },
   ]
 
   return (
@@ -44,9 +45,23 @@ export default function AdminTransactions() {
   const [sortKey, setSortKey] = useState('data')
   const [sortDir, setSortDir] = useState('desc')
   const [selectedTx, setSelectedTx] = useState(null)
+  const [txList, setTxList] = useState(transactions)
+  const [volumeSummary, setVolumeSummary] = useState(transactionVolumeSummary)
+
+  useEffect(() => {
+    let cancelled = false
+    fetchAdminTransactionsWithFallback().then((data) => {
+      if (cancelled) return
+      setTxList(data.transactions)
+      setVolumeSummary(data.summary)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const filtered = useMemo(() => {
-    let list = [...transactions]
+    let list = [...txList]
 
     if (statusFilter !== 'Tutti') {
       list = list.filter((tx) => tx.stato === statusFilter)
@@ -77,7 +92,7 @@ export default function AdminTransactions() {
     })
 
     return list
-  }, [search, statusFilter, sortKey, sortDir])
+  }, [search, statusFilter, sortKey, sortDir, txList])
 
   const toggleSort = (key) => {
     if (sortKey === key) {
@@ -107,7 +122,7 @@ export default function AdminTransactions() {
         </button>
       </div>
 
-      <VolumeStrip />
+      <VolumeStrip summary={volumeSummary} />
 
       <div className={`${adminGlassCard} p-4`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -206,7 +221,7 @@ export default function AdminTransactions() {
           </table>
         </div>
         <p className="border-t border-white/5 px-4 py-2 text-xs text-zinc-500 sm:px-5">
-          {filtered.length} di {transactions.length} transazioni
+          {filtered.length} di {txList.length} transazioni
         </p>
       </div>
 

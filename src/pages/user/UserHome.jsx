@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import { ArrowRight, Plus, ShieldCheck, Sparkles } from 'lucide-react'
-import { getLatestSearch, getUserDisplayName } from '../../data/mockUserSearches'
+import { getLatestSearch } from '../../data/mockUserSearches'
+import { fetchUserHomeWithFallback } from '../../services/userService'
 
 const spring = { type: 'spring', stiffness: 400, damping: 28 }
 
@@ -84,8 +86,7 @@ function GlowingStatusPill({ label, tone = 'amber' }) {
   )
 }
 
-function StatusWidget({ reducedMotion }) {
-  const latest = getLatestSearch()
+function StatusWidget({ reducedMotion, latest }) {
   const hoverTap = reducedMotion
     ? {}
     : { whileHover: { scale: 1.02 }, whileTap: { scale: 0.98 } }
@@ -190,9 +191,22 @@ function StatusWidget({ reducedMotion }) {
 }
 
 export default function UserHome() {
-  const name = getUserDisplayName()
+  const [displayName, setDisplayName] = useState('amico')
+  const [latestSearch, setLatestSearch] = useState(() => getLatestSearch())
   const greetingEmoji = getTimeGreetingEmoji()
   const prefersReducedMotion = useReducedMotion()
+
+  useEffect(() => {
+    let cancelled = false
+    fetchUserHomeWithFallback().then((data) => {
+      if (cancelled) return
+      if (data.displayName) setDisplayName(data.displayName.split(' ')[0])
+      if (data.latestSearch) setLatestSearch(data.latestSearch)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const pageInitial = prefersReducedMotion ? false : { opacity: 0, y: 20 }
   const itemInitial = prefersReducedMotion ? false : { opacity: 0, y: 20 }
@@ -218,7 +232,7 @@ export default function UserHome() {
             {greetingEmoji}
           </p>
           <h1 className="text-4xl font-semibold tracking-tight text-slate-800 sm:text-5xl lg:text-6xl">
-            Ciao, {name}.
+            Ciao, {displayName}.
           </h1>
           <p className="mt-4 max-w-lg text-lg leading-relaxed text-slate-600 sm:text-xl">
             Ecco com&apos;è andata con le tue ricerche.
@@ -230,7 +244,7 @@ export default function UserHome() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ ...spring, delay: prefersReducedMotion ? 0 : 0.12 }}
         >
-          <StatusWidget reducedMotion={prefersReducedMotion} />
+          <StatusWidget reducedMotion={prefersReducedMotion} latest={latestSearch} />
         </motion.div>
 
         <motion.div

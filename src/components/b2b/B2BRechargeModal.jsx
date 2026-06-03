@@ -26,9 +26,9 @@ export default function B2BRechargeModal() {
 
   const effectiveAmount = customAmount ? parseFloat(customAmount) : selectedAmount
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     setLoading(true)
-    const ok = rechargeWallet(effectiveAmount)
+    const ok = await rechargeWallet(effectiveAmount, paymentMethod)
     setLoading(false)
     if (ok) {
       setSuccess(true)

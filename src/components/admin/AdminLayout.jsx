@@ -18,6 +18,7 @@ import {
 import { WenandoMark } from '../ui/WenandoLogo'
 import { useIsMobile } from '../../utils/performanceTier'
 import { adminNotifications } from '../../data/mockAdmin'
+import { logoutSession } from '../../services/authService'
 import { adminGlassCard, adminNavActive, adminNavInactive } from './adminStyles'
 
 const NAV_ITEMS = [
@@ -218,9 +219,10 @@ function AdminAvatarMenu({ open, onToggle, onClose }) {
           </Link>
           <button
             type="button"
-            onClick={() => {
+            onClick={async () => {
               onClose()
-              navigate('/')
+              await logoutSession()
+              navigate('/admin/login')
             }}
             className="flex w-full items-center gap-2 px-4 py-2 text-sm text-zinc-400 transition-colors hover:bg-white/5 hover:text-white"
           >

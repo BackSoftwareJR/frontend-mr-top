@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { B2BProvider } from './context/B2BContext'
+import AdminProtectedRoute from './components/auth/AdminProtectedRoute'
 import { B2BProtectedRoute, ConsumerProtectedRoute } from './components/auth/ProtectedRoute'
 import CookieBanner from './components/CookieBanner'
 import { usePlausibleAnalytics } from './hooks/usePlausibleAnalytics'
@@ -33,6 +34,7 @@ const AdminTransactions = lazy(() => import('./pages/admin/AdminTransactions'))
 const ManagePartners = lazy(() => import('./pages/admin/ManagePartners'))
 const LeadRouter = lazy(() => import('./pages/admin/LeadRouter'))
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'))
+const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'))
 const DesktopRouteTransitions = lazy(() => import('./DesktopRouteTransitions'))
 const PrivacyPage = lazy(() => import('./pages/legal/PrivacyPage'))
 const CookiesPage = lazy(() => import('./pages/legal/CookiesPage'))
@@ -105,7 +107,15 @@ function AppRoutes() {
             <Route path="fatturazione" element={<Fatturazione />} />
           </Route>
         </Route>
-        <Route path="/admin" element={<AdminLayout />}>
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route
+          path="/admin"
+          element={
+            <AdminProtectedRoute>
+              <AdminLayout />
+            </AdminProtectedRoute>
+          }
+        >
           <Route index element={<AdminHome />} />
           <Route path="portfolio" element={<AdminPortfolio />} />
           <Route path="transactions" element={<AdminTransactions />} />

@@ -12,8 +12,10 @@ import {
   mockNotifications,
 } from '../data/mockB2B'
 import { getBearerToken, isApiConfigured } from '../services/apiClient'
+import { createAppointment, fetchAppointments } from '../services/b2bAppointmentsService'
 import { fetchCrmClients, updateCrmClientStatus } from '../services/b2bCrmService'
 import { fetchMarketplaceLeads, unlockMarketplaceLead } from '../services/b2bMarketplaceService'
+import { fetchWallet, rechargeWalletApi } from '../services/b2bWalletService'
 
 const B2BContext = createContext(null)
 
@@ -70,15 +72,24 @@ export function B2BProvider({ children }) {
     async function loadFromApi() {
       setLoading(true)
       try {
-        const [leads, clients] = await Promise.all([
+        const [leads, clients, wallet, appointmentsList] = await Promise.all([
           fetchMarketplaceLeads(),
           fetchCrmClients(),
+          fetchWallet().catch(() => null),
+          fetchAppointments().catch(() => null),
         ])
 
         if (cancelled) return
 
         setMarketplaceLeads(leads)
         setCrmClients(clients)
+        if (wallet) {
+          setWalletBalance(wallet.balanceCredits)
+          setTotalSpent(wallet.totalSpent)
+        }
+        if (appointmentsList?.length) {
+          setAppointments(appointmentsList)
+        }
         setUseApi(true)
       } catch (error) {
         if (cancelled) return
@@ -102,11 +113,44 @@ export function B2BProvider({ children }) {
   }, [showToast])
 
   const rechargeWallet = useCallback(
-    (amount) => {
+    async (amount, paymentMethod = 'card') => {
       if (!amount || amount <= 0) {
         showToast('Inserisci un importo valido', 'error')
         return false
       }
+
+      if (useApi) {
+        try {
+          const result = await rechargeWalletApi({ amount, paymentMethod })
+          if (result.wallet) {
+            setWalletBalance(result.wallet.balanceCredits)
+            setTotalSpent(result.wallet.totalSpent)
+          } else {
+            setWalletBalance((prev) => prev + amount)
+          }
+          addInvoice({
+            date: new Date().toISOString().slice(0, 10),
+            description: 'Ricarica credito wallet',
+            amount,
+            status: 'Pagata',
+          })
+          addActivity({
+            type: 'recharge',
+            text: `Ricarica wallet: ${formatCurrency(amount)}`,
+            time: 'Adesso',
+          })
+          showToast(`Credito ricaricato: ${formatCurrency(amount)}`, 'success')
+          return true
+        } catch (error) {
+          if (import.meta.env.DEV) {
+            console.warn('[Wenando B2B] Recharge API failed — mock fallback:', error)
+          } else {
+            showToast(error.message ?? 'Ricarica non riuscita.', 'error')
+            return false
+          }
+        }
+      }
+
       setWalletBalance((prev) => prev + amount)
       addInvoice({
         date: new Date().toISOString().slice(0, 10),
@@ -122,7 +166,7 @@ export function B2BProvider({ children }) {
       showToast(`Credito ricaricato: ${formatCurrency(amount)}`, 'success')
       return true
     },
-    [addActivity, addInvoice, showToast],
+    [addActivity, addInvoice, showToast, useApi],
   )
 
   const unlockLead = useCallback(
@@ -268,11 +312,54 @@ export function B2BProvider({ children }) {
   )
 
   const scheduleVisit = useCallback(
-    (clientId, date, time, note) => {
+    async (clientId, date, time, note) => {
       const client = crmClients.find((c) => c.id === clientId)
       if (!client) return false
 
       const formattedDate = formatDateIT(date)
+
+      if (useApi) {
+        try {
+          const result = await createAppointment({ clientId, date, time, note })
+          const appointment = result.appointment ?? {
+            id: `APT-${Date.now()}`,
+            clientId,
+            cliente: client.cliente,
+            date,
+            time,
+            note: note || '',
+          }
+          setAppointments((prev) => [...prev, appointment])
+          setCrmClients((prev) =>
+            prev.map((c) =>
+              c.id === clientId
+                ? {
+                    ...c,
+                    stato: 'Visita Fissata',
+                    ultimaAzione: formatUltimaAzione(
+                      `Visita fissata · ${formattedDate} ${time}`,
+                    ),
+                  }
+                : c,
+            ),
+          )
+          addActivity({
+            type: 'visit',
+            text: `Visita programmata: ${client.cliente} · ${formattedDate} ${time}`,
+            time: 'Adesso',
+          })
+          showToast(`Visita fissata con ${client.cliente}`, 'success')
+          return true
+        } catch (error) {
+          if (import.meta.env.DEV) {
+            console.warn('[Wenando B2B] Appointment API failed — mock fallback:', error)
+          } else {
+            showToast(error.message ?? 'Impossibile fissare la visita.', 'error')
+            return false
+          }
+        }
+      }
+
       const appointment = {
         id: `APT-${Date.now()}`,
         clientId,
@@ -302,7 +389,7 @@ export function B2BProvider({ children }) {
       showToast(`Visita fissata con ${client.cliente}`, 'success')
       return true
     },
-    [addActivity, crmClients, showToast],
+    [addActivity, crmClients, showToast, useApi],
   )
 
   const markNotificationRead = useCallback((notifId) => {

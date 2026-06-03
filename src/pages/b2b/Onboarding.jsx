@@ -14,8 +14,9 @@ import {
   getOnboardingData,
   getOnboardingStatus,
   getRegistration,
-  saveOnboardingData,
-  submitOnboardingForReview,
+  loadOnboardingDataAsync,
+  saveOnboardingDataAsync,
+  submitOnboardingForReviewAsync,
 } from '../../services/b2bOnboardingService'
 
 const STEP_META = [
@@ -87,8 +88,13 @@ export default function Onboarding() {
   }, [isAuthenticated, navigate, userType])
 
   useEffect(() => {
-    if (email) {
-      setData(getOnboardingData(email))
+    if (!email) return
+    let cancelled = false
+    loadOnboardingDataAsync(email).then((loaded) => {
+      if (!cancelled && loaded) setData(loaded)
+    })
+    return () => {
+      cancelled = true
     }
   }, [email])
 
@@ -97,7 +103,7 @@ export default function Onboarding() {
       if (!email) return
       const next = { ...data, ...patch }
       setData(next)
-      saveOnboardingData(email, next)
+      saveOnboardingDataAsync(email, next)
     },
     [data, email]
   )
@@ -124,8 +130,8 @@ export default function Onboarding() {
 
   const meta = STEP_META[stepIndex]
 
-  const handleSubmitReview = () => {
-    submitOnboardingForReview(email)
+  const handleSubmitReview = async () => {
+    await submitOnboardingForReviewAsync(email)
     bumpStatus()
   }
 

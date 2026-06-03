@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { getSession } from '../../services/authService'
 import { getB2BRedirectPath, getOnboardingStatus } from '../../services/b2bOnboardingService'
 
 export function B2BProtectedRoute({ children }) {
@@ -14,7 +15,8 @@ export function B2BProtectedRoute({ children }) {
     return <Navigate to="/user" replace />
   }
 
-  const status = getOnboardingStatus(userEmail)
+  const status =
+    getSession()?.onboardingStatus ?? getOnboardingStatus(userEmail)
   if (status !== 'approved') {
     return <Navigate to="/pro/onboarding" replace />
   }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Building2, Loader2, Mail } from 'lucide-react'
+import { ArrowLeft, Building2, KeyRound, Loader2, Mail } from 'lucide-react'
 import { WenandoMark } from '../../components/ui/WenandoLogo'
 import CodeInput from '../../components/auth/CodeInput'
 import HumanVerification from '../../components/auth/HumanVerification'
@@ -11,9 +11,12 @@ import {
   getResendCooldown,
   validateEmailForPortal,
 } from '../../services/authService'
+import { loginB2B } from '../../services/b2bAuthService'
 import { getB2BRedirectPath, getOnboardingStatus } from '../../services/b2bOnboardingService'
+import { isApiConfigured } from '../../services/apiClient'
 
 const STEPS = { EMAIL: 'email', CAPTCHA: 'captcha', CODE: 'code' }
+const MODES = { OTP: 'otp', PASSWORD: 'password' }
 
 function maskEmail(email) {
   const [local, domain] = email.split('@')
@@ -25,10 +28,12 @@ function maskEmail(email) {
 export default function ProAccedi() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { isAuthenticated, userType, userEmail, requestCode, login } = useAuth()
+  const { isAuthenticated, userType, userEmail, requestCode, login, establishSession } = useAuth()
 
+  const [authMode, setAuthMode] = useState(MODES.OTP)
   const [step, setStep] = useState(STEPS.EMAIL)
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [code, setCode] = useState('')
   const [captchaPayload, setCaptchaPayload] = useState(null)
   const [devCode, setDevCode] = useState(null)
@@ -57,6 +62,40 @@ export default function ProAccedi() {
     return () => clearInterval(timer)
   }, [resendCooldown])
 
+  const navigateAfterLogin = (session) => {
+    const target =
+      getOnboardingStatus(session?.email) === 'approved' && redirectTarget
+        ? redirectTarget
+        : getB2BRedirectPath(session)
+    navigate(target, { replace: true })
+  }
+
+  const handlePasswordLogin = async (e) => {
+    e.preventDefault()
+    setError('')
+    const normalized = email.trim().toLowerCase()
+    if (!normalized || !password) {
+      setError('Inserisci email e password.')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const result = await loginB2B({ email: normalized, password })
+      establishSession(result.session)
+      navigateAfterLogin(result.session)
+    } catch (err) {
+      if (import.meta.env.DEV) {
+        console.warn('[Wenando Pro] Password login failed:', err)
+        setError('Login password non disponibile. Usa il codice OTP.')
+      } else {
+        setError(err.message ?? 'Credenziali non valide.')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleEmailSubmit = (e) => {
     e.preventDefault()
     setError('')
@@ -71,6 +110,7 @@ export default function ProAccedi() {
       return
     }
     setEmail(normalized)
+    if (authMode === MODES.PASSWORD) return
     setStep(STEPS.CAPTCHA)
   }
 
@@ -80,7 +120,7 @@ export default function ProAccedi() {
     setError('')
 
     const formData = new FormData(document.getElementById('pro-auth-form'))
-    const result = await requestCode(email, buildCaptchaPayload(formData, payload))
+    const result = await requestCode(email, buildCaptchaPayload(formData, payload), 'partner')
 
     setLoading(false)
 
@@ -116,11 +156,7 @@ export default function ProAccedi() {
       return
     }
 
-    const target =
-      getOnboardingStatus(result.session?.email) === 'approved' && redirectTarget
-        ? redirectTarget
-        : getB2BRedirectPath(result.session)
-    navigate(target, { replace: true })
+    navigateAfterLogin(result.session)
   }
 
   const handleResend = async () => {
@@ -128,7 +164,7 @@ export default function ProAccedi() {
     setLoading(true)
     setError('')
     const formData = new FormData(document.getElementById('pro-auth-form'))
-    const result = await requestCode(email, buildCaptchaPayload(formData, captchaPayload))
+    const result = await requestCode(email, buildCaptchaPayload(formData, captchaPayload), 'partner')
     setLoading(false)
 
     if (!result.ok) {
@@ -174,9 +210,48 @@ export default function ProAccedi() {
             </p>
           </div>
 
+          <div className="mb-4 flex rounded-xl border border-black/5 bg-white/50 p-1 text-xs font-medium">
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode(MODES.OTP)
+                setStep(STEPS.EMAIL)
+                setError('')
+              }}
+              className={`flex-1 rounded-lg py-2 transition-colors ${
+                authMode === MODES.OTP ? 'bg-white text-charcoal shadow-sm' : 'text-charcoal-muted'
+              }`}
+            >
+              Codice email
+            </button>
+            {isApiConfigured() && (
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode(MODES.PASSWORD)
+                  setStep(STEPS.EMAIL)
+                  setError('')
+                }}
+                className={`flex-1 rounded-lg py-2 transition-colors ${
+                  authMode === MODES.PASSWORD
+                    ? 'bg-white text-charcoal shadow-sm'
+                    : 'text-charcoal-muted'
+                }`}
+              >
+                Password
+              </button>
+            )}
+          </div>
+
           <form
             id="pro-auth-form"
-            onSubmit={step === STEPS.CODE ? handleVerifyCode : handleEmailSubmit}
+            onSubmit={
+              step === STEPS.CODE
+                ? handleVerifyCode
+                : authMode === MODES.PASSWORD
+                  ? handlePasswordLogin
+                  : handleEmailSubmit
+            }
           >
             {step === STEPS.EMAIL && (
               <div className="space-y-4">
@@ -198,14 +273,34 @@ export default function ProAccedi() {
                   </div>
                 </div>
 
+                {authMode === MODES.PASSWORD && (
+                  <div>
+                    <label htmlFor="pro-password" className="mb-1.5 block text-xs font-medium text-charcoal-muted">
+                      Password
+                    </label>
+                    <div className="relative">
+                      <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-charcoal-muted" />
+                      <input
+                        id="pro-password"
+                        type="password"
+                        autoComplete="current-password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className={`w-full rounded-xl border border-black/5 bg-white/90 py-3 pl-10 pr-4 text-sm text-charcoal ${b2bInputFocus}`}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {error && (
                   <p className="text-sm font-medium text-red-600" role="alert">
                     {error}
                   </p>
                 )}
 
-                <button type="submit" className={`w-full ${b2bPrimaryBtn}`}>
-                  Continua
+                <button type="submit" disabled={loading} className={`flex w-full items-center justify-center gap-2 ${b2bPrimaryBtn}`}>
+                  {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {authMode === MODES.PASSWORD ? 'Accedi' : 'Continua'}
                 </button>
               </div>
             )}

@@ -1,8 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check, Eye, MapPin, X } from 'lucide-react'
 import { mockPartnerRegistrations } from '../../data/mockAdmin'
-import { approvePartner, rejectPartner } from '../../services/adminService'
-import { getBearerToken, isApiConfigured } from '../../services/apiClient'
+import {
+  approvePartner,
+  fetchAdminPartnersWithFallback,
+  rejectPartner,
+} from '../../services/adminService'
+import { isApiConfigured } from '../../services/apiClient'
 import {
   adminGlassCard,
   adminPageSubtitle,
@@ -88,6 +92,16 @@ export default function ManagePartners() {
   const [partners, setPartners] = useState(mockPartnerRegistrations)
   const [toast, setToast] = useState(null)
 
+  useEffect(() => {
+    let cancelled = false
+    fetchAdminPartnersWithFallback().then((data) => {
+      if (!cancelled && data.length) setPartners(data)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const showToast = (message) => {
     setToast(message)
     setTimeout(() => setToast(null), 2500)
@@ -97,7 +111,7 @@ export default function ManagePartners() {
     const partner = partners.find((p) => p.id === id)
     const companyId = partner?.companyId ?? id
 
-    if (isApiConfigured() && getBearerToken() && partner?.companyId) {
+    if (isApiConfigured() && partner?.companyId) {
       try {
         await approvePartner(companyId)
       } catch (error) {
@@ -119,7 +133,7 @@ export default function ManagePartners() {
     const partner = partners.find((p) => p.id === id)
     const companyId = partner?.companyId ?? id
 
-    if (isApiConfigured() && getBearerToken() && partner?.companyId) {
+    if (isApiConfigured() && partner?.companyId) {
       try {
         await rejectPartner(companyId)
       } catch (error) {
