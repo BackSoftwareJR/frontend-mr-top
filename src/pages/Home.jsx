@@ -1,4 +1,3 @@
-import { useRef } from 'react'
 import { motion } from 'framer-motion'
 import { HomePageContent } from '../components/home/HeroSection'
 import ScrollMorphCompanion from '../components/layout/ScrollMorphCompanion'
@@ -10,11 +9,8 @@ const pageVariants = {
 }
 
 export default function Home() {
-  const pageRef = useRef(null)
-
   return (
     <motion.div
-      ref={pageRef}
       variants={pageVariants}
       initial="initial"
       animate="animate"
@@ -22,7 +18,7 @@ export default function Home() {
       transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
       className="relative min-h-screen"
     >
-      <ScrollMorphCompanion scrollRef={pageRef} />
+      <ScrollMorphCompanion />
       <HomePageContent />
     </motion.div>
   )

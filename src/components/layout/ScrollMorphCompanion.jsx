@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, useReducedMotion, useScroll, useSpring, useTransform } from 'framer-motion'
 import {
   BLOB_PATHS,
@@ -46,12 +48,12 @@ function useMorphMotion(scrollYProgress) {
   return { left, top, scale, rotate, pathD, fill, fillOpacity }
 }
 
+const COMPANION_LAYER_CLASS =
+  'pointer-events-none fixed inset-0 z-[1] overflow-visible'
+
 function StaticCompanion() {
   return (
-    <div
-      className="pointer-events-none fixed inset-0 z-[1] overflow-hidden"
-      aria-hidden="true"
-    >
+    <div className={COMPANION_LAYER_CLASS} aria-hidden="true">
       <div
         className="absolute will-change-transform"
         style={{
@@ -83,25 +85,16 @@ function StaticCompanion() {
   )
 }
 
-export default function ScrollMorphCompanion({ scrollRef }) {
-  const prefersReducedMotion = useReducedMotion()
+function MorphCompanion() {
   const { scrollYProgress } = useScroll({
-    target: scrollRef,
     offset: ['start start', 'end end'],
   })
 
   const { left, top, scale, rotate, pathD, fill, fillOpacity } =
     useMorphMotion(scrollYProgress)
 
-  if (prefersReducedMotion) {
-    return <StaticCompanion />
-  }
-
   return (
-    <div
-      className="pointer-events-none fixed inset-0 z-[1] overflow-hidden"
-      aria-hidden="true"
-    >
+    <div className={COMPANION_LAYER_CLASS} aria-hidden="true">
       <motion.div
         className="absolute will-change-transform"
         style={{
@@ -134,4 +127,21 @@ export default function ScrollMorphCompanion({ scrollRef }) {
       </motion.div>
     </div>
   )
+}
+
+export default function ScrollMorphCompanion() {
+  const prefersReducedMotion = useReducedMotion()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return null
+  }
+
+  const content = prefersReducedMotion ? <StaticCompanion /> : <MorphCompanion />
+
+  return createPortal(content, document.body)
 }
