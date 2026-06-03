@@ -1,32 +1,22 @@
 import { motion } from 'framer-motion'
 import { MessageCircle, Search, Handshake } from 'lucide-react'
 import Card from '../ui/Card'
-import MeshGradientBackground from '../ui/MeshGradientBackground'
 
 const steps = [
   {
     icon: MessageCircle,
     title: 'Rispondi alle domande',
-    description:
-      'Quattro domande semplici sulle vostre esigenze. Ci vogliono meno di 3 minuti.',
-    cardVariant: 'warm',
-    iconBg: 'from-coral to-coral-deep',
+    description: 'Quattro domande essenziali. Meno di tre minuti.',
   },
   {
     icon: Search,
     title: 'Analizziamo le necessità',
-    description:
-      'Il nostro motore di analisi valuta autonomia, zona, budget e preferenze con attenzione.',
-    cardVariant: 'sunny',
-    iconBg: 'from-sunny to-coral',
+    description: 'Autonomia, zona e budget valutati con rigore.',
   },
   {
     icon: Handshake,
-    title: 'Ti colleghiamo solo con le strutture ideali',
-    description:
-      'Niente liste infinite: solo partner verificati che corrispondono davvero a ciò che cercate.',
-    cardVariant: 'teal',
-    iconBg: 'from-teal-warm to-teal-deep',
+    title: 'Solo strutture ideali',
+    description: 'Partner verificati, abbinati alle vostre esigenze.',
   },
 ]
 
@@ -34,33 +24,29 @@ const container = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
-    transition: { staggerChildren: 0.12 },
+    transition: { staggerChildren: 0.1 },
   },
 }
 
 const item = {
-  hidden: { opacity: 0, y: 28 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] } },
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] } },
 }
 
 export default function HowItWorks() {
   return (
-    <section id="come-funziona">
-    <MeshGradientBackground className="px-4 py-24 sm:px-6" intensity="subtle">
+    <section id="come-funziona" className="border-t border-zinc-200 px-4 py-24 sm:px-6">
       <div className="mx-auto max-w-5xl">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-80px' }}
-          transition={{ duration: 0.5 }}
-          className="mb-16 text-center"
+          transition={{ duration: 0.45 }}
+          className="mb-16"
         >
-          <h2 className="mb-4 text-3xl font-extrabold text-warm-text sm:text-4xl">
+          <h2 className="text-3xl font-bold text-zinc-900 sm:text-4xl">
             Come funziona
           </h2>
-          <p className="mx-auto max-w-xl text-lg font-medium text-warm-muted">
-            Un percorso semplice, pensato per accompagnarvi con calma in ogni passo.
-          </p>
         </motion.div>
 
         <motion.div
@@ -68,27 +54,24 @@ export default function HowItWorks() {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, margin: '-60px' }}
-          className="grid gap-8 md:grid-cols-3"
+          className="grid gap-6 md:grid-cols-3"
         >
           {steps.map((step, index) => (
             <motion.div key={step.title} variants={item}>
-              <Card variant={step.cardVariant} className="group h-full">
-                <span className="mb-6 inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/80 text-sm font-extrabold text-coral shadow-peach">
+              <Card className="h-full">
+                <span className="mb-6 inline-flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 text-sm font-bold text-[#1A4D2E]">
                   {index + 1}
                 </span>
-                <div
-                  className={`mb-5 flex h-14 w-14 items-center justify-center rounded-[1.25rem] bg-gradient-to-br ${step.iconBg} text-white shadow-coral transition-transform group-hover:scale-110`}
-                >
-                  <step.icon className="h-7 w-7" strokeWidth={1.75} />
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-[#1A4D2E] text-white">
+                  <step.icon className="h-6 w-6" strokeWidth={1.75} />
                 </div>
-                <h3 className="mb-3 text-xl font-bold text-warm-text">{step.title}</h3>
-                <p className="font-medium leading-relaxed text-warm-muted">{step.description}</p>
+                <h3 className="mb-2 text-xl font-bold text-zinc-900">{step.title}</h3>
+                <p className="leading-relaxed text-zinc-600">{step.description}</p>
               </Card>
             </motion.div>
           ))}
         </motion.div>
       </div>
-    </MeshGradientBackground>
     </section>
   )
 }
