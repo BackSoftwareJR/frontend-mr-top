@@ -1,5 +1,5 @@
 export const wizardConfig = {
-  id: 'care-advisor-intake-v3',
+  id: 'wenando-intake-v3',
   title: 'Analisi gratuita',
   steps: [
     {

@@ -6,7 +6,7 @@ import SectionBlob from '../ui/SectionBlob'
 
 const FAQS = [
   {
-    question: 'Quanto costa il servizio CareAdvisor?',
+    question: 'Quanto costa il servizio Wenando?',
     answer:
       'L\'analisi iniziale è completamente gratuita per le famiglie. Il nostro compenso arriva dalle strutture partner, solo se decidete di procedere con una di esse.',
     accent: 'border-[#E07A5F]/25',

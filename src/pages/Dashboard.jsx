@@ -2,7 +2,6 @@ import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   BarChart3,
-  HeartHandshake,
   Home,
   Inbox,
   Settings,
@@ -10,6 +9,7 @@ import {
 } from 'lucide-react'
 import AuroraBackground from '../components/layout/AuroraBackground'
 import GlassCard from '../components/ui/GlassCard'
+import WenandoLogo, { WenandoMark } from '../components/ui/WenandoLogo'
 import { mockLeads, statusStyles } from '../data/mockLeads'
 
 const NAV_ITEMS = [
@@ -35,11 +35,9 @@ function DashboardSidebar() {
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-slate-200 bg-white/90 backdrop-blur-2xl lg:flex">
       <div className="flex items-center gap-3 border-b border-slate-200 px-6 py-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#E07A5F] to-[#E9A84A]">
-          <HeartHandshake className="h-5 w-5 text-white" strokeWidth={2} />
-        </div>
+        <WenandoMark className="h-10 w-10" />
         <div>
-          <p className="text-sm font-bold text-slate-800">CareAdvisor</p>
+          <WenandoLogo size="sm" />
           <p className="text-xs text-slate-500">Area B2B</p>
         </div>
       </div>

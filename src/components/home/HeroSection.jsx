@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { HeartHandshake, Sparkles } from 'lucide-react'
 import MagneticButton from '../ui/MagneticButton'
 import MulticolorHeading from '../ui/MulticolorHeading'
+import WenandoLogo, { WenandoMark } from '../ui/WenandoLogo'
 import BentoSteps from './BentoSteps'
 import StatsSection from './StatsSection'
 import PersonalizedAnalysisSection from './PersonalizedAnalysisSection'
@@ -23,13 +23,9 @@ export default function HeroSection() {
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="relative z-10 mb-8 inline-flex items-center gap-2 rounded-full border border-[#E07A5F]/20 bg-white/80 px-4 py-2 shadow-sm backdrop-blur-xl"
+        className="relative z-10 mb-8 inline-flex flex-col items-center gap-1 rounded-2xl border border-[#E07A5F]/20 bg-white/80 px-8 py-5 shadow-sm backdrop-blur-xl"
       >
-        <HeartHandshake className="h-4 w-4 text-[#E07A5F]" strokeWidth={2} />
-        <span className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
-          CareAdvisor
-        </span>
-        <Sparkles className="h-3.5 w-3.5 text-[#E9A84A]" strokeWidth={2} />
+        <WenandoLogo size="hero" showTagline align="center" />
       </motion.div>
 
       <MulticolorHeading
@@ -96,11 +92,9 @@ function HomeNav() {
       className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4"
     >
       <nav className="flex w-full max-w-3xl items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white/80 px-5 py-3 shadow-sm backdrop-blur-2xl">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#E07A5F] to-[#E9A84A]">
-            <HeartHandshake className="h-4 w-4 text-white" strokeWidth={2} />
-          </div>
-          <span className="text-sm font-bold text-slate-800">CareAdvisor</span>
+        <Link to="/" className="flex items-center gap-2.5">
+          <WenandoMark className="h-9 w-9" />
+          <WenandoLogo size="sm" />
         </Link>
         <div className="flex items-center gap-3">
           <Link
@@ -122,7 +116,7 @@ function HomeFooter() {
   return (
     <footer className="border-t border-slate-200/60 px-6 py-12 text-center">
       <p className="text-sm text-slate-500">
-        © 2026 CareAdvisor — Con cura, per chi ami.
+        © 2026 Wenando — Con cura, per chi ami.
       </p>
     </footer>
   )
