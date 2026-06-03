@@ -2,13 +2,14 @@
 
 @theme {
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  --color-stone: #f5f5f0;
-  --color-stone-deep: #ebebe6;
-  --color-forest: #1a4d2e;
-  --color-forest-light: #245a38;
-  --color-ink: #18181b;
-  --color-muted: #71717a;
-  --color-border: #e4e4e7;
+  --color-oat: #faf9f6;
+  --color-oat-deep: #f3f1ec;
+  --color-terracotta: #e07a5f;
+  --color-terracotta-hover: #c96a52;
+  --color-navy: #1e293b;
+  --color-ink: #1e293b;
+  --color-muted: #64748b;
+  --color-border: #e2e8f0;
 }
 
 html {
@@ -17,15 +18,15 @@ html {
 
 body {
   font-family: var(--font-sans);
-  background-color: var(--color-stone);
-  color: var(--color-ink);
+  background-color: var(--color-oat);
+  color: #1e293b;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 ::selection {
-  background-color: rgb(26 77 46 / 0.15);
-  color: var(--color-ink);
+  background-color: rgb(224 122 95 / 0.2);
+  color: #1e293b;
 }
 
 input[type="range"] {
@@ -41,7 +42,7 @@ input[type="range"] {
 input[type="range"]::-webkit-slider-runnable-track {
   height: 6px;
   border-radius: 9999px;
-  background: #e4e4e7;
+  background: #e2e8f0;
 }
 
 input[type="range"]::-webkit-slider-thumb {
@@ -50,7 +51,7 @@ input[type="range"]::-webkit-slider-thumb {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #1a4d2e;
+  background: #e07a5f;
   border: 2px solid #fff;
   margin-top: -8px;
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
@@ -59,14 +60,14 @@ input[type="range"]::-webkit-slider-thumb {
 input[type="range"]::-moz-range-track {
   height: 6px;
   border-radius: 9999px;
-  background: #e4e4e7;
+  background: #e2e8f0;
 }
 
 input[type="range"]::-moz-range-thumb {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #1a4d2e;
+  background: #e07a5f;
   border: 2px solid #fff;
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
 }
@@ -76,11 +77,11 @@ input[type="range"]:focus {
 }
 
 input[type="range"]:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 0 0 3px rgb(26 77 46 / 0.25);
+  box-shadow: 0 0 0 3px rgb(224 122 95 / 0.25);
 }
 
 input[type="range"]:focus-visible::-moz-range-thumb {
-  box-shadow: 0 0 0 3px rgb(26 77 46 / 0.25);
+  box-shadow: 0 0 0 3px rgb(224 122 95 / 0.25);
 }
 
 input[type="range"].range-overlay {

@@ -11,14 +11,15 @@ const pageVariants = {
 export default function Layout() {
   const location = useLocation()
   const isWizard = location.pathname === '/wizard'
+  const isHome = location.pathname === '/'
 
   if (isWizard) {
     return <Outlet />
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F0]">
-      <Navbar />
+    <div className="min-h-screen bg-[#FAF9F6]">
+      {!isHome && <Navbar />}
       <AnimatePresence mode="wait">
         <motion.main
           key={location.pathname}

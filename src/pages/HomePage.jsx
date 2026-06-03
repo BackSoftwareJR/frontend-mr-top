@@ -1,13 +1,5 @@
-import Hero from '../components/home/Hero'
-import HowItWorks from '../components/home/HowItWorks'
-import WhyUs from '../components/home/WhyUs'
+import CareAdvisorLanding from '../components/home/CareAdvisorLanding'
 
 export default function HomePage() {
-  return (
-    <>
-      <Hero />
-      <HowItWorks />
-      <WhyUs />
-    </>
-  )
+  return <CareAdvisorLanding />
 }

@@ -2,11 +2,11 @@ import { motion } from 'framer-motion'
 
 const variants = {
   primary:
-    'bg-[#1A4D2E] text-white hover:bg-[#245A38]',
+    'bg-[#E07A5F] text-white hover:bg-[#c96a52]',
   secondary:
-    'bg-white text-zinc-900 border border-zinc-200 hover:border-[#1A4D2E] hover:text-[#1A4D2E]',
+    'bg-white text-slate-800 border border-slate-200 hover:border-[#E07A5F] hover:text-[#E07A5F]',
   ghost:
-    'bg-transparent text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900',
+    'bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-800',
 }
 
 export default function Button({
@@ -21,9 +21,9 @@ export default function Button({
       whileTap={{ scale: 0.98 }}
       transition={{ type: 'spring', stiffness: 420, damping: 24 }}
       className={`
-        inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3
+        inline-flex items-center justify-center gap-2 rounded-[2rem] px-6 py-3
         text-sm font-bold tracking-wide transition-colors duration-200
-        focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1A4D2E]/30 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F5F5F0]
+        focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F]/30 focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF9F6]
         disabled:cursor-not-allowed disabled:opacity-50
         ${variants[variant]} ${className}
       `}
