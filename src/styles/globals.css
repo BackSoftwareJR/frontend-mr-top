@@ -2,8 +2,8 @@
 
 @theme {
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  --color-slate-deep: #0a0f1a;
-  --color-navy-deep: #0f172a;
+  --color-slate-deep: #0f1419;
+  --color-navy-deep: #121820;
   --color-glass-border: rgb(255 255 255 / 0.12);
   --color-glass-bg: rgb(255 255 255 / 0.06);
   --color-accent-purple: #a855f7;
@@ -30,13 +30,13 @@ body {
   color: #fff;
 }
 
-/* Aurora mesh background */
+/* Aurora mesh background — whisper of muted slate/teal */
 .aurora-bg {
   position: fixed;
   inset: 0;
   z-index: 0;
   overflow: hidden;
-  background: linear-gradient(160deg, #0a0f1a 0%, #0f172a 40%, #1e1b4b 100%);
+  background: linear-gradient(165deg, #0f1419 0%, #121820 45%, #0f1419 100%);
   pointer-events: none;
 }
 
@@ -45,9 +45,9 @@ body {
   content: "";
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.55;
-  animation: aurora-drift 22s ease-in-out infinite alternate;
+  filter: blur(110px);
+  opacity: 0.12;
+  animation: aurora-drift 40s ease-in-out infinite alternate;
 }
 
 .aurora-bg::before {
@@ -55,8 +55,8 @@ body {
   height: 70vmax;
   top: -20%;
   left: -15%;
-  background: radial-gradient(circle, #7c3aed 0%, #a855f7 35%, transparent 70%);
-  animation-duration: 24s;
+  background: radial-gradient(circle, #334155 0%, #1e293b 35%, transparent 72%);
+  animation-duration: 44s;
 }
 
 .aurora-bg::after {
@@ -64,17 +64,17 @@ body {
   height: 60vmax;
   bottom: -25%;
   right: -10%;
-  background: radial-gradient(circle, #14b8a6 0%, #2dd4bf 30%, transparent 65%);
-  animation-duration: 28s;
-  animation-delay: -8s;
+  background: radial-gradient(circle, #1a3535 0%, #152a2a 30%, transparent 68%);
+  animation-duration: 50s;
+  animation-delay: -12s;
 }
 
 .aurora-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(90px);
-  opacity: 0.45;
-  animation: aurora-drift 20s ease-in-out infinite alternate;
+  filter: blur(110px);
+  opacity: 0.1;
+  animation: aurora-drift 38s ease-in-out infinite alternate;
 }
 
 .aurora-orb--coral {
@@ -82,9 +82,9 @@ body {
   height: 50vmax;
   top: 35%;
   left: 40%;
-  background: radial-gradient(circle, #fb7185 0%, #f97316 40%, transparent 70%);
-  animation-duration: 26s;
-  animation-delay: -4s;
+  background: radial-gradient(circle, #2a2a32 0%, #1f1f28 40%, transparent 72%);
+  animation-duration: 46s;
+  animation-delay: -6s;
 }
 
 .aurora-orb--purple {
@@ -92,9 +92,9 @@ body {
   height: 40vmax;
   bottom: 10%;
   left: 5%;
-  background: radial-gradient(circle, #6366f1 0%, #8b5cf6 45%, transparent 70%);
-  animation-duration: 30s;
-  animation-delay: -12s;
+  background: radial-gradient(circle, #252a38 0%, #1a1f2e 45%, transparent 72%);
+  animation-duration: 52s;
+  animation-delay: -18s;
 }
 
 @keyframes aurora-drift {
@@ -102,13 +102,13 @@ body {
     transform: translate(0, 0) scale(1);
   }
   33% {
-    transform: translate(5%, 8%) scale(1.08);
+    transform: translate(2%, 3%) scale(1.02);
   }
   66% {
-    transform: translate(-4%, 5%) scale(0.95);
+    transform: translate(-1.5%, 2%) scale(0.99);
   }
   100% {
-    transform: translate(6%, -6%) scale(1.05);
+    transform: translate(2%, -2%) scale(1.01);
   }
 }
 
