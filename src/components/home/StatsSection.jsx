@@ -1,39 +1,49 @@
 import { motion } from 'framer-motion'
 import { Clock, Heart, Shield, Users } from 'lucide-react'
 import GlassCard from '../ui/GlassCard'
+import MulticolorHeading from '../ui/MulticolorHeading'
+import SectionBlob from '../ui/SectionBlob'
 
 const STATS = [
   {
     icon: Users,
     value: '500+',
     label: 'Famiglie aiutate',
-    iconBg: 'bg-[#E07A5F]/10',
+    iconBg: 'bg-[#E07A5F]/12',
     iconColor: 'text-[#E07A5F]',
     valueColor: 'text-[#E07A5F]',
+    cardTint: 'bg-[#E07A5F]/[0.03]',
+    border: 'border-[#E07A5F]/12',
   },
   {
     icon: Clock,
     value: '48h',
     label: 'Risposta media',
-    iconBg: 'bg-[#E9A84A]/10',
+    iconBg: 'bg-[#E9A84A]/12',
     iconColor: 'text-[#E9A84A]',
     valueColor: 'text-[#E9A84A]',
+    cardTint: 'bg-[#E9A84A]/[0.04]',
+    border: 'border-[#E9A84A]/12',
   },
   {
     icon: Shield,
     value: '120+',
     label: 'Strutture verificate',
-    iconBg: 'bg-[#9B8EC4]/10',
+    iconBg: 'bg-[#9B8EC4]/12',
     iconColor: 'text-[#9B8EC4]',
     valueColor: 'text-[#9B8EC4]',
+    cardTint: 'bg-[#9B8EC4]/[0.04]',
+    border: 'border-[#9B8EC4]/12',
   },
   {
     icon: Heart,
     value: '4.9',
     label: 'Soddisfazione media',
-    iconBg: 'bg-[#5CB8A8]/10',
-    iconColor: 'text-[#5CB8A8]',
-    valueColor: 'text-[#5CB8A8]',
+    iconBg: 'bg-[#E879A0]/12',
+    iconColor: 'text-[#E879A0]',
+    valueColor: 'text-[#E879A0]',
+    cardTint: 'bg-[#E879A0]/[0.03]',
+    border: 'border-[#E879A0]/12',
   },
 ]
 
@@ -53,8 +63,19 @@ const itemVariants = {
 
 export default function StatsSection() {
   return (
-    <section className="px-6 py-16">
-      <div className="mx-auto max-w-6xl">
+    <section className="relative overflow-hidden px-6 py-20">
+      <SectionBlob variant="amber" shape="ring" position="top-right" />
+
+      <div className="relative z-10 mx-auto max-w-6xl">
+        <div className="mb-12 text-center">
+          <MulticolorHeading
+            as="h2"
+            words="Numeri che contano davvero"
+            className="text-2xl font-extrabold tracking-tight sm:text-3xl md:text-4xl"
+            startIndex={2}
+          />
+        </div>
+
         <motion.div
           className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
           variants={containerVariants}
@@ -66,7 +87,10 @@ export default function StatsSection() {
             const Icon = stat.icon
             return (
               <motion.div key={stat.label} variants={itemVariants}>
-                <GlassCard className="p-6 text-center">
+                <GlassCard
+                  hover={false}
+                  className={`border ${stat.border} ${stat.cardTint} p-6 text-center`}
+                >
                   <div
                     className={`mx-auto mb-4 inline-flex rounded-2xl ${stat.iconBg} p-3`}
                   >

@@ -3,6 +3,8 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { wizardConfig } from '../data/wizardConfig'
 import AuroraBackground from '../components/layout/AuroraBackground'
 import { WizardHeader, WizardComplete } from '../components/wizard/WizardShell'
+import MulticolorHeading from '../components/ui/MulticolorHeading'
+import SectionBlob from '../components/ui/SectionBlob'
 import AutonomyStep, {
   LocationStep,
   BudgetStep,
@@ -108,8 +110,10 @@ export default function Wizard() {
 
   if (completed) {
     return (
-      <div className="relative min-h-screen">
+      <div className="relative min-h-screen overflow-hidden">
         <AuroraBackground />
+        <SectionBlob variant="coral" shape="circle" position="top-right" />
+        <SectionBlob variant="violet" shape="blob" position="bottom-left" />
         <div className="relative z-10">
           <WizardComplete />
         </div>
@@ -118,8 +122,11 @@ export default function Wizard() {
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col">
+    <div className="relative flex min-h-screen flex-col overflow-hidden">
       <AuroraBackground />
+      <SectionBlob variant="violet" shape="blob" position="top-left" />
+      <SectionBlob variant="amber" shape="ring" position="bottom-right" />
+
       <div className="relative z-10 flex min-h-screen flex-col">
         <WizardHeader progress={progress} />
 
@@ -135,9 +142,13 @@ export default function Wizard() {
               transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
               className="w-full max-w-xl"
             >
-              <h2 className="mb-8 text-2xl font-bold text-slate-800 sm:text-3xl">
-                {step.question}
-              </h2>
+              <MulticolorHeading
+                as="h2"
+                words={step.question}
+                className="mb-8 text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl"
+                startIndex={currentStep}
+                trigger="mount"
+              />
               {renderStepContent()}
             </motion.div>
           </AnimatePresence>

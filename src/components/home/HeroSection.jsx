@@ -2,41 +2,28 @@ import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { HeartHandshake, Sparkles } from 'lucide-react'
 import MagneticButton from '../ui/MagneticButton'
+import MulticolorHeading from '../ui/MulticolorHeading'
 import BentoSteps from './BentoSteps'
-import StructuresCarousel from './StructuresCarousel'
-import TestimonialsSection from './TestimonialsSection'
 import StatsSection from './StatsSection'
+import PersonalizedAnalysisSection from './PersonalizedAnalysisSection'
+import TestimonialsSection from './TestimonialsSection'
 import TrustPartnersSection from './TrustPartnersSection'
 import FAQSection from './FAQSection'
+import CTASection from './CTASection'
 import AuroraBackground from '../layout/AuroraBackground'
-
-const HEADLINE_WORDS = [
-  { text: 'La', color: 'text-slate-800' },
-  { text: 'guida', color: 'text-[#E07A5F]' },
-  { text: 'sicura', color: 'text-[#9B8EC4]' },
-  { text: 'per', color: 'text-slate-800' },
-  { text: 'chi', color: 'text-slate-800' },
-  { text: 'ami.', color: 'text-[#5CB8A8]' },
-]
-
-const wordVariants = {
-  hidden: { opacity: 0, y: 24, filter: 'blur(8px)' },
-  visible: (i) => ({
-    opacity: 1,
-    y: 0,
-    filter: 'blur(0px)',
-    transition: { delay: i * 0.08 + 0.1, duration: 0.55, ease: [0.25, 0.46, 0.45, 0.94] },
-  }),
-}
+import SectionBlob from '../ui/SectionBlob'
 
 export default function HeroSection() {
   return (
-    <section className="relative flex min-h-screen flex-col items-center justify-center px-6 pb-24 pt-32 text-center">
+    <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 pb-24 pt-32 text-center">
+      <SectionBlob variant="coral" shape="circle" position="top-right" />
+      <SectionBlob variant="violet" shape="blob" position="bottom-left" />
+
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="mb-8 inline-flex items-center gap-2 rounded-full border border-[#E07A5F]/20 bg-white/80 px-4 py-2 shadow-sm backdrop-blur-xl"
+        className="relative z-10 mb-8 inline-flex items-center gap-2 rounded-full border border-[#E07A5F]/20 bg-white/80 px-4 py-2 shadow-sm backdrop-blur-xl"
       >
         <HeartHandshake className="h-4 w-4 text-[#E07A5F]" strokeWidth={2} />
         <span className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
@@ -45,41 +32,38 @@ export default function HeroSection() {
         <Sparkles className="h-3.5 w-3.5 text-[#E9A84A]" strokeWidth={2} />
       </motion.div>
 
-      <motion.h1
-        className="mb-6 max-w-4xl text-5xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl md:text-7xl lg:text-8xl"
-        initial="hidden"
-        animate="visible"
-      >
-        {HEADLINE_WORDS.map((word, i) => (
-          <motion.span
-            key={`${word.text}-${i}`}
-            custom={i}
-            variants={wordVariants}
-            className={`inline-block mr-[0.25em] ${word.color}`}
-          >
-            {word.text}
-          </motion.span>
-        ))}
-      </motion.h1>
+      <MulticolorHeading
+        as="h1"
+        words="La guida sicura per chi ami."
+        className="relative z-10 mb-6 max-w-4xl text-5xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl md:text-7xl lg:text-8xl"
+        startIndex={0}
+        neutralWords={[0, 3, 4]}
+        trigger="mount"
+      />
 
       <motion.p
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, duration: 0.6 }}
-        className="mb-12 max-w-2xl text-lg font-medium text-slate-600 sm:text-xl md:text-2xl"
+        className="relative z-10 mb-12 max-w-2xl text-lg font-medium leading-relaxed text-slate-600 sm:text-xl md:text-2xl"
       >
-        L&apos;intelligenza di un algoritmo, l&apos;empatia di un concierge.
+        Non un catalogo di strutture — un&apos;analisi personalizzata della{' '}
+        <span className="font-semibold text-[#E07A5F]">vostra</span> situazione,
+        con l&apos;empatia di chi vi ascolta davvero.
       </motion.p>
 
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.7, duration: 0.6 }}
+        className="relative z-10"
       >
         <MagneticButton to="/wizard">Inizia l&apos;analisi gratuita</MagneticButton>
       </motion.div>
 
-      <BentoSteps />
+      <div className="relative z-10 w-full">
+        <BentoSteps />
+      </div>
     </section>
   )
 }
@@ -92,10 +76,11 @@ export function HomePageContent() {
         <HomeNav />
         <HeroSection />
         <StatsSection />
-        <StructuresCarousel />
+        <PersonalizedAnalysisSection />
         <TestimonialsSection />
         <TrustPartnersSection />
         <FAQSection />
+        <CTASection />
         <HomeFooter />
       </div>
     </>

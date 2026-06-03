@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight, Quote } from 'lucide-react'
 import GlassCard from '../ui/GlassCard'
+import MulticolorHeading from '../ui/MulticolorHeading'
+import SectionBlob from '../ui/SectionBlob'
 
 const TESTIMONIALS = [
   {
@@ -11,7 +13,8 @@ const TESTIMONIALS = [
     role: 'Figlia — Milano',
     accent: 'border-l-[#E07A5F]',
     iconColor: 'text-[#E07A5F]',
-    iconBg: 'bg-[#E07A5F]/10',
+    iconBg: 'bg-[#E07A5F]/12',
+    cardTint: 'bg-[#E07A5F]/[0.02]',
   },
   {
     quote:
@@ -20,16 +23,18 @@ const TESTIMONIALS = [
     role: 'Nipoti — Roma',
     accent: 'border-l-[#9B8EC4]',
     iconColor: 'text-[#9B8EC4]',
-    iconBg: 'bg-[#9B8EC4]/10',
+    iconBg: 'bg-[#9B8EC4]/12',
+    cardTint: 'bg-[#9B8EC4]/[0.03]',
   },
   {
     quote:
       'Papà si è ambientato in una settimana. La struttura scelta aveva esattamente le attività che gli servivano.',
     author: 'Elena R.',
     role: 'Figlia — Torino',
-    accent: 'border-l-[#5CB8A8]',
-    iconColor: 'text-[#5CB8A8]',
-    iconBg: 'bg-[#5CB8A8]/10',
+    accent: 'border-l-[#E879A0]',
+    iconColor: 'text-[#E879A0]',
+    iconBg: 'bg-[#E879A0]/12',
+    cardTint: 'bg-[#E879A0]/[0.02]',
   },
   {
     quote:
@@ -38,7 +43,8 @@ const TESTIMONIALS = [
     role: 'Figlio — Bologna',
     accent: 'border-l-[#E9A84A]',
     iconColor: 'text-[#E9A84A]',
-    iconBg: 'bg-[#E9A84A]/10',
+    iconBg: 'bg-[#E9A84A]/12',
+    cardTint: 'bg-[#E9A84A]/[0.03]',
   },
 ]
 
@@ -55,20 +61,26 @@ export default function TestimonialsSection() {
   const t = TESTIMONIALS[index]
 
   return (
-    <section className="px-6 py-24">
-      <div className="mx-auto max-w-4xl">
+    <section className="relative overflow-hidden px-6 py-28">
+      <SectionBlob variant="teal" shape="blob" position="top-right" />
+      <SectionBlob variant="amber" shape="circle" position="bottom-left" />
+
+      <div className="relative z-10 mx-auto max-w-4xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mb-10 text-center"
+          className="mb-12 text-center"
         >
           <p className="mb-3 text-sm font-semibold tracking-widest text-slate-400 uppercase">
             Storie di famiglie
           </p>
-          <h2 className="text-3xl font-bold text-slate-800 sm:text-4xl">
-            Non siamo noi a dirlo
-          </h2>
+          <MulticolorHeading
+            as="h2"
+            words="Non siamo noi a dirlo"
+            className="text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl"
+            startIndex={3}
+          />
         </motion.div>
 
         <div className="relative">
@@ -83,7 +95,7 @@ export default function TestimonialsSection() {
             >
               <GlassCard
                 hover={false}
-                className={`border-l-4 ${t.accent} p-8 sm:p-10`}
+                className={`border-l-4 ${t.accent} ${t.cardTint} p-8 sm:p-10`}
               >
                 <div className={`mb-6 inline-flex rounded-2xl ${t.iconBg} p-3`}>
                   <Quote className={`h-6 w-6 ${t.iconColor}`} strokeWidth={1.75} />

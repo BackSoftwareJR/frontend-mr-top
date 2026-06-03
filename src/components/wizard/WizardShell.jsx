@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { CheckCircle2 } from 'lucide-react'
 import GlassCard from '../ui/GlassCard'
 import MagneticButton from '../ui/MagneticButton'
+import MulticolorHeading from '../ui/MulticolorHeading'
 
 export function WizardComplete() {
   return (
@@ -17,7 +18,13 @@ export function WizardComplete() {
           <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#E07A5F] to-[#E9A84A]">
             <CheckCircle2 className="h-8 w-8 text-white" strokeWidth={2} />
           </div>
-          <h2 className="mb-3 text-2xl font-bold text-slate-800">Grazie</h2>
+          <MulticolorHeading
+            as="h2"
+            words="Grazie di cuore"
+            className="mb-3 text-2xl font-extrabold tracking-tight"
+            startIndex={0}
+            trigger="mount"
+          />
           <p className="mb-8 leading-relaxed text-slate-600">
             Stiamo analizzando le vostre risposte. Riceverete presto le soluzioni
             più adatte.
