@@ -86,13 +86,19 @@ export const MOBILE_BREAKPOINT = 768
 export const MOBILE_HERO_SCROLL_ZONE_END = 0.1
 
 /** Mobile: cap for descent linear band (anchor measurement may go lower) */
-export const MOBILE_DESCENT_SCROLL_ZONE_MAX = 0.52
+export const MOBILE_DESCENT_SCROLL_ZONE_MAX = 0.64
 
 /** Mobile: lighter blend after descent before tail / optional remap */
-export const MOBILE_DESCENT_SCROLL_BLEND = 0.015
+export const MOBILE_DESCENT_SCROLL_BLEND = 0.012
 
 /** Mobile: skip viewport-constrained remap that stalls pathIdx while scrollY advances */
 export const MOBILE_USE_VIEWPORT_REMAP = false
+
+/** Mobile: scale scroll progress so path keeps pace with finger scroll */
+export const MOBILE_SCROLL_PROGRESS_MULTIPLIER = 1.38
+
+/** Mobile tail: power < 1 advances path faster early in the post-descent band */
+export const MOBILE_TAIL_PROGRESS_POWER = 0.72
 
 /** Horizontal sway for wavy vertical descent (px, ±) */
 export const WAVY_VERTICAL_AMPLITUDE = 64
@@ -655,7 +661,8 @@ function resolveMobileLinearTail(scrollProgress, zoneConfig) {
 
   const span = 1 - tailScrollStart || 1
   const t = (scrollProgress - tailScrollStart) / span
-  return tailPathStart + t * (1 - tailPathStart)
+  const eased = Math.pow(Math.max(0, Math.min(1, t)), MOBILE_TAIL_PROGRESS_POWER)
+  return tailPathStart + eased * (1 - tailPathStart)
 }
 
 /**
@@ -727,7 +734,11 @@ export function resolveReadingPathProgress(
   if (!isMobile) {
     return resolveDesktopReadingPathProgress(scrollProgress, remapTable, zoneConfig)
   }
-  return resolveMobileReadingPathProgress(scrollProgress, remapTable, zoneConfig)
+  const adjusted = Math.min(
+    1,
+    scrollProgress * MOBILE_SCROLL_PROGRESS_MULTIPLIER,
+  )
+  return resolveMobileReadingPathProgress(adjusted, remapTable, zoneConfig)
 }
 
 /** Hero + bento descent scroll zones from measured path waypoints */
@@ -741,8 +752,8 @@ export function computeReadingPathZoneConfig(
   const scrollBlend = isMobile ? MOBILE_DESCENT_SCROLL_BLEND : HERO_SCROLL_BLEND
   const descentScrollBlend = isMobile ? MOBILE_DESCENT_SCROLL_BLEND : DESCENT_SCROLL_BLEND
   const descentScrollMax = isMobile ? MOBILE_DESCENT_SCROLL_ZONE_MAX : 0.38
-  const descentScrollMinGap = isMobile ? 0.1 : 0.05
-  const statsViewportRatio = isMobile ? 0.36 : 0.46
+  const descentScrollMinGap = isMobile ? 0.06 : 0.05
+  const statsViewportRatio = isMobile ? 0.28 : 0.46
 
   const total = pathEl?.getTotalLength?.() ?? 0
   if (!total || !viewportHeight || typeof document === 'undefined') {
@@ -787,7 +798,7 @@ export function computeReadingPathZoneConfig(
       const bentoTop = bentoEl.getBoundingClientRect().top + window.scrollY
       scrollYTarget = Math.min(
         scrollYTarget,
-        bentoTop - viewportHeight * 0.22,
+        bentoTop - viewportHeight * 0.14,
       )
     }
   }

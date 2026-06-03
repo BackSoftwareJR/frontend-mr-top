@@ -32,6 +32,11 @@ export default function HeroSection() {
       <SectionBlob variant="coral" shape="circle" position="top-right" />
       <SectionBlob variant="violet" shape="blob" position="bottom-left" />
 
+      <div className="relative z-10 mb-8 flex flex-col items-center gap-3 md:hidden">
+        <WenandoMark className="h-24 w-24" />
+        <WenandoLogo size="lg" align="center" />
+      </div>
+
       <MulticolorHeading
         as="h1"
         words="La guida sicura per chi ami."

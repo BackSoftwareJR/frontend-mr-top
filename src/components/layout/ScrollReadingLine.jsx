@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   motion,
+  useMotionValueEvent,
   useMotionValue,
   useReducedMotion,
   useScroll,
@@ -329,6 +330,7 @@ function ReadingPathLayer({
   const zoneConfigRef = useRef({ pathEnd: 0, scrollEnd: HERO_SCROLL_ZONE_END })
   const [pathD, setPathD] = useState('')
   const [pathLength, setPathLength] = useState(0)
+  const [pathRevision, setPathRevision] = useState(0)
   const [glowRanges, setGlowRanges] = useState([])
   const [statRanges, setStatRanges] = useState([])
   const [points, setPoints] = useState([])
@@ -337,6 +339,7 @@ function ReadingPathLayer({
     const nextPoints = measureReadingPathPoints()
     setPoints(nextPoints)
     setPathD(buildReadingPathD(nextPoints))
+    setPathRevision((revision) => revision + 1)
   }, [])
 
   useDebouncedRemeasure(remeasurePath)
@@ -378,7 +381,7 @@ function ReadingPathLayer({
     }
 
     return undefined
-  }, [pathD, points, viewport.height, isMobile])
+  }, [pathRevision, viewport.height, isMobile])
 
   const pathProgress = useTransform(scrollYProgress, (rawP) =>
     resolveReadingPathProgress(rawP, remapTableRef.current, zoneConfigRef.current, {
@@ -408,6 +411,25 @@ function ReadingPathLayer({
     const len = lookupRef.current.totalLength || pathLength
     return getPathTipPosition(pathEl, len, p).y
   })
+
+  const visiblePathRef = useRef(null)
+
+  useMotionValueEvent(strokeDashoffset, 'change', (value) => {
+    if (visiblePathRef.current) {
+      visiblePathRef.current.style.strokeDashoffset = String(value)
+    }
+  })
+
+  useEffect(() => {
+    if (!visiblePathRef.current) return
+    visiblePathRef.current.setAttribute('d', pathD)
+    if (pathLength) {
+      visiblePathRef.current.style.strokeDasharray = String(pathLength)
+      visiblePathRef.current.style.strokeDashoffset = String(
+        strokeDashoffset.get(),
+      )
+    }
+  }, [pathRevision, pathLength])
 
   return (
     <>
@@ -448,7 +470,8 @@ function ReadingPathLayer({
                   willChange: 'transform',
                 }}
               >
-                <motion.path
+                <path
+                  ref={visiblePathRef}
                   d={pathD}
                   fill="none"
                   stroke="url(#wenando-reading-gradient)"
@@ -456,11 +479,6 @@ function ReadingPathLayer({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   opacity={STROKE_OPACITY}
-                  style={{
-                    strokeDasharray: pathLength,
-                    strokeDashoffset,
-                    willChange: 'stroke-dashoffset',
-                  }}
                 />
                 {showCursor ? (
                   <motion.circle
