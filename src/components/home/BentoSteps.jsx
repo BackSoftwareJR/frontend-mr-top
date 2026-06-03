@@ -8,27 +8,30 @@ const STEPS = [
     title: 'Analisi',
     description:
       'Raccogliamo le esigenze reali con un percorso guidato, empatico e senza stress.',
-    iconBg: 'bg-[#5B8A72]/10',
-    iconColor: 'text-[#5B8A72]',
-    delay: 0,
+    iconBg: 'bg-[#E07A5F]/10',
+    iconColor: 'text-[#E07A5F]',
+    borderAccent: 'hover:border-[#E07A5F]/40',
+    topBar: 'bg-[#E07A5F]',
   },
   {
     icon: Target,
     title: 'Match',
     description:
       'Il motore confronta centinaia di strutture verificate e seleziona le più compatibili.',
-    iconBg: 'bg-teal-50',
-    iconColor: 'text-teal-700',
-    delay: 0.1,
+    iconBg: 'bg-[#9B8EC4]/10',
+    iconColor: 'text-[#9B8EC4]',
+    borderAccent: 'hover:border-[#9B8EC4]/40',
+    topBar: 'bg-[#9B8EC4]',
   },
   {
     icon: Sparkles,
     title: 'Soluzione',
     description:
       'Ricevi proposte personalizzate con trasparenza su costi, servizi e disponibilità.',
-    iconBg: 'bg-[#C4785A]/10',
-    iconColor: 'text-[#C4785A]',
-    delay: 0.2,
+    iconBg: 'bg-[#5CB8A8]/10',
+    iconColor: 'text-[#5CB8A8]',
+    borderAccent: 'hover:border-[#5CB8A8]/40',
+    topBar: 'bg-[#5CB8A8]',
   },
 ]
 
@@ -69,9 +72,12 @@ export default function BentoSteps() {
           const Icon = step.icon
           return (
             <motion.div key={step.title} variants={cardVariants}>
-              <GlassCard className="group h-full p-6 text-left sm:p-8">
+              <GlassCard
+                className={`group relative h-full overflow-hidden p-6 text-left transition-colors sm:p-8 ${step.borderAccent}`}
+              >
+                <div className={`absolute inset-x-0 top-0 h-1 ${step.topBar} opacity-60`} />
                 <div
-                  className={`mb-5 inline-flex rounded-2xl ${step.iconBg} p-3`}
+                  className={`mb-5 inline-flex rounded-2xl ${step.iconBg} p-3 transition-transform group-hover:scale-110`}
                 >
                   <Icon className={`h-6 w-6 ${step.iconColor}`} strokeWidth={1.75} />
                 </div>

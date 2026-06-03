@@ -8,10 +8,14 @@
   --color-charcoal-muted: #64748b;
   --color-glass-border: rgb(226 232 240 / 0.8);
   --color-glass-bg: rgb(255 255 255 / 0.8);
-  --color-accent-sage: #5b8a72;
-  --color-accent-sage-dark: #4a7360;
-  --color-accent-teal: #0d9488;
-  --color-accent-warm: #c4785a;
+  --color-accent-coral: #e07a5f;
+  --color-accent-coral-dark: #c96a52;
+  --color-accent-amber: #e9a84a;
+  --color-accent-amber-dark: #c88a32;
+  --color-accent-violet: #9b8ec4;
+  --color-accent-violet-dark: #7c6ba8;
+  --color-accent-teal: #5cb8a8;
+  --color-accent-teal-dark: #0d9488;
 }
 
 html {
@@ -28,11 +32,11 @@ body {
 }
 
 ::selection {
-  background-color: rgb(91 138 114 / 0.2);
+  background-color: rgb(224 122 95 / 0.2);
   color: var(--color-charcoal);
 }
 
-/* Subtle warm light background — no dark aurora */
+/* Subtle warm light background — soft multicolor orbs, no sage */
 .aurora-bg {
   position: fixed;
   inset: 0;
@@ -57,7 +61,7 @@ body {
   height: 60vmax;
   top: -15%;
   right: -10%;
-  background: radial-gradient(circle, rgb(91 138 114 / 0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, rgb(224 122 95 / 0.07) 0%, transparent 70%);
   animation-duration: 48s;
 }
 
@@ -66,7 +70,7 @@ body {
   height: 50vmax;
   bottom: -20%;
   left: -5%;
-  background: radial-gradient(circle, rgb(13 148 136 / 0.06) 0%, transparent 68%);
+  background: radial-gradient(circle, rgb(155 142 196 / 0.06) 0%, transparent 68%);
   animation-duration: 54s;
   animation-delay: -10s;
 }
@@ -84,19 +88,29 @@ body {
   height: 40vmax;
   top: 40%;
   left: 50%;
-  background: radial-gradient(circle, rgb(196 120 90 / 0.05) 0%, transparent 72%);
+  background: radial-gradient(circle, rgb(224 122 95 / 0.06) 0%, transparent 72%);
   animation-duration: 46s;
   animation-delay: -6s;
 }
 
-.aurora-orb--purple {
+.aurora-orb--violet {
   width: 35vmax;
   height: 35vmax;
   bottom: 15%;
   left: 10%;
-  background: radial-gradient(circle, rgb(91 138 114 / 0.06) 0%, transparent 72%);
+  background: radial-gradient(circle, rgb(155 142 196 / 0.07) 0%, transparent 72%);
   animation-duration: 52s;
   animation-delay: -18s;
+}
+
+.aurora-orb--amber {
+  width: 30vmax;
+  height: 30vmax;
+  top: 10%;
+  left: 20%;
+  background: radial-gradient(circle, rgb(233 168 74 / 0.05) 0%, transparent 72%);
+  animation-duration: 44s;
+  animation-delay: -12s;
 }
 
 @keyframes aurora-drift {
@@ -131,7 +145,6 @@ body {
   box-shadow: 0 4px 12px rgb(15 23 42 / 0.06);
 }
 
-/* Headline — warm charcoal, accent on key word via component */
 .text-gradient {
   color: var(--color-charcoal);
 }
@@ -141,22 +154,44 @@ body {
 }
 
 .text-accent {
-  color: var(--color-accent-sage);
+  color: var(--color-accent-coral);
+}
+
+/* Multicolor gradient text */
+.text-gradient-multicolor {
+  background: linear-gradient(
+    135deg,
+    var(--color-accent-coral) 0%,
+    var(--color-accent-amber) 35%,
+    var(--color-accent-violet) 70%,
+    var(--color-accent-teal) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 /* Soft glow for CTAs */
-.glow-sage {
+.glow-coral {
   box-shadow:
-    0 4px 16px rgb(91 138 114 / 0.25),
+    0 4px 16px rgb(224 122 95 / 0.28),
     0 1px 3px rgb(15 23 42 / 0.06);
 }
 
 .glow-badge-hot {
-  box-shadow: 0 0 0 1px rgb(196 120 90 / 0.2);
+  box-shadow: 0 0 0 1px rgb(224 122 95 / 0.2);
 }
 
 .glow-badge-warm {
-  box-shadow: 0 0 0 1px rgb(91 138 114 / 0.2);
+  box-shadow: 0 0 0 1px rgb(233 168 74 / 0.25);
+}
+
+.glow-badge-violet {
+  box-shadow: 0 0 0 1px rgb(155 142 196 / 0.25);
+}
+
+.glow-badge-teal {
+  box-shadow: 0 0 0 1px rgb(92 184 168 / 0.25);
 }
 
 /* Custom range slider — light theme */
@@ -182,10 +217,10 @@ input[type="range"].glass-range::-webkit-slider-thumb {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: var(--color-accent-sage);
+  background: var(--color-accent-coral);
   border: 3px solid #fff;
   margin-top: -8px;
-  box-shadow: 0 2px 8px rgb(91 138 114 / 0.35);
+  box-shadow: 0 2px 8px rgb(224 122 95 / 0.35);
 }
 
 input[type="range"].glass-range::-moz-range-track {
@@ -198,9 +233,9 @@ input[type="range"].glass-range::-moz-range-thumb {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: var(--color-accent-sage);
+  background: var(--color-accent-coral);
   border: 3px solid #fff;
-  box-shadow: 0 2px 8px rgb(91 138 114 / 0.35);
+  box-shadow: 0 2px 8px rgb(224 122 95 / 0.35);
 }
 
 input[type="range"].glass-range:focus {

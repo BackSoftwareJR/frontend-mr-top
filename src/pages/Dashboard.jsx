@@ -35,7 +35,7 @@ function DashboardSidebar() {
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-slate-200 bg-white/90 backdrop-blur-2xl lg:flex">
       <div className="flex items-center gap-3 border-b border-slate-200 px-6 py-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#5B8A72]">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#E07A5F] to-[#E9A84A]">
           <HeartHandshake className="h-5 w-5 text-white" strokeWidth={2} />
         </div>
         <div>
@@ -53,7 +53,7 @@ function DashboardSidebar() {
               to={item.to}
               className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
                 item.active
-                  ? 'bg-[#5B8A72]/10 text-[#4A7360]'
+                  ? 'bg-[#E07A5F]/10 text-[#c96a52]'
                   : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
               }`}
             >
@@ -67,7 +67,7 @@ function DashboardSidebar() {
       <div className="border-t border-slate-200 p-4">
         <Link
           to="/"
-          className="flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-600 transition-colors hover:border-[#5B8A72]/40 hover:text-[#5B8A72]"
+          className="flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-600 transition-colors hover:border-[#E07A5F]/40 hover:text-[#E07A5F]"
         >
           Torna al sito
         </Link>
@@ -106,10 +106,10 @@ function LeadsGrid() {
                   <p className="text-xs text-slate-400">{lead.id}</p>
                 </td>
                 <td className="px-6 py-4 text-slate-600">{lead.location}</td>
-                <td className="px-6 py-4 font-medium text-[#5B8A72]">{lead.budget}</td>
+                <td className="px-6 py-4 font-medium text-[#9B8EC4]">{lead.budget}</td>
                 <td className="px-6 py-4 text-slate-600">{lead.autonomy}</td>
                 <td className="px-6 py-4">
-                  <span className="font-bold text-[#C4785A]">{lead.score}</span>
+                  <span className="font-bold text-[#E07A5F]">{lead.score}</span>
                 </td>
                 <td className="px-6 py-4">
                   <StatusBadge status={lead.status} />
@@ -153,7 +153,7 @@ export default function Dashboard() {
             </div>
             <Link
               to="/"
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-600 shadow-sm transition-colors hover:border-[#5B8A72]/40 hover:text-[#5B8A72] lg:hidden"
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-600 shadow-sm transition-colors hover:border-[#E07A5F]/40 hover:text-[#E07A5F] lg:hidden"
             >
               Torna al sito
             </Link>
@@ -161,11 +161,11 @@ export default function Dashboard() {
 
           <div className="mb-8 grid gap-4 sm:grid-cols-3">
             {[
-              { label: 'Hot Match', value: hotCount, color: 'text-[#C4785A]' },
-              { label: 'Warm Lead', value: mockLeads.filter((l) => l.status === 'Warm Lead').length, color: 'text-[#5B8A72]' },
-              { label: 'Nuovi oggi', value: 2, color: 'text-teal-700' },
+              { label: 'Hot Match', value: hotCount, color: 'text-[#E07A5F]', border: 'border-l-[#E07A5F]' },
+              { label: 'Warm Lead', value: mockLeads.filter((l) => l.status === 'Warm Lead').length, color: 'text-[#E9A84A]', border: 'border-l-[#E9A84A]' },
+              { label: 'Nuovi oggi', value: 2, color: 'text-[#5CB8A8]', border: 'border-l-[#5CB8A8]' },
             ].map((stat) => (
-              <GlassCard key={stat.label} className="p-5">
+              <GlassCard key={stat.label} className={`border-l-4 ${stat.border} p-5`}>
                 <p className="text-xs font-semibold tracking-wider text-slate-400 uppercase">
                   {stat.label}
                 </p>

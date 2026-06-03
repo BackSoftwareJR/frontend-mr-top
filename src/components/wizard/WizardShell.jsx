@@ -14,7 +14,7 @@ export function WizardComplete() {
         className="w-full max-w-md"
       >
         <GlassCard hover={false} className="p-8 text-center">
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#5B8A72]">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#E07A5F] to-[#E9A84A]">
             <CheckCircle2 className="h-8 w-8 text-white" strokeWidth={2} />
           </div>
           <h2 className="mb-3 text-2xl font-bold text-slate-800">Grazie</h2>
@@ -47,7 +47,7 @@ export function WizardHeader({ progress, onClose }) {
       </div>
       <div className="h-1 bg-slate-100">
         <motion.div
-          className="h-full bg-[#5B8A72]"
+          className="h-full bg-gradient-to-r from-[#E07A5F] via-[#E9A84A] to-[#9B8EC4]"
           initial={{ width: 0 }}
           animate={{ width: `${progress}%` }}
           transition={{ duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] }}
