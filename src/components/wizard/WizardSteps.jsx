@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
+import BudgetRangeSlider from './BudgetRangeSlider'
+import InfoDrawer, { InfoHelpButton } from '../ui/InfoDrawer'
+import { autonomyInfo } from '../../data/autonomyInfo'
 
 const MOCK_LOCATIONS = [
   { label: 'Milano (MI)', value: 'milano-mi' },
@@ -8,25 +11,82 @@ const MOCK_LOCATIONS = [
   { label: 'Torino (TO)', value: 'torino-to' },
 ]
 
-export default function AutonomyStep({ step, onSelect }) {
+const stepEase = [0.25, 0.46, 0.45, 0.94]
+
+const glassInputClass =
+  'w-full rounded-2xl border border-slate-200/50 bg-white/70 px-5 py-3.5 text-base font-medium text-slate-800 placeholder:text-slate-400 shadow-sm backdrop-blur-xl transition-colors focus:border-teal-800/30 focus:bg-white/90 focus:outline-none focus:ring-2 focus:ring-teal-800/15'
+
+function StepNav({ onBack, onPrimary, primaryLabel, primaryDisabled = false }) {
   return (
-    <div className="grid gap-3">
-      {step.options.map((option, index) => (
-        <motion.button
-          key={option.value}
-          type="button"
-          onClick={() => onSelect(option.value)}
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: index * 0.08 }}
-          whileHover={{ scale: 1.02, borderColor: 'rgba(224,122,95,0.4)' }}
-          whileTap={{ scale: 0.98 }}
-          className="w-full rounded-2xl border border-slate-200 bg-white px-6 py-5 text-left shadow-sm transition-colors hover:border-[#E07A5F]/40 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E07A5F]/30"
-        >
-          <span className="text-lg font-bold text-slate-800">{option.label}</span>
-        </motion.button>
-      ))}
+    <div className="flex items-center justify-between gap-4 pt-1">
+      <motion.button
+        type="button"
+        onClick={onBack}
+        whileTap={{ scale: 0.96 }}
+        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-500 transition-colors hover:bg-white/80 hover:text-slate-700"
+      >
+        Indietro
+      </motion.button>
+      <motion.button
+        type="button"
+        onClick={onPrimary}
+        disabled={primaryDisabled}
+        whileTap={primaryDisabled ? undefined : { scale: 0.97 }}
+        className="inline-flex items-center rounded-xl border border-teal-800/20 bg-teal-800/[0.06] px-5 py-2.5 text-sm font-medium text-teal-800 transition-colors hover:border-teal-800/30 hover:bg-teal-800/[0.1] disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        {primaryLabel}
+      </motion.button>
     </div>
+  )
+}
+
+export default function AutonomyStep({ step, onSelect }) {
+  const [drawerOpen, setDrawerOpen] = useState(false)
+
+  return (
+    <>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <p className="text-sm text-slate-500">Scegli il livello più vicino alla situazione</p>
+        <InfoHelpButton onClick={() => setDrawerOpen(true)} />
+      </div>
+
+      <InfoDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title={autonomyInfo.title}
+      >
+        <p className="mb-5 text-sm leading-relaxed text-slate-600">{autonomyInfo.intro}</p>
+        <div className="space-y-3">
+          {autonomyInfo.levels.map((level) => (
+            <div
+              key={level.value}
+              className="rounded-xl border border-slate-200/50 bg-white/70 p-4 backdrop-blur-xl"
+            >
+              <h3 className="mb-1 text-sm font-semibold text-teal-800">{level.label}</h3>
+              <p className="text-sm leading-relaxed text-slate-600">{level.description}</p>
+            </div>
+          ))}
+        </div>
+      </InfoDrawer>
+
+      <div className="grid gap-2.5">
+        {step.options.map((option, index) => (
+          <motion.button
+            key={option.value}
+            type="button"
+            onClick={() => onSelect(option.value)}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.06, duration: 0.35, ease: stepEase }}
+            whileTap={{ scale: 0.97 }}
+            className="w-full rounded-2xl border border-slate-200/50 bg-white/70 px-5 py-4 text-left shadow-sm backdrop-blur-xl transition-colors hover:border-teal-800/25 hover:bg-white/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-800/20"
+            style={{ willChange: 'transform, opacity' }}
+          >
+            <span className="text-base font-semibold text-slate-800">{option.label}</span>
+          </motion.button>
+        ))}
+      </div>
+    </>
   )
 }
 
@@ -54,7 +114,9 @@ export function LocationStep({ step, value, onSelect }) {
 
   return (
     <div ref={containerRef} className="relative">
-      <input
+      <p className="mb-3 text-sm text-slate-500">Inizia a digitare il comune o la città</p>
+
+      <motion.input
         type="text"
         value={query}
         onChange={(e) => {
@@ -63,29 +125,37 @@ export function LocationStep({ step, value, onSelect }) {
         }}
         onFocus={() => setOpen(true)}
         placeholder={step.placeholder}
-        className="w-full rounded-2xl border border-slate-200 bg-white px-5 py-4 text-lg font-medium text-slate-800 placeholder:text-slate-400 shadow-sm focus:border-[#E07A5F]/50 focus:outline-none focus:ring-2 focus:ring-[#E07A5F]/20"
+        className={glassInputClass}
         autoComplete="off"
+        whileFocus={{ scale: 1.005 }}
+        transition={{ duration: 0.2, ease: stepEase }}
       />
 
       {open && suggestions.length > 0 && (
         <motion.ul
-          initial={{ opacity: 0, y: -4 }}
+          initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute left-0 right-0 top-full z-10 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg"
+          transition={{ duration: 0.25, ease: stepEase }}
+          className="absolute left-0 right-0 top-full z-10 mt-2 overflow-hidden rounded-2xl border border-slate-200/50 bg-white/70 shadow-lg backdrop-blur-xl"
+          style={{ willChange: 'transform, opacity' }}
         >
-          {suggestions.map((loc) => (
+          {suggestions.map((loc, index) => (
             <li key={loc.value}>
-              <button
+              <motion.button
                 type="button"
                 onClick={() => {
                   setQuery(loc.label)
                   setOpen(false)
                   onSelect(loc)
                 }}
-                className="w-full px-5 py-3.5 text-left text-base font-medium text-slate-800 transition-colors hover:bg-slate-50 focus:outline-none"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: index * 0.04, duration: 0.2 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full px-5 py-3 text-left text-sm font-medium text-slate-800 transition-colors hover:bg-teal-800/[0.04] focus:outline-none focus-visible:bg-teal-800/[0.06]"
               >
                 {loc.label}
-              </button>
+              </motion.button>
             </li>
           ))}
         </motion.ul>
@@ -96,17 +166,6 @@ export function LocationStep({ step, value, onSelect }) {
 
 function formatEuro(value) {
   return new Intl.NumberFormat('it-IT').format(value)
-}
-
-function ThumbLabel({ value, percent }) {
-  return (
-    <div
-      className="pointer-events-none absolute top-0 -translate-x-1/2 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-[#E07A5F] shadow-sm"
-      style={{ left: `${percent}%` }}
-    >
-      {formatEuro(value)}€
-    </div>
-  )
 }
 
 export function BudgetStep({ step, value, onChange, onNext, onBack }) {
@@ -129,69 +188,33 @@ export function BudgetStep({ step, value, onChange, onNext, onBack }) {
     onChange({ min: minVal, max: clamped })
   }
 
-  const minPercent = ((minVal - budgetMin) / (budgetMax - budgetMin)) * 100
-  const maxPercent = ((maxVal - budgetMin) / (budgetMax - budgetMin)) * 100
-  const fillLeft = minPercent
-  const fillWidth = maxPercent - minPercent
-
   return (
     <div>
-      <p className="mb-10 text-center text-3xl font-bold tracking-tight text-slate-800 sm:text-4xl">
-        Da {formatEuro(minVal)}€ a {formatEuro(maxVal)}€
-      </p>
+      <motion.p
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: stepEase }}
+        className="mb-8 text-center text-base font-medium tracking-tight text-slate-700 sm:mb-10 sm:text-lg"
+      >
+        Da{' '}
+        <span className="font-semibold text-teal-800">{formatEuro(minVal)} €</span>
+        {' '}a{' '}
+        <span className="font-semibold text-teal-800/80">{formatEuro(maxVal)} €</span>
+      </motion.p>
 
-      <div className="relative mb-4 h-14">
-        <ThumbLabel value={minVal} percent={minPercent} />
-        <ThumbLabel value={maxVal} percent={maxPercent} />
-
-        <div className="absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-slate-200" />
-        <div
-          className="absolute top-1/2 h-2 -translate-y-1/2 rounded-full bg-gradient-to-r from-[#E07A5F] to-[#E9A84A]"
-          style={{ left: `${fillLeft}%`, width: `${fillWidth}%` }}
-        />
-        <input
-          type="range"
+      <div className="mb-10">
+        <BudgetRangeSlider
           min={budgetMin}
           max={budgetMax}
           step={budgetStep}
-          value={minVal}
-          onChange={(e) => handleMinChange(Number(e.target.value))}
-          className="glass-range range-overlay z-20"
-          aria-label="Budget minimo"
-        />
-        <input
-          type="range"
-          min={budgetMin}
-          max={budgetMax}
-          step={budgetStep}
-          value={maxVal}
-          onChange={(e) => handleMaxChange(Number(e.target.value))}
-          className="glass-range range-overlay z-30"
-          aria-label="Budget massimo"
+          minVal={minVal}
+          maxVal={maxVal}
+          onMinChange={handleMinChange}
+          onMaxChange={handleMaxChange}
         />
       </div>
 
-      <div className="mb-10 flex justify-between text-sm font-medium text-slate-400">
-        <span>{formatEuro(budgetMin)}€</span>
-        <span>{formatEuro(budgetMax)}€</span>
-      </div>
-
-      <div className="flex items-center justify-between gap-4">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800"
-        >
-          Indietro
-        </button>
-        <button
-          type="button"
-          onClick={onNext}
-          className="rounded-2xl bg-[#E07A5F] px-6 py-3 text-sm font-bold text-white shadow-sm transition-all hover:bg-[#c96a52]"
-        >
-          Continua
-        </button>
-      </div>
+      <StepNav onBack={onBack} onPrimary={onNext} primaryLabel="Continua" />
     </div>
   )
 }
@@ -203,14 +226,13 @@ export function ContactStep({ step, value, onChange, onSubmit, onBack, canSubmit
     onChange({ ...formData, [name]: fieldValue })
   }
 
-  const inputClass =
-    'w-full rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-slate-800 placeholder:text-slate-400 shadow-sm focus:border-[#E07A5F]/50 focus:outline-none focus:ring-2 focus:ring-[#E07A5F]/20'
-
   return (
     <div>
-      <div className="mb-8 space-y-4">
-        {step.fields.map((field) => (
-          <input
+      <p className="mb-4 text-sm text-slate-500">Ti contatteremo solo con le opzioni più adatte</p>
+
+      <div className="mb-8 space-y-3">
+        {step.fields.map((field, index) => (
+          <motion.input
             key={field.name}
             id={field.name}
             type={field.type}
@@ -218,29 +240,21 @@ export function ContactStep({ step, value, onChange, onSubmit, onBack, canSubmit
             onChange={(e) => updateField(field.name, e.target.value)}
             placeholder={field.placeholder}
             required={field.required}
-            className={inputClass}
+            className={glassInputClass}
             aria-label={field.label}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.06, duration: 0.3, ease: stepEase }}
           />
         ))}
       </div>
 
-      <div className="flex items-center justify-between gap-4">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800"
-        >
-          Indietro
-        </button>
-        <button
-          type="button"
-          onClick={onSubmit}
-          disabled={!canSubmit}
-          className="rounded-2xl bg-[#E07A5F] px-6 py-3 text-sm font-bold text-white shadow-sm transition-all hover:bg-[#c96a52] disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {step.submitLabel}
-        </button>
-      </div>
+      <StepNav
+        onBack={onBack}
+        onPrimary={onSubmit}
+        primaryLabel={step.submitLabel}
+        primaryDisabled={!canSubmit}
+      />
     </div>
   )
 }

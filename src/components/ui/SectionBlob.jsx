@@ -37,17 +37,23 @@ export default function SectionBlob({
     center: 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 scale-90',
   }
 
+  const positionClass = positionClasses[position] || positionClasses['top-right']
+
   return (
     <div
       className={`pointer-events-none absolute inset-0 overflow-visible ${className}`}
       aria-hidden="true"
     >
-      <svg
-        viewBox="0 0 600 400"
-        className={`absolute h-[65%] w-[65%] max-h-[440px] max-w-[440px] sm:h-[75%] sm:w-[75%] ${positionClasses[position] || positionClasses['top-right']}`}
-        preserveAspectRatio="xMidYMid meet"
-        overflow="visible"
+      <div
+        className={`absolute h-[65%] w-[65%] max-h-[440px] max-w-[440px] max-md:h-[55%] max-md:w-[55%] max-md:max-h-[360px] max-md:max-w-[360px] sm:h-[75%] sm:w-[75%] ${positionClass}`}
       >
+        <div className="section-blob-layer h-full w-full">
+        <svg
+          viewBox="0 0 600 400"
+          className="h-full w-full"
+          preserveAspectRatio="xMidYMid meet"
+          overflow="visible"
+        >
         {isRing ? (
           <ellipse
             cx="280"
@@ -64,7 +70,9 @@ export default function SectionBlob({
             {shapeEl}
           </g>
         )}
-      </svg>
+        </svg>
+        </div>
+      </div>
     </div>
   )
 }

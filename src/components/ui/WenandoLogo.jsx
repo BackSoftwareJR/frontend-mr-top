@@ -4,15 +4,21 @@ import WenandoWordmarkStatic from './WenandoWordmarkStatic'
 
 const WenandoWordmarkMotion = lazy(() => import('./WenandoWordmarkMotion'))
 
-export function WenandoMark({ className, width = 64, height = 64, fetchPriority }) {
+export function WenandoMark({
+  className,
+  width = 64,
+  height = 64,
+  fetchPriority,
+  alt = '',
+}) {
   return (
     <picture>
       <source srcSet="/wenando-logo-96.webp" type="image/webp" media="(max-width: 768px)" />
       <source srcSet="/wenando-logo-96.webp" type="image/webp" />
       <img
         src="/wenando-logo-96.png"
-        alt=""
-        aria-hidden="true"
+        alt={alt}
+        aria-hidden={alt ? undefined : true}
         width={width}
         height={height}
         decoding="async"

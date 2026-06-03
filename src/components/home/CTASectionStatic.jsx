@@ -19,11 +19,11 @@ export function CTASectionContent() {
       <MulticolorHeading
         as="h2"
         words="Iniziamo dal vostro caso"
-        className="mb-5 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl"
+        className="mb-4 text-2xl font-extrabold leading-[1.1] tracking-tight sm:text-3xl"
         startIndex={1}
       />
 
-      <p className="mx-auto mb-10 max-w-xl text-lg leading-relaxed text-slate-600">
+      <p className="mx-auto mb-8 max-w-xl text-base leading-snug text-slate-600 sm:text-lg sm:leading-relaxed">
         Raccontateci la vostra situazione. Analizzeremo ogni dettaglio con cura
         prima di suggerirvi la strada giusta — senza cataloghi, senza fretta.
       </p>
@@ -39,7 +39,7 @@ export default function CTASectionStatic() {
   return (
     <section
       id="cta"
-      className="section-deferred relative overflow-x-clip px-6 py-20 sm:py-24"
+      className="section-deferred relative overflow-x-clip px-6 py-16 sm:py-20"
     >
       <SectionBlob variant="coral" shape="wave" position="bottom-left" />
       <SectionBlob variant="amber" shape="ring" position="top-right" />

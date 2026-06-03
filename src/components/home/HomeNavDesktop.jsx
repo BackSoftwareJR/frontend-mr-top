@@ -6,6 +6,7 @@ import {
 } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { MORPH_SPRING } from '../../data/readingPathSchema'
+import ConsumerAccediNavLink from './ConsumerAccediNavLink'
 import MagneticButton from '../ui/MagneticButton'
 import WenandoLogo, { WenandoMark } from '../ui/WenandoLogo'
 
@@ -45,12 +46,7 @@ function HomeNavLinks() {
         <WenandoLogo size="nav" className="min-w-0 overflow-visible" />
       </Link>
       <div className="flex items-center gap-2 sm:gap-3">
-        <Link
-          to="/dashboard"
-          className="hidden text-xs font-semibold text-slate-500 transition-colors hover:text-[#E07A5F] sm:block"
-        >
-          Area B2B
-        </Link>
+        <ConsumerAccediNavLink />
         <MagneticButton to="/wizard" variant="outline-coral" className="!px-4 !py-2 !text-sm sm:!px-5 sm:!py-2.5">
           Inizia ora →
         </MagneticButton>

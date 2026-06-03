@@ -91,7 +91,7 @@ export default function FAQSectionStatic() {
       id="faq"
       data-scroll-anchor="faq"
       data-scroll-label="FAQ"
-      className="section-deferred relative overflow-x-clip px-6 py-20 sm:py-28"
+      className="section-deferred relative overflow-x-clip px-6 py-16 sm:py-20"
     >
       <SectionBlob variant="violet" shape="circle" position="top-left" />
       <SectionBlob variant="rose" shape="wave" position="bottom-right" />
@@ -105,7 +105,7 @@ export default function FAQSectionStatic() {
             <MulticolorHeading
               as="h2"
               words="Siamo qui per chiarire ogni dubbio"
-              className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl"
+              className="text-2xl font-extrabold leading-[1.1] tracking-tight sm:text-3xl"
               startIndex={0}
             />
             <p className="mx-auto mt-5 max-w-sm text-base leading-relaxed text-slate-600 lg:mx-0">

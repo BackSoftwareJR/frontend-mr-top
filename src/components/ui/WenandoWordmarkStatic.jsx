@@ -9,9 +9,17 @@ const SIZE_STYLES = {
     word: 'text-2xl sm:text-3xl',
     mark: 'h-14 w-14 sm:h-16 sm:w-16',
   },
+  'nav-mobile': {
+    word: 'text-[1.75rem] leading-none tracking-tight',
+    mark: 'h-12 w-12',
+  },
   sm: { word: 'text-sm tracking-tight', mark: 'h-9 w-9' },
   md: { word: 'text-base tracking-tight', mark: 'h-9 w-9' },
   lg: { word: 'text-2xl sm:text-3xl tracking-tight', mark: 'h-10 w-10' },
+  hero: {
+    word: 'text-[2.25rem] leading-none tracking-tight',
+    mark: 'h-12 w-12',
+  },
 }
 
 const ANDO = ['a', 'n', 'd', 'o']

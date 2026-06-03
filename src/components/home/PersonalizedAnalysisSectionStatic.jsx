@@ -63,13 +63,13 @@ export default function PersonalizedAnalysisSectionStatic() {
       id="personalized"
       data-scroll-anchor="personalized"
       data-scroll-label="Analisi personalizzata"
-      className="section-deferred relative overflow-x-clip px-6 py-20 sm:py-28"
+      className="section-deferred relative overflow-x-clip px-6 py-16 sm:py-20"
     >
       <SectionBlob variant="violet" shape="blob" position="top-left" />
       <SectionBlob variant="rose" shape="circle" position="bottom-right" />
 
       <div className="relative z-10 mx-auto max-w-6xl">
-        <div className="mb-14 text-center">
+        <div className="mb-10 text-center">
           <div className="mb-5 inline-flex items-center rounded-full border border-[#9B8EC4]/25 bg-[#9B8EC4]/8 px-4 py-1.5">
             <span className="text-xs font-semibold tracking-wide text-[#9B8EC4] uppercase">
               Analisi personalizzata
@@ -79,7 +79,7 @@ export default function PersonalizedAnalysisSectionStatic() {
           <MulticolorHeading
             as="h2"
             words="Ogni famiglia è diversa"
-            className="mb-5 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl md:text-5xl"
+            className="mb-4 text-2xl font-extrabold leading-[1.1] tracking-tight sm:text-3xl"
             startIndex={0}
           />
 

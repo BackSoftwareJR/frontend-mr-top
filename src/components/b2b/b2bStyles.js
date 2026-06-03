@@ -1,0 +1,33 @@
+/**
+ * Wenando Pro B2B styles — re-exports site-aligned iOS tokens
+ */
+export {
+  proGlassCard as b2bCard,
+  proGlassCardSm as b2bCardSm,
+  proPageTitle as b2bPageTitle,
+  proPageSubtitle as b2bPageSubtitle,
+  proPrimaryBtn as b2bPrimaryBtn,
+  proPrimaryBtnSm as b2bPrimaryBtnSm,
+  proGhostBtn as b2bGhostBtn,
+  proSecondaryBtn as b2bSecondaryBtn,
+  proInputFocus as b2bInputFocus,
+  proInput as b2bInput,
+  proLink as b2bLink,
+  proIconAccent as b2bIconAccent,
+  proNavActive as b2bNavActive,
+  proNavInactive as b2bNavInactive,
+  proStatusPaid as b2bStatusPaid,
+  proStatusPending as b2bStatusPending,
+  proGlassPanel as b2bGlassPanel,
+  proWalletPill as b2bWalletPill,
+  proTopbar as b2bTopbar,
+  proDropdown as b2bDropdown,
+  proSegmented as b2bSegmented,
+  proSegmentedActive as b2bSegmentedActive,
+  proSegmentedInactive as b2bSegmentedInactive,
+  proLowBalanceBanner as b2bLowBalanceBanner,
+  proEmptyState as b2bEmptyState,
+  proHeroStat as b2bHeroStat,
+  proListGroup as b2bListGroup,
+  proListItem as b2bListItem,
+} from './proDesignTokens'

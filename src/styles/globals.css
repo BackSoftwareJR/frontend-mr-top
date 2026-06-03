@@ -17,6 +17,7 @@
   --color-accent-violet-dark: #7c6ba8;
   --color-accent-teal: #5cb8a8;
   --color-accent-teal-dark: #0d9488;
+  --color-wenando-teal: #0f766e;
   --color-accent-rose: #e879a0;
   --color-accent-rose-dark: #db5f8a;
 }
@@ -204,9 +205,9 @@ body {
   z-index: 0;
   border-radius: inherit;
   background: var(--color-accent-coral);
-  transform: scaleX(var(--reading-fill, 0));
-  transform-origin: left center;
-  transition: transform 0.12s linear;
+  /* clip-path (not scaleX) keeps both end caps rounded during L→R sweep */
+  clip-path: inset(0 calc((1 - var(--reading-fill, 0)) * 100%) 0 0 round 1rem);
+  transition: clip-path 0.12s linear;
 }
 
 .reading-line-cta[data-reading-locked="true"] {
@@ -219,8 +220,8 @@ body {
 }
 
 .reading-line-cta[data-reading-locked="true"]::before {
-  transform: scaleX(1);
-  transition: transform 0.35s ease;
+  clip-path: inset(0 0 0 0 round 1rem);
+  transition: clip-path 0.35s ease;
 }
 
 .reading-line-cta[data-reading-locked="true"] {
@@ -355,6 +356,55 @@ input[type="range"].glass-range.range-overlay::-webkit-slider-thumb {
 
 input[type="range"].glass-range.range-overlay::-moz-range-thumb {
   pointer-events: auto;
+}
+
+/* Dual-thumb budget range — teal glass theme */
+.budget-range__track {
+  background: rgb(226 232 240 / 0.55);
+}
+
+.budget-range__fill {
+  background: linear-gradient(
+    90deg,
+    rgb(17 94 89 / 0.75) 0%,
+    rgb(17 94 89 / 0.9) 100%
+  );
+}
+
+.budget-range-thumb {
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.95);
+  border: 2px solid rgb(17 94 89 / 0.3);
+  box-shadow:
+    0 2px 8px rgb(17 94 89 / 0.15),
+    0 0 0 1px rgb(255 255 255 / 0.8);
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.budget-range-thumb:active {
+  cursor: grabbing;
+}
+
+.budget-range-thumb--active {
+  border-color: rgb(17 94 89 / 0.55);
+  box-shadow:
+    0 4px 14px rgb(17 94 89 / 0.22),
+    0 0 0 3px rgb(17 94 89 / 0.08);
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+.budget-range-thumb:focus-visible {
+  outline: none;
+  box-shadow:
+    0 4px 14px rgb(17 94 89 / 0.22),
+    0 0 0 3px rgb(17 94 89 / 0.15);
 }
 
 /* Scrollbar */

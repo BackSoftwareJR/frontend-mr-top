@@ -9,7 +9,7 @@ export default function BentoStepsStatic() {
       id="bento"
       data-scroll-anchor="bento"
       data-scroll-label="Come funziona"
-      className="section-deferred relative overflow-x-clip px-6 py-20 sm:py-28"
+      className="section-deferred relative overflow-x-clip px-6 py-16 sm:py-20"
     >
       <div className="relative mx-auto w-full max-w-6xl overflow-visible">
         <SectionBlob variant="teal" shape="wave" position="center" className="-z-10" />
@@ -21,14 +21,14 @@ export default function BentoStepsStatic() {
         />
 
         <div className="relative z-10">
-          <div className="mb-12 text-center sm:mb-14">
-            <p className="mb-3 text-sm font-semibold tracking-widest text-slate-400 uppercase">
+          <div className="mb-10 text-center sm:mb-12">
+            <p className="mb-2.5 text-sm font-semibold tracking-widest text-slate-400 uppercase">
               Come funziona
             </p>
             <MulticolorHeading
               as="h2"
               words="Tre passi con cura"
-              className="text-2xl font-extrabold tracking-tight sm:text-3xl md:text-4xl"
+              className="text-xl font-extrabold leading-[1.1] tracking-tight sm:text-2xl"
               startIndex={1}
             />
           </div>

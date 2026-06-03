@@ -63,20 +63,20 @@ export default function TestimonialsSectionStatic() {
       id="testimonials"
       data-scroll-anchor="testimonials"
       data-scroll-label="Testimonianze"
-      className="section-deferred relative overflow-x-clip px-6 py-20 sm:py-28"
+      className="section-deferred relative overflow-x-clip px-6 py-16 sm:py-20"
     >
       <SectionBlob variant="teal" shape="blob" position="top-right" />
       <SectionBlob variant="amber" shape="circle" position="bottom-left" />
 
       <div className="relative z-10 mx-auto max-w-4xl">
-        <div className="mb-12 text-center">
-          <p className="mb-3 text-sm font-semibold tracking-widest text-slate-400 uppercase">
+        <div className="mb-10 text-center">
+          <p className="mb-2.5 text-sm font-semibold tracking-widest text-slate-400 uppercase">
             Storie di famiglie
           </p>
           <MulticolorHeading
             as="h2"
             words="Non siamo noi a dirlo"
-            className="text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl"
+            className="text-2xl font-extrabold leading-[1.1] tracking-tight sm:text-3xl"
             startIndex={3}
           />
         </div>

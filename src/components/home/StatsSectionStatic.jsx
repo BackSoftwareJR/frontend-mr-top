@@ -8,16 +8,16 @@ export default function StatsSectionStatic() {
       id="stats"
       data-scroll-anchor="stats"
       data-scroll-label="Numeri"
-      className="section-deferred relative overflow-x-clip px-6 py-20 sm:py-24"
+      className="section-deferred relative overflow-x-clip px-6 py-16 sm:py-20"
     >
       <SectionBlob variant="amber" shape="ring" position="top-right" />
 
       <div className="relative z-10 mx-auto max-w-6xl">
-        <div className="mb-12 text-center">
+        <div className="mb-10 text-center">
           <MulticolorHeading
             as="h2"
             words="Numeri che contano davvero"
-            className="text-2xl font-extrabold tracking-tight sm:text-3xl md:text-4xl"
+            className="text-xl font-extrabold leading-[1.1] tracking-tight sm:text-2xl"
             startIndex={2}
           />
         </div>

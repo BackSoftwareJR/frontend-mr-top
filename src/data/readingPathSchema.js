@@ -904,35 +904,65 @@ function clampMonotonicBridgeX(fromX, toX, x) {
 
 const clampHeroBridgeX = clampMonotonicBridgeX
 
+/** κ for approximating a circular fillet with one cubic (4/3 · tan(π/8)) */
+const CUBIC_FILLET_KAPPA = 0.5522847498
+
 /**
- * Two cubics: period → hero CTA pass entry.
- * Drops vertically on the period column (avoids looping behind headline copy),
- * then glides left with monotonic X and a horizontal tangent into the left entry.
+ * Vertical drop → filleted corner → horizontal glide.
+ * Three cubics: column descent, quarter-turn fillet, monotonic horizontal entry.
  */
-function buildHeroBridgeBezierSuffix(from, to) {
+function buildVerticalHorizontalBridgeSuffix(from, to, clampX) {
   const dx = to.x - from.x
   const dy = to.y - from.y
   const spanX = Math.abs(dx)
   const drop = Math.max(HERO_VERTICAL_DROP * 0.42, Math.abs(dy) * 0.14, 28)
   const lead = Math.min(36, Math.max(14, spanX * 0.1))
+  const horizSign = Math.sign(dx || -1)
 
-  const midDrop = { x: from.x, y: from.y + dy * 0.52 }
+  const cornerX = from.x
+  const cornerY = from.y + dy * 0.52
+  const vertLeg = Math.abs(cornerY - from.y)
+  const horizLeg = Math.abs(to.x - cornerX)
+  const filletR = Math.max(
+    4,
+    Math.min(24, vertLeg * 0.45, horizLeg * 0.35, Math.max(8, spanX * 0.06)),
+  )
+
+  const vertEnd = { x: cornerX, y: cornerY - filletR }
+  const horizStart = { x: cornerX + horizSign * filletR, y: cornerY }
+
   const cp1 = { x: from.x, y: from.y + drop * 0.38 }
-  const cp2 = { x: from.x, y: midDrop.y - Math.abs(dy) * 0.06 }
+  const cp2 = { x: from.x, y: vertEnd.y - Math.abs(dy) * 0.06 }
 
-  const cp3 = {
-    x: clampHeroBridgeX(from.x, to.x, from.x + dx * 0.58),
-    y: from.y + dy * 0.82,
+  const filletCp1 = { x: vertEnd.x, y: vertEnd.y + filletR * CUBIC_FILLET_KAPPA }
+  const filletCp2 = {
+    x: horizStart.x - horizSign * filletR * CUBIC_FILLET_KAPPA,
+    y: horizStart.y,
   }
-  const cp4 = {
-    x: clampHeroBridgeX(from.x, to.x, to.x + Math.sign(dx || -1) * lead * 0.28),
+
+  const horizCp1 = {
+    x: clampX(from.x, to.x, horizStart.x + (to.x - horizStart.x) * 0.42),
+    y: horizStart.y,
+  }
+  const horizCp2 = {
+    x: clampX(from.x, to.x, to.x + horizSign * lead * 0.28),
     y: to.y,
   }
 
   return (
-    ` C ${fmt(cp1.x)} ${fmt(cp1.y)}, ${fmt(cp2.x)} ${fmt(cp2.y)}, ${fmt(midDrop.x)} ${fmt(midDrop.y)}` +
-    ` C ${fmt(cp3.x)} ${fmt(cp3.y)}, ${fmt(cp4.x)} ${fmt(cp4.y)}, ${fmt(to.x)} ${fmt(to.y)}`
+    ` C ${fmt(cp1.x)} ${fmt(cp1.y)}, ${fmt(cp2.x)} ${fmt(cp2.y)}, ${fmt(vertEnd.x)} ${fmt(vertEnd.y)}` +
+    ` C ${fmt(filletCp1.x)} ${fmt(filletCp1.y)}, ${fmt(filletCp2.x)} ${fmt(filletCp2.y)}, ${fmt(horizStart.x)} ${fmt(horizStart.y)}` +
+    ` C ${fmt(horizCp1.x)} ${fmt(horizCp1.y)}, ${fmt(horizCp2.x)} ${fmt(horizCp2.y)}, ${fmt(to.x)} ${fmt(to.y)}`
   )
+}
+
+/**
+ * Three cubics: period → hero CTA pass entry.
+ * Drops vertically on the period column (avoids looping behind headline copy),
+ * fillets the column turn, then glides with monotonic X into the left entry.
+ */
+function buildHeroBridgeBezierSuffix(from, to) {
+  return buildVerticalHorizontalBridgeSuffix(from, to, clampHeroBridgeX)
 }
 
 /** Single flat horizontal cubic — L→R pass, no interior waypoints */
@@ -990,33 +1020,11 @@ function orderStatsPassPoints(passPoints) {
 }
 
 /**
- * Two cubics: hero exit → stats row entry.
- * Drops vertically on the hero column, then glides with monotonic X into the left entry.
+ * Three cubics: hero exit → stats row entry.
+ * Drops vertically on the hero column, fillets the turn, then glides with monotonic X.
  */
 function buildStatsBridgeBezierSuffix(from, to) {
-  const dx = to.x - from.x
-  const dy = to.y - from.y
-  const spanX = Math.abs(dx)
-  const drop = Math.max(HERO_VERTICAL_DROP * 0.42, Math.abs(dy) * 0.14, 28)
-  const lead = Math.min(36, Math.max(14, spanX * 0.1))
-
-  const midDrop = { x: from.x, y: from.y + dy * 0.52 }
-  const cp1 = { x: from.x, y: from.y + drop * 0.38 }
-  const cp2 = { x: from.x, y: midDrop.y - Math.abs(dy) * 0.06 }
-
-  const cp3 = {
-    x: clampMonotonicBridgeX(from.x, to.x, from.x + dx * 0.58),
-    y: from.y + dy * 0.82,
-  }
-  const cp4 = {
-    x: clampMonotonicBridgeX(from.x, to.x, to.x + Math.sign(dx || -1) * lead * 0.28),
-    y: to.y,
-  }
-
-  return (
-    ` C ${fmt(cp1.x)} ${fmt(cp1.y)}, ${fmt(cp2.x)} ${fmt(cp2.y)}, ${fmt(midDrop.x)} ${fmt(midDrop.y)}` +
-    ` C ${fmt(cp3.x)} ${fmt(cp3.y)}, ${fmt(cp4.x)} ${fmt(cp4.y)}, ${fmt(to.x)} ${fmt(to.y)}`
-  )
+  return buildVerticalHorizontalBridgeSuffix(from, to, clampMonotonicBridgeX)
 }
 
 /** Stats row pass-through — flat horizontal sweep, one card segment at a time */

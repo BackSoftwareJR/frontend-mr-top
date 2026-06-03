@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { wizardConfig } from '../data/wizardConfig'
 import AuroraBackground from '../components/layout/AuroraBackground'
-import { WizardHeader, WizardComplete } from '../components/wizard/WizardShell'
+import { WizardHeader } from '../components/wizard/WizardShell'
+import AnalyzingState from '../components/wizard/AnalyzingState'
 import MulticolorHeading from '../components/ui/MulticolorHeading'
 import SectionBlob from '../components/ui/SectionBlob'
 import AutonomyStep, {
@@ -28,10 +30,11 @@ const slideVariants = {
 }
 
 export default function Wizard() {
+  const navigate = useNavigate()
   const [currentStep, setCurrentStep] = useState(0)
   const [direction, setDirection] = useState(1)
   const [answers, setAnswers] = useState({})
-  const [completed, setCompleted] = useState(false)
+  const [analyzing, setAnalyzing] = useState(false)
 
   const steps = wizardConfig.steps
   const step = steps[currentStep]
@@ -46,9 +49,13 @@ export default function Wizard() {
       setDirection(1)
       setCurrentStep((s) => s + 1)
     } else {
-      setCompleted(true)
+      setAnalyzing(true)
     }
   }
+
+  const handleAnalysisComplete = useCallback(() => {
+    navigate('/results', { state: { answers }, replace: true })
+  }, [navigate, answers])
 
   const goBack = () => {
     if (currentStep > 0) {
@@ -108,17 +115,8 @@ export default function Wizard() {
     }
   }
 
-  if (completed) {
-    return (
-      <div className="relative min-h-screen overflow-hidden">
-        <AuroraBackground />
-        <SectionBlob variant="coral" shape="circle" position="top-right" />
-        <SectionBlob variant="violet" shape="blob" position="bottom-left" />
-        <div className="relative z-10">
-          <WizardComplete />
-        </div>
-      </div>
-    )
+  if (analyzing) {
+    return <AnalyzingState onComplete={handleAnalysisComplete} />
   }
 
   return (
