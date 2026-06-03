@@ -1,23 +1,9 @@
 import { lazy, Suspense } from 'react'
 import { HomePageContent } from '../components/home/HeroSection'
-import { useDeferUntilReady } from '../hooks/useDeferUntilReady'
 import { usePrefetchOnIdle } from '../hooks/usePrefetchOnIdle'
 import { useIsMobile } from '../utils/performanceTier'
 
-const ScrollReadingLineLazy = lazy(() => import('../components/layout/ScrollReadingLine'))
 const HomeDesktop = lazy(() => import('./HomeDesktop'))
-
-function DeferredMobileReadingLine() {
-  const ready = useDeferUntilReady({ loadDelayMs: 100, scrollTrigger: true })
-
-  if (!ready) return null
-
-  return (
-    <Suspense fallback={null}>
-      <ScrollReadingLineLazy />
-    </Suspense>
-  )
-}
 
 export default function Home() {
   const isMobile = useIsMobile()
@@ -27,7 +13,6 @@ export default function Home() {
   if (isMobile) {
     return (
       <div className="relative min-h-screen">
-        <DeferredMobileReadingLine />
         <HomePageContent />
       </div>
     )

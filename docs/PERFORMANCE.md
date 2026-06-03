@@ -207,11 +207,21 @@ Second pass targets **scroll jank on phones only** (`max-width: 768px`). Desktop
 | `Home.jsx` | Plain div wrapper on mobile |
 | `public/wenando-logo-96.webp/png` | Optimized 192×192 assets |
 
+### Round 7 (mobile reading line disabled)
+
+| Strategy | Implementation |
+|----------|----------------|
+| **AB. No reading line on mobile** | `Home.jsx` skips `ScrollReadingLine` lazy chunk entirely on ≤768px |
+| **AC. Static mobile CTAs** | `MagneticButtonStatic` uses plain `outline-coral` (no `reading-line-cta` fill sweep) |
+| **AD. Static mobile stat cards** | `StatsSectionStatic` drops `reading-line-stat` glow/fill classes |
+
+Desktop path unchanged: `HomeDesktop.jsx` + full `ScrollReadingLine`, CTA fill sync, stat glow.
+
 ### Round 6 (defer critical path, zero mobile scroll listeners, 20 fps low-core)
 
 | Strategy | Implementation |
 |----------|----------------|
-| **T. Deferred reading line mount** | Mobile: `lazy()` + `useDeferUntilReady` (idle / load+100ms / first scroll) — hero paints before path JS |
+| **T. Deferred reading line mount** | ~~Mobile: lazy + deferred mount~~ **Superseded by Round 7** — reading line removed on mobile |
 | **U. No `useScroll` on mobile** | Split `DesktopReadingLineLayer` / `MobileReadingLineLayer`; mobile uses stub motion values only |
 | **V. Idle path measure** | `requestIdleCallback` initial `measureReadingPathPoints`; 300ms debounced resize remeasure |
 | **W. 20 fps on ≤2 cores** | `useLowCoreDevice` → 50ms paint cap; 30 fps otherwise |
@@ -224,8 +234,8 @@ Second pass targets **scroll jank on phones only** (`max-width: 768px`). Desktop
 
 | | Round 5 | Round 6 |
 |--|---------|---------|
-| Reading line in initial bundle | Eager with Home | Lazy chunk after idle/scroll |
-| Framer `useScroll` on mobile | 1 subscriber (reading line) | 0 |
+| Reading line on mobile | Lazy chunk after idle/scroll | **Not loaded** (Round 7) |
+| Framer `useScroll` on mobile | 1 subscriber (reading line) | **0** (no reading line chunk) |
 | Path measure on mount | Sync + delayed timeouts | Idle-first + 300ms resize debounce |
 | Scroll paint (2-core phone) | 30 fps | 20 fps |
 | Stroke paint (Chrome mobile) | rAF only | scroll-timeline when supported |
@@ -236,7 +246,7 @@ Second pass targets **scroll jank on phones only** (`max-width: 768px`). Desktop
 
 | File | Change |
 |------|--------|
-| `Home.jsx` | Lazy reading line + deferred mount; no framer on mobile |
+| `Home.jsx` | ~~Lazy reading line + deferred mount~~ Round 7: no reading line on mobile; no framer on mobile |
 | `HomeDesktop.jsx` | Desktop-only motion wrapper (lazy chunk) |
 | `ScrollReadingLine.jsx` | Split layers, idle measure, scroll-timeline, 20fps low-core |
 | `useDeferUntilReady.js` | Idle / load / scroll activation hook |
@@ -247,6 +257,15 @@ Second pass targets **scroll jank on phones only** (`max-width: 768px`). Desktop
 | `MagneticButton.jsx`, `AnimatedText.jsx` | Static mobile path |
 | Home sections | Static wrappers on mobile (CTA, trust, stats, bento, FAQ, testimonials) |
 | `WenandoLogo.jsx` | WebP source gated with `media="(max-width: 768px)"` |
+
+### Files (Round 7)
+
+| File | Change |
+|------|--------|
+| `Home.jsx` | Mobile: no `ScrollReadingLine` chunk or deferred mount |
+| `MagneticButtonStatic.jsx` | Static `outline-coral` on mobile; no `reading-line-cta` |
+| `StatsSectionStatic.jsx` | Removed `reading-line-stat` class from stat cards |
+| `PERFORMANCE.md` | Document mobile reading line disabled by design |
 
 ---
 
