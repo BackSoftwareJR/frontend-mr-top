@@ -42,10 +42,10 @@ export const MOBILE_PROGRESS_LOOKUP_SAMPLES = 32
 export const CONSTRAINED_PROGRESS_LOOKUP_SAMPLES = 24
 
 /** Precomputed scroll→frame table resolution (mobile rAF hot path) */
-export const MOBILE_SCROLL_FRAME_SAMPLES = 24
+export const MOBILE_SCROLL_FRAME_SAMPLES = 40
 
 /** Fewer scroll frames on constrained devices */
-export const CONSTRAINED_SCROLL_FRAME_SAMPLES = 16
+export const CONSTRAINED_SCROLL_FRAME_SAMPLES = 28
 
 export function resolveMobileScrollFrameSampleCount({
   isMobile = false,

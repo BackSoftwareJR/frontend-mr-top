@@ -207,21 +207,24 @@ Second pass targets **scroll jank on phones only** (`max-width: 768px`). Desktop
 | `Home.jsx` | Plain div wrapper on mobile |
 | `public/wenando-logo-96.webp/png` | Optimized 192×192 assets |
 
-### Round 7 (mobile reading line disabled)
+### Round 7 (static hero LCP, smooth line lerp, drop motion from mobile critical path)
 
 | Strategy | Implementation |
 |----------|----------------|
-| **AB. No reading line on mobile** | `Home.jsx` skips `ScrollReadingLine` lazy chunk entirely on ≤768px |
-| **AC. Static mobile CTAs** | `MagneticButtonStatic` uses plain `outline-coral` (no `reading-line-cta` fill sweep) |
-| **AD. Static mobile stat cards** | `StatsSectionStatic` drops `reading-line-stat` glow/fill classes |
+| **AB. Static mobile hero / headings** | `HeroSection.jsx`, `MulticolorHeadingStatic`, `AnimatedTextStatic`, `MagneticButtonStatic`, `WenandoWordmarkStatic` — zero `framer-motion` import on ≤768px; desktop motion in lazy `*Desktop.jsx` / `*Motion.jsx` chunks |
+| **AC. Bundle: JSX from React, not motion** | Removed `framer-motion` from Vite `manualChunks` — Rolldown was re-exporting JSX via the motion chunk, forcing ~135 KB sync load on bootstrap; motion now lazy in `proxy-*.js` (~121 KB gzip 39 KB) only when desktop sections or deferred reading line load |
+| **AD. Deferred lazy reading line (mobile)** | `Home.jsx` → `DeferredMobileReadingLine`: `useDeferUntilReady` (idle / load+120ms / first scroll) + `lazy(ScrollReadingLine)` — not on LCP critical path |
+| **AE. Perceptually smooth scroll line** | `MOBILE_SCROLL_FRAME_SAMPLES = 40`; continuous rAF (no fps cap); `lerpMobileFrame` with factor **0.35** on dot/stroke/pathProgress — silk between table samples, no stepped motion on slow scroll |
+| **AF. Touch / compositor** | `overscroll-behavior-y: none` on `html, body` ≤768px; reading layer `translate3d(0,0,0)` + `-webkit-transform` |
+| **AG. Load hygiene** | `main.jsx` → dynamic `bootstrap.jsx`; Home lazy; preconnect limited to Google Fonts (essential) |
 
-Desktop path unchanged: `HomeDesktop.jsx` + full `ScrollReadingLine`, CTA fill sync, stat glow.
+Desktop path unchanged: `HomeDesktop.jsx` eager `ScrollReadingLine`, full Framer sections, CTA fill sync, stat glow.
 
 ### Round 6 (defer critical path, zero mobile scroll listeners, 20 fps low-core)
 
 | Strategy | Implementation |
 |----------|----------------|
-| **T. Deferred reading line mount** | ~~Mobile: lazy + deferred mount~~ **Superseded by Round 7** — reading line removed on mobile |
+| **T. Deferred reading line mount** | Mobile: lazy + `useDeferUntilReady` (Round 7) — off LCP path |
 | **U. No `useScroll` on mobile** | Split `DesktopReadingLineLayer` / `MobileReadingLineLayer`; mobile uses stub motion values only |
 | **V. Idle path measure** | `requestIdleCallback` initial `measureReadingPathPoints`; 300ms debounced resize remeasure |
 | **W. 20 fps on ≤2 cores** | `useLowCoreDevice` → 50ms paint cap; 30 fps otherwise |
@@ -234,7 +237,7 @@ Desktop path unchanged: `HomeDesktop.jsx` + full `ScrollReadingLine`, CTA fill s
 
 | | Round 5 | Round 6 |
 |--|---------|---------|
-| Reading line on mobile | Lazy chunk after idle/scroll | **Not loaded** (Round 7) |
+| Reading line on mobile | Lazy chunk after idle/scroll | **Deferred lazy** (Round 7) — ~14 KB chunk + motion proxy after idle/scroll, not at LCP |
 | Framer `useScroll` on mobile | 1 subscriber (reading line) | **0** (no reading line chunk) |
 | Path measure on mount | Sync + delayed timeouts | Idle-first + 300ms resize debounce |
 | Scroll paint (2-core phone) | 30 fps | 20 fps |
@@ -246,7 +249,7 @@ Desktop path unchanged: `HomeDesktop.jsx` + full `ScrollReadingLine`, CTA fill s
 
 | File | Change |
 |------|--------|
-| `Home.jsx` | ~~Lazy reading line + deferred mount~~ Round 7: no reading line on mobile; no framer on mobile |
+| `Home.jsx` | Lazy reading line + deferred mount on mobile; static wrapper; no framer on mobile |
 | `HomeDesktop.jsx` | Desktop-only motion wrapper (lazy chunk) |
 | `ScrollReadingLine.jsx` | Split layers, idle measure, scroll-timeline, 20fps low-core |
 | `useDeferUntilReady.js` | Idle / load / scroll activation hook |
@@ -258,12 +261,35 @@ Desktop path unchanged: `HomeDesktop.jsx` + full `ScrollReadingLine`, CTA fill s
 | Home sections | Static wrappers on mobile (CTA, trust, stats, bento, FAQ, testimonials) |
 | `WenandoLogo.jsx` | WebP source gated with `media="(max-width: 768px)"` |
 
+### Before / after (Round 7 mobile LCP + scroll)
+
+| | Round 6 | Round 7 |
+|--|---------|---------|
+| `vendor-motion` / `proxy` on bootstrap | Sync ~135 KB (JSX via motion chunk) | **None** — JSX from `vendor-react` only |
+| Hero / headings on mobile | Partial static | Fully static; motion lazy on desktop |
+| Reading line mount | Removed (interim) | Deferred lazy + 40-sample lerp rAF |
+| Scroll paint | 20 fps cap (low-core) | Continuous rAF + 0.35 lerp |
+| Frame table samples | 24 | **40** |
+
 ### Files (Round 7)
 
 | File | Change |
 |------|--------|
-| `Home.jsx` | Mobile: no `ScrollReadingLine` chunk or deferred mount |
-| `MagneticButtonStatic.jsx` | Static `outline-coral` on mobile; no `reading-line-cta` |
+| `Home.jsx` | `DeferredMobileReadingLine` — idle/scroll deferred lazy chunk |
+| `HeroSection.jsx`, `*Static.jsx`, `*Desktop.jsx`, `*Motion.jsx` | Mobile/desktop split for all home motion |
+| `ScrollReadingLine.jsx` | `MOBILE_LERP_FACTOR = 0.35`, continuous rAF, GPU layer classes |
+| `readingPathSchema.js` | `MOBILE_SCROLL_FRAME_SAMPLES = 40` |
+| `vite.config.js` | Drop `framer-motion` manualChunk (fixes JSX dedupe bug) |
+| `globals.css` | `overscroll-behavior-y: none` mobile |
+| `main.jsx` / `bootstrap.jsx` | Thin entry split |
+| `PERFORMANCE.md` | Round 7 documentation |
+
+### Files (Round 6 — interim Round 7 note removed)
+
+| File | Change |
+|------|--------|
+| `Home.jsx` | ~~No reading line on mobile~~ superseded by Round 7 deferred lazy |
+| `MagneticButtonStatic.jsx` | Static `outline-coral` on mobile |
 | `StatsSectionStatic.jsx` | Removed `reading-line-stat` class from stat cards |
 | `PERFORMANCE.md` | Document mobile reading line disabled by design |
 

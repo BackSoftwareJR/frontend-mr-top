@@ -42,14 +42,24 @@ const LAYER_CLASS =
   'pointer-events-none fixed inset-0 z-[5] overflow-hidden [contain:layout]'
 
 const MOBILE_LAYER_CLASS =
-  'pointer-events-none fixed inset-0 z-[5] overflow-hidden [contain:strict] [transform:translateZ(0)]'
+  'pointer-events-none fixed inset-0 z-[5] overflow-hidden [contain:strict] [transform:translate3d(0,0,0)] [-webkit-transform:translate3d(0,0,0)]'
 
 const STROKE_OPACITY = 1
 const RESIZE_DEBOUNCE_MS = 300
 const MOBILE_FILL_POLL_MS = 66
-const MOBILE_SCROLL_FRAME_MS = 1000 / 30
-const MOBILE_LOW_CORE_FRAME_MS = 1000 / 20
+const MOBILE_LERP_FACTOR = 0.35
 const SCROLL_WILL_CHANGE_IDLE_MS = 150
+
+function lerpMobileFrame(current, target, factor = MOBILE_LERP_FACTOR) {
+  current.pathProgress += (target.pathProgress - current.pathProgress) * factor
+  current.strokeDashoffset +=
+    (target.strokeDashoffset - current.strokeDashoffset) * factor
+  current.dotX += (target.dotX - current.dotX) * factor
+  current.dotY += (target.dotY - current.dotY) * factor
+  current.dotOpacity +=
+    (target.dotOpacity - current.dotOpacity) * factor
+  return current
+}
 
 const MOBILE_FRAME_OUT = {
   pathProgress: 0,
@@ -112,19 +122,12 @@ function useMobileReadingScrollFrame({
   dotCircleRef,
   pathProgressRef,
   frameTableRef,
-  scrollFrameMs = MOBILE_SCROLL_FRAME_MS,
   skipStrokePaint = false,
 }) {
   const rafRef = useRef(null)
-  const lastPaintAtRef = useRef(0)
   const scrollIdleTimerRef = useRef(null)
-  const frameOutRef = useRef({
-    pathProgress: 0,
-    strokeDashoffset: 0,
-    dotX: 0,
-    dotY: 0,
-    dotOpacity: 0,
-  })
+  const targetRef = useRef({ ...MOBILE_FRAME_OUT })
+  const smoothRef = useRef({ ...MOBILE_FRAME_OUT })
 
   useEffect(() => {
     if (!enabled) return undefined
@@ -140,21 +143,18 @@ function useMobileReadingScrollFrame({
       dotGroup.style.willChange = active ? 'transform' : ''
     }
 
-    const flush = () => {
-      rafRef.current = null
-
-      const now = performance.now()
-      if (now - lastPaintAtRef.current < scrollFrameMs) {
-        rafRef.current = requestAnimationFrame(flush)
-        return
-      }
-      lastPaintAtRef.current = now
+    const tick = () => {
+      rafRef.current = requestAnimationFrame(tick)
 
       if (!anchorsVisibleRef.current) return
 
       const table = frameTableRef.current
+      if (!table.length) return
+
       const rawP = getDocumentScrollYProgress()
-      const frame = applyMobileScrollFrame(table, rawP, frameOutRef.current)
+      applyMobileScrollFrame(table, rawP, targetRef.current)
+      lerpMobileFrame(smoothRef.current, targetRef.current)
+      const frame = smoothRef.current
       const scrollY = window.scrollY
 
       const group = scrollGroupRef.current
@@ -173,28 +173,25 @@ function useMobileReadingScrollFrame({
       const dot = dotCircleRef.current
       if (dotGroup && dot) {
         dotGroup.style.transform = `translate3d(${frame.dotX}px, ${frame.dotY}px, 0)`
-        dot.style.opacity = frame.dotOpacity > 0 ? '1' : '0'
+        dot.style.opacity = frame.dotOpacity > 0.35 ? '1' : '0'
       }
 
       pathProgressRef.current = frame.pathProgress
     }
 
-    const schedule = () => {
+    const onScroll = () => {
       setDotWillChange(true)
       window.clearTimeout(scrollIdleTimerRef.current)
       scrollIdleTimerRef.current = window.setTimeout(() => {
         setDotWillChange(false)
       }, SCROLL_WILL_CHANGE_IDLE_MS)
-
-      if (rafRef.current !== null) return
-      rafRef.current = requestAnimationFrame(flush)
     }
 
-    window.addEventListener('scroll', schedule, { passive: true })
-    schedule()
+    rafRef.current = requestAnimationFrame(tick)
+    window.addEventListener('scroll', onScroll, { passive: true })
 
     return () => {
-      window.removeEventListener('scroll', schedule)
+      window.removeEventListener('scroll', onScroll)
       window.clearTimeout(scrollIdleTimerRef.current)
       setDotWillChange(false)
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
@@ -208,7 +205,6 @@ function useMobileReadingScrollFrame({
     dotCircleRef,
     pathProgressRef,
     frameTableRef,
-    scrollFrameMs,
     skipStrokePaint,
   ])
 }
@@ -566,7 +562,6 @@ function ReadingPathLayer({
   const [statRanges, setStatRanges] = useState([])
   const [points, setPoints] = useState([])
   const useScrollTimelineStroke = isMobile && supportsScrollTimeline()
-  const mobileScrollFrameMs = isLowCore ? MOBILE_LOW_CORE_FRAME_MS : MOBILE_SCROLL_FRAME_MS
 
   const remeasurePath = useCallback(() => {
     const nextPoints = measureReadingPathPoints()
@@ -666,7 +661,6 @@ function ReadingPathLayer({
     dotCircleRef,
     pathProgressRef,
     frameTableRef,
-    scrollFrameMs: mobileScrollFrameMs,
     skipStrokePaint: useScrollTimelineStroke,
   })
 

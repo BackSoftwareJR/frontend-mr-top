@@ -1,19 +1,31 @@
-import { motion } from 'framer-motion'
+import { lazy, Suspense } from 'react'
+import { useIsMobile } from '../../utils/performanceTier'
 
-export default function GlassCard({
-  children,
-  className = '',
-  hover = true,
-  ...props
-}) {
+const GlassCardMotion = lazy(() => import('./GlassCardMotion'))
+
+export default function GlassCard({ children, className = '', hover = true, ...props }) {
+  const isMobile = useIsMobile()
+  const baseClass = `rounded-2xl border border-slate-200/80 bg-white/80 shadow-sm backdrop-blur-xl ${className}`
+
+  if (isMobile) {
+    return (
+      <div className={baseClass} {...props}>
+        {children}
+      </div>
+    )
+  }
+
   return (
-    <motion.div
-      className={`rounded-2xl border border-slate-200/80 bg-white/80 shadow-sm backdrop-blur-xl ${className}`}
-      whileHover={hover ? { y: -4, boxShadow: '0 8px 24px rgb(15 23 42 / 0.08)' } : undefined}
-      transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
-      {...props}
+    <Suspense
+      fallback={
+        <div className={baseClass} {...props}>
+          {children}
+        </div>
+      }
     >
-      {children}
-    </motion.div>
+      <GlassCardMotion className={className} hover={hover} {...props}>
+        {children}
+      </GlassCardMotion>
+    </Suspense>
   )
 }

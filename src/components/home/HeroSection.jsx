@@ -1,13 +1,5 @@
-import { useRef } from 'react'
-import {
-  motion,
-  useReducedMotion,
-  useScroll,
-  useSpring,
-  useTransform,
-} from 'framer-motion'
+import { lazy, Suspense, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { MORPH_SPRING } from '../../data/readingPathSchema'
 import { useIsMobile } from '../../utils/performanceTier'
 import MagneticButton from '../ui/MagneticButton'
 import MulticolorHeading from '../ui/MulticolorHeading'
@@ -22,11 +14,74 @@ import CTASection from './CTASection'
 import AuroraBackground from '../layout/AuroraBackground'
 import SectionBlob from '../ui/SectionBlob'
 
-export default function HeroSection() {
-  const heroDotRef = useRef(null)
+const HomeNavDesktop = lazy(() => import('./HomeNavDesktop'))
+const HeroSectionDesktop = lazy(() => import('./HeroSectionDesktop'))
+
+function HomeNavLinks() {
+  return (
+    <>
+      <Link
+        to="/"
+        className="flex min-w-0 items-center gap-1 overflow-visible sm:gap-1.5"
+      >
+        <WenandoMark className="h-14 w-14 shrink-0 sm:h-16 sm:w-16" />
+        <WenandoLogo size="nav" className="min-w-0 overflow-visible" />
+      </Link>
+      <div className="flex items-center gap-2 sm:gap-3">
+        <Link
+          to="/dashboard"
+          className="hidden text-xs font-semibold text-slate-500 transition-colors hover:text-[#E07A5F] sm:block"
+        >
+          Area B2B
+        </Link>
+        <MagneticButton to="/wizard" variant="outline-coral" className="!px-4 !py-2 !text-sm sm:!px-5 sm:!py-2.5">
+          Inizia ora →
+        </MagneticButton>
+      </div>
+    </>
+  )
+}
+
+function HomeNav() {
   const isMobile = useIsMobile()
-  const prefersReducedMotion = useReducedMotion()
-  const lightMotion = isMobile || prefersReducedMotion
+
+  if (isMobile) {
+    return (
+      <header className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4">
+        <nav className="flex min-h-[56px] w-full max-w-5xl items-center justify-between gap-3 overflow-visible rounded-2xl border border-slate-200/80 bg-white/80 px-3 py-1 shadow-sm backdrop-blur-2xl sm:px-4 sm:py-1.5">
+          <HomeNavLinks />
+        </nav>
+      </header>
+    )
+  }
+
+  return (
+    <Suspense
+      fallback={
+        <header className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4">
+          <nav className="flex min-h-[56px] w-full max-w-5xl items-center justify-between gap-3 overflow-visible rounded-2xl border border-slate-200/80 bg-white/80 px-3 py-1 shadow-sm backdrop-blur-2xl sm:px-4 sm:py-1.5">
+            <HomeNavLinks />
+          </nav>
+        </header>
+      }
+    >
+      <HomeNavDesktop />
+    </Suspense>
+  )
+}
+
+function HomeFooter() {
+  return (
+    <footer className="border-t border-slate-200/60 px-6 py-12 text-center">
+      <p className="text-sm text-slate-500">
+        © 2026 Wenando — Con cura, per chi ami.
+      </p>
+    </footer>
+  )
+}
+
+function HeroSectionStatic() {
+  const heroDotRef = useRef(null)
 
   return (
     <section
@@ -60,50 +115,36 @@ export default function HeroSection() {
         }}
       />
 
-      {lightMotion ? (
-        <p className="hero-fade-in relative z-10 mb-10 max-w-2xl text-lg font-medium leading-relaxed text-slate-600 sm:mb-12 sm:text-xl md:text-2xl">
-          Non un catalogo di strutture — un&apos;analisi personalizzata della{' '}
-          <span className="font-semibold text-[#E07A5F]">vostra</span> situazione,
-          con l&apos;empatia di chi vi ascolta davvero.
-        </p>
-      ) : (
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.6 }}
-          className="relative z-10 mb-10 max-w-2xl text-lg font-medium leading-relaxed text-slate-600 sm:mb-12 sm:text-xl md:text-2xl"
-        >
-          Non un catalogo di strutture — un&apos;analisi personalizzata della{' '}
-          <span className="font-semibold text-[#E07A5F]">vostra</span> situazione,
-          con l&apos;empatia di chi vi ascolta davvero.
-        </motion.p>
-      )}
+      <p className="hero-fade-in relative z-10 mb-10 max-w-2xl text-lg font-medium leading-relaxed text-slate-600 sm:mb-12 sm:text-xl md:text-2xl">
+        Non un catalogo di strutture — un&apos;analisi personalizzata della{' '}
+        <span className="font-semibold text-[#E07A5F]">vostra</span> situazione,
+        con l&apos;empatia di chi vi ascolta davvero.
+      </p>
 
-      {lightMotion ? (
-        <div
-          className="hero-fade-in-delay relative z-10 mt-2 flex justify-center"
-          data-scroll-anchor="hero-cta"
-          data-scroll-label="CTA Hero"
-        >
-          <MagneticButton to="/wizard" variant="outline-coral" readingLineCta>
-            Inizia ora →
-          </MagneticButton>
-        </div>
-      ) : (
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7, duration: 0.6 }}
-          className="relative z-10 mt-2 flex justify-center"
-          data-scroll-anchor="hero-cta"
-          data-scroll-label="CTA Hero"
-        >
-          <MagneticButton to="/wizard" variant="outline-coral" readingLineCta>
-            Inizia ora →
-          </MagneticButton>
-        </motion.div>
-      )}
+      <div
+        className="hero-fade-in-delay relative z-10 mt-2 flex justify-center"
+        data-scroll-anchor="hero-cta"
+        data-scroll-label="CTA Hero"
+      >
+        <MagneticButton to="/wizard" variant="outline-coral" readingLineCta>
+          Inizia ora →
+        </MagneticButton>
+      </div>
     </section>
+  )
+}
+
+export default function HeroSection() {
+  const isMobile = useIsMobile()
+
+  if (isMobile) {
+    return <HeroSectionStatic />
+  }
+
+  return (
+    <Suspense fallback={<HeroSectionStatic />}>
+      <HeroSectionDesktop />
+    </Suspense>
   )
 }
 
@@ -124,107 +165,5 @@ export function HomePageContent() {
         <HomeFooter />
       </div>
     </>
-  )
-}
-
-const NAV_SCROLL_RANGE = [0, 140]
-
-function useNavMorph() {
-  const { scrollY } = useScroll()
-
-  const borderRadius = useSpring(
-    useTransform(scrollY, NAV_SCROLL_RANGE, [2, 9999]),
-    MORPH_SPRING,
-  )
-  const headerTop = useSpring(
-    useTransform(scrollY, NAV_SCROLL_RANGE, [0, 24]),
-    MORPH_SPRING,
-  )
-  const headerPadX = useSpring(
-    useTransform(scrollY, NAV_SCROLL_RANGE, [0, 16]),
-    MORPH_SPRING,
-  )
-  const navMaxWidth = useSpring(
-    useTransform(scrollY, NAV_SCROLL_RANGE, [2000, 1024]),
-    MORPH_SPRING,
-  )
-
-  return { borderRadius, headerTop, headerPadX, navMaxWidth }
-}
-
-function HomeNavLinks() {
-  return (
-    <>
-      <Link
-        to="/"
-        className="flex min-w-0 items-center gap-1 overflow-visible sm:gap-1.5"
-      >
-        <WenandoMark className="h-14 w-14 shrink-0 sm:h-16 sm:w-16" />
-        <WenandoLogo size="nav" className="min-w-0 overflow-visible" />
-      </Link>
-      <div className="flex items-center gap-2 sm:gap-3">
-        <Link
-          to="/dashboard"
-          className="hidden text-xs font-semibold text-slate-500 transition-colors hover:text-[#E07A5F] sm:block"
-        >
-          Area B2B
-        </Link>
-        <MagneticButton to="/wizard" variant="outline-coral" className="!px-4 !py-2 !text-sm sm:!px-5 sm:!py-2.5">
-          Inizia ora →
-        </MagneticButton>
-      </div>
-    </>
-  )
-}
-
-function HomeNavDesktop() {
-  const { borderRadius, headerTop, headerPadX, navMaxWidth } = useNavMorph()
-
-  return (
-    <motion.header
-      initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      style={{
-        top: headerTop,
-        paddingLeft: headerPadX,
-        paddingRight: headerPadX,
-      }}
-      className="fixed left-0 right-0 z-50 flex justify-center"
-    >
-      <motion.nav
-        style={{ borderRadius, maxWidth: navMaxWidth }}
-        className="flex min-h-[56px] w-full items-center justify-between gap-3 overflow-visible border border-slate-200/80 bg-white/80 px-3 py-1 shadow-sm backdrop-blur-2xl sm:px-4 sm:py-1.5"
-      >
-        <HomeNavLinks />
-      </motion.nav>
-    </motion.header>
-  )
-}
-
-function HomeNav() {
-  const prefersReducedMotion = useReducedMotion()
-  const isMobile = useIsMobile()
-
-  if (prefersReducedMotion || isMobile) {
-    return (
-      <header className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4">
-        <nav className="flex min-h-[56px] w-full max-w-5xl items-center justify-between gap-3 overflow-visible rounded-2xl border border-slate-200/80 bg-white/80 px-3 py-1 shadow-sm backdrop-blur-2xl sm:px-4 sm:py-1.5">
-          <HomeNavLinks />
-        </nav>
-      </header>
-    )
-  }
-
-  return <HomeNavDesktop />
-}
-
-function HomeFooter() {
-  return (
-    <footer className="border-t border-slate-200/60 px-6 py-12 text-center">
-      <p className="text-sm text-slate-500">
-        © 2026 Wenando — Con cura, per chi ami.
-      </p>
-    </footer>
   )
 }

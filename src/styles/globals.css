@@ -377,6 +377,11 @@ input[type="range"].glass-range.range-overlay::-moz-range-thumb {
 }
 
 @media (max-width: 768px) {
+  html,
+  body {
+    overscroll-behavior-y: none;
+  }
+
   :root {
     --font-brand: var(--font-sans);
   }
