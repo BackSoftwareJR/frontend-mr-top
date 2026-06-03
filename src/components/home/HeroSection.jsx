@@ -177,20 +177,8 @@ function HomeNavLinks() {
   )
 }
 
-function HomeNav() {
-  const prefersReducedMotion = useReducedMotion()
-  const isMobile = useIsMobile()
+function HomeNavDesktop() {
   const { borderRadius, headerTop, headerPadX, navMaxWidth } = useNavMorph()
-
-  if (prefersReducedMotion || isMobile) {
-    return (
-      <header className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4">
-        <nav className="flex min-h-[56px] w-full max-w-5xl items-center justify-between gap-3 overflow-visible rounded-2xl border border-slate-200/80 bg-white/80 px-3 py-1 shadow-sm backdrop-blur-2xl sm:px-4 sm:py-1.5">
-          <HomeNavLinks />
-        </nav>
-      </header>
-    )
-  }
 
   return (
     <motion.header
@@ -212,6 +200,23 @@ function HomeNav() {
       </motion.nav>
     </motion.header>
   )
+}
+
+function HomeNav() {
+  const prefersReducedMotion = useReducedMotion()
+  const isMobile = useIsMobile()
+
+  if (prefersReducedMotion || isMobile) {
+    return (
+      <header className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4">
+        <nav className="flex min-h-[56px] w-full max-w-5xl items-center justify-between gap-3 overflow-visible rounded-2xl border border-slate-200/80 bg-white/80 px-3 py-1 shadow-sm backdrop-blur-2xl sm:px-4 sm:py-1.5">
+          <HomeNavLinks />
+        </nav>
+      </header>
+    )
+  }
+
+  return <HomeNavDesktop />
 }
 
 function HomeFooter() {

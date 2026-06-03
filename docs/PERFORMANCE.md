@@ -171,6 +171,42 @@ Second pass targets **scroll jank on phones only** (`max-width: 768px`). Desktop
 | `readingPathSchema.js` | Sample counts, `resolveWavyVerticalSegmentCount`, mobile path `d` |
 | `performanceTier.js` | Unchanged (still gates 32-sample lookup) |
 
+### Round 5 (ultra-minimal mobile — decouple fill, lighter frames, LCP)
+
+| Strategy | Implementation |
+|----------|----------------|
+| **M. Fewer frame-table samples** | 24 mobile / 16 constrained (was 64); `resolveMobileScrollFrameSampleCount` |
+| **N. Fill fully decoupled from scroll rAF** | Mobile scroll handler only writes `translate3d` + `strokeDashoffset`; CTA/stat `--reading-fill` via `setInterval(66ms)` reading `pathProgressRef` — no `pathProgressMv.set` / React transitions during scroll |
+| **O. 30 fps scroll paint cap** | Mobile rAF coalesces to ~30 fps; frame-table lerp keeps motion smooth between samples |
+| **P. Constrained path geometry** | `isConstrained`: `buildMinimalConnectorSuffix` (vertical+horizontal elbow, no wavy cubics) |
+| **Q. GPU layer** | Mobile reading layer `[transform:translateZ(0)]`; dot/path already `translate3d` |
+| **R. LCP logo** | `wenando-logo-96.webp` (7.4 KB) + `wenando-logo-96.png` (14 KB) at 192×192; preload WebP; hero `<picture>` |
+| **S. Motion diet** | `LazyMotion` + `domAnimation` on mobile; Home page wrapper plain `<div>`; Wenando wordmark static on mobile |
+
+### Before / after (Round 5 mobile scroll path)
+
+| | Round 3–4 | Round 5 |
+|--|-----------|---------|
+| Frame table samples | 64 | 24 / 16 constrained |
+| Fill updates during scroll | Throttled `pathProgress.on('change')` (~every 3 rAF) | Independent 15 fps timer (66 ms) |
+| Scroll rAF work | stroke + dot + motion value sync | stroke + dot only |
+| Scroll paint rate | Uncapped (~60 fps irregular) | Capped 30 fps + table lerp |
+| Logo LCP | 233 KB PNG | 7.4 KB WebP (192 px) |
+| `getPointAtLength` in scroll handler | None | None (unchanged) |
+| `querySelector` in scroll handler | None | None (unchanged; fill sync queries only at mount) |
+
+### Files (Round 5)
+
+| File | Change |
+|------|--------|
+| `ScrollReadingLine.jsx` | 30 fps cap, fill poll timer, no motion sync on scroll, GPU layer |
+| `readingPathSchema.js` | 24/16 frame samples, constrained minimal connectors |
+| `WenandoLogo.jsx` | WebP/PNG picture, static wordmark on mobile |
+| `index.html` | Preload `wenando-logo-96.webp` |
+| `App.jsx` | `LazyMotion` + `domAnimation` on mobile |
+| `Home.jsx` | Plain div wrapper on mobile |
+| `public/wenando-logo-96.webp/png` | Optimized 192×192 assets |
+
 ---
 
 ## Verification

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ACCENT_PALETTE } from './MulticolorHeading'
+import { useIsMobile } from '../../utils/performanceTier'
 
 const EASE = [0.25, 0.46, 0.45, 0.94]
 
@@ -54,6 +55,7 @@ function ColoredLetter({ className, children }) {
 
 function WenandoWordmark({ size = 'md', className = '' }) {
   const prefersReducedMotion = useReducedMotion()
+  const isMobile = useIsMobile()
   const styles = SIZE_STYLES[size] || SIZE_STYLES.md
   const [expanded, setExpanded] = useState(false)
 
@@ -92,7 +94,7 @@ function WenandoWordmark({ size = 'md', className = '' }) {
 
   const wordClass = `inline-flex items-baseline overflow-visible pb-0.5 leading-[1.2] ${BRAND_FONT} ${styles.word} ${className}`
 
-  if (prefersReducedMotion) {
+  if (prefersReducedMotion || isMobile) {
     return (
       <span className={wordClass} aria-hidden="true">
         <span className={`inline-block ${WE_CLASS}`}>w</span>
@@ -183,16 +185,19 @@ function WenandoWordmark({ size = 'md', className = '' }) {
 
 export function WenandoMark({ className, width = 64, height = 64, fetchPriority }) {
   return (
-    <img
-      src="/wenando-logo.png"
-      alt=""
-      aria-hidden="true"
-      width={width}
-      height={height}
-      decoding="async"
-      fetchPriority={fetchPriority}
-      className={`shrink-0 object-contain ${className || 'h-9 w-9'}`}
-    />
+    <picture>
+      <source srcSet="/wenando-logo-96.webp" type="image/webp" />
+      <img
+        src="/wenando-logo-96.png"
+        alt=""
+        aria-hidden="true"
+        width={width}
+        height={height}
+        decoding="async"
+        fetchPriority={fetchPriority}
+        className={`shrink-0 object-contain ${className || 'h-9 w-9'}`}
+      />
+    </picture>
   )
 }
 

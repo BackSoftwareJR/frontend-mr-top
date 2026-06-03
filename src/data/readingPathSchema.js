@@ -42,7 +42,19 @@ export const MOBILE_PROGRESS_LOOKUP_SAMPLES = 32
 export const CONSTRAINED_PROGRESS_LOOKUP_SAMPLES = 24
 
 /** Precomputed scroll→frame table resolution (mobile rAF hot path) */
-export const MOBILE_SCROLL_FRAME_SAMPLES = 64
+export const MOBILE_SCROLL_FRAME_SAMPLES = 24
+
+/** Fewer scroll frames on constrained devices */
+export const CONSTRAINED_SCROLL_FRAME_SAMPLES = 16
+
+export function resolveMobileScrollFrameSampleCount({
+  isMobile = false,
+  isConstrained = false,
+} = {}) {
+  if (isConstrained) return CONSTRAINED_SCROLL_FRAME_SAMPLES
+  if (isMobile) return MOBILE_SCROLL_FRAME_SAMPLES
+  return MOBILE_SCROLL_FRAME_SAMPLES
+}
 
 /** Float32 packing: pathProgress, strokeDashoffset, dotX, dotY, dotOpacity */
 export const MOBILE_FRAME_STRIDE = 5
@@ -59,7 +71,9 @@ export function resolveProgressLookupSampleCount({ isMobile = false, isConstrain
 export function resolveWavyVerticalSegmentCount({
   isMobile = false,
   simplifiedPath = false,
+  isConstrained = false,
 } = {}) {
+  if (isConstrained) return 1
   if (simplifiedPath) return 1
   if (isMobile) return MOBILE_WAVY_VERTICAL_SEGMENTS
   return WAVY_VERTICAL_SEGMENTS
@@ -1096,12 +1110,38 @@ export function buildWavyHorizontalSuffix(from, to, amplitude = WAVY_HORIZONTAL_
   )
 }
 
+/** Constrained mobile: single cubic elbow (no wavy chain) */
+function buildMinimalConnectorSuffix(from, to) {
+  const dx = to.x - from.x
+  const dy = to.y - from.y
+  if (Math.hypot(dx, dy) < 2) return ''
+
+  const verticalBias = Math.abs(dy) / (Math.hypot(dx, dy) || 1)
+  if (verticalBias > 0.55) {
+    const cornerY = to.y
+    return (
+      ` C ${fmt(from.x)} ${fmt(from.y + dy * 0.55)}, ${fmt(from.x)} ${fmt(cornerY - dy * 0.08)}, ${fmt(from.x)} ${fmt(cornerY)}` +
+      (Math.abs(dx) > 2
+        ? ` L ${fmt(to.x)} ${fmt(to.y)}`
+        : '')
+    )
+  }
+
+  const cornerX = to.x
+  return (
+    ` C ${fmt(from.x + dx * 0.55)} ${fmt(from.y)}, ${fmt(cornerX - dx * 0.08)} ${fmt(from.y)}, ${fmt(cornerX)} ${fmt(from.y)}` +
+    (Math.abs(dy) > 2 ? ` L ${fmt(to.x)} ${fmt(to.y)}` : '')
+  )
+}
 /** Smooth connector between descent end and stats entry — S-curve, no 90° corner */
 function buildWavyConnectorSuffix(
   from,
   to,
   wavyVerticalSegments = WAVY_VERTICAL_SEGMENTS,
+  useMinimalConnectors = false,
 ) {
+  if (useMinimalConnectors) return buildMinimalConnectorSuffix(from, to)
+
   const dx = to.x - from.x
   const dy = to.y - from.y
   if (Math.hypot(dx, dy) < 2) return ''
@@ -1172,7 +1212,12 @@ function buildOrbitExitTail(orbitPoints) {
 }
 
 /** Wavy cubic chain between section anchors (tangent-continuous, no sharp Catmull corners) */
-function buildSmoothSectionSuffix(points, startIndex = 0, wavyVerticalSegments = WAVY_VERTICAL_SEGMENTS) {
+function buildSmoothSectionSuffix(
+  points,
+  startIndex = 0,
+  wavyVerticalSegments = WAVY_VERTICAL_SEGMENTS,
+  useMinimalConnectors = false,
+) {
   if (points.length < startIndex + 2) return ''
 
   let d = ''
@@ -1181,6 +1226,11 @@ function buildSmoothSectionSuffix(points, startIndex = 0, wavyVerticalSegments =
     const to = points[i + 1]
     const span = Math.hypot(to.x - from.x, to.y - from.y)
     if (span < 2) continue
+
+    if (useMinimalConnectors) {
+      d += buildMinimalConnectorSuffix(from, to)
+      continue
+    }
 
     const verticalBias = Math.abs(to.y - from.y) / span
     if (verticalBias > 0.58) {
@@ -1312,11 +1362,19 @@ function buildOrbitBezierSuffix(orbitPoints, fromPoint) {
 }
 
 /** Build SVG path: hero pass-through + final CTA orbit, Catmull-Rom elsewhere */
-export function buildReadingPathD(points, { isMobile = false, simplifiedPath = false } = {}) {
+export function buildReadingPathD(
+  points,
+  { isMobile = false, simplifiedPath = false, isConstrained = false } = {},
+) {
   if (!points.length) return ''
   if (points.length === 1) return `M ${fmt(points[0].x)} ${fmt(points[0].y)}`
 
-  const wavyVerticalSegments = resolveWavyVerticalSegmentCount({ isMobile, simplifiedPath })
+  const wavyVerticalSegments = resolveWavyVerticalSegmentCount({
+    isMobile,
+    simplifiedPath,
+    isConstrained,
+  })
+  const useMinimalConnectors = isConstrained
 
   let d = `M ${fmt(points[0].x)} ${fmt(points[0].y)}`
   let i = 1
@@ -1364,6 +1422,8 @@ export function buildReadingPathD(points, { isMobile = false, simplifiedPath = f
       if (from && to) {
         if (Math.abs(from.x - to.x) > 8) {
           d += buildStatsBridgeBezierSuffix(from, to)
+        } else if (useMinimalConnectors) {
+          d += buildMinimalConnectorSuffix(from, to)
         } else {
           d += buildVerticalDescentSuffix(from, to, WAVY_VERTICAL_AMPLITUDE, wavyVerticalSegments)
         }
@@ -1423,10 +1483,20 @@ export function buildReadingPathD(points, { isMobile = false, simplifiedPath = f
     if (chunk.length >= 2 && chunk[0].orbit) {
       d += buildSectionConnector(chunk[0], chunk[1])
       if (chunk.length > 2) {
-        d += buildSmoothSectionSuffix(chunk.slice(1), 0, wavyVerticalSegments)
+        d += buildSmoothSectionSuffix(
+          chunk.slice(1),
+          0,
+          wavyVerticalSegments,
+          useMinimalConnectors,
+        )
       }
     } else {
-      d += buildSmoothSectionSuffix(chunk, 0, wavyVerticalSegments)
+      d += buildSmoothSectionSuffix(
+        chunk,
+        0,
+        wavyVerticalSegments,
+        useMinimalConnectors,
+      )
     }
 
     i = chunkEnd

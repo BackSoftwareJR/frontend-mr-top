@@ -1,4 +1,4 @@
-import { memo, startTransition, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   motion,
@@ -25,6 +25,7 @@ import {
   MOBILE_SCROLL_REMAP_SAMPLES,
   pathVisibleLength,
   READING_STROKE_WIDTH,
+  resolveMobileScrollFrameSampleCount,
   resolveProgressLookupSampleCount,
   resolveReadingPathProgress,
   SCROLL_REMAP_SAMPLES,
@@ -36,12 +37,12 @@ const LAYER_CLASS =
   'pointer-events-none fixed inset-0 z-[5] overflow-hidden [contain:layout]'
 
 const MOBILE_LAYER_CLASS =
-  'pointer-events-none fixed inset-0 z-[5] overflow-hidden [contain:strict]'
+  'pointer-events-none fixed inset-0 z-[5] overflow-hidden [contain:strict] [transform:translateZ(0)]'
 
 const STROKE_OPACITY = 1
 const RESIZE_DEBOUNCE_MS = 150
-const MOBILE_SYNC_PROGRESS_EPSILON = 0.002
-const MOBILE_FILL_SYNC_FRAME_SKIP = 3
+const MOBILE_FILL_POLL_MS = 66
+const MOBILE_SCROLL_FRAME_MS = 1000 / 30
 const SCROLL_WILL_CHANGE_IDLE_MS = 150
 
 const MOBILE_FRAME_OUT = {
@@ -103,13 +104,11 @@ function useMobileReadingScrollFrame({
   visiblePathRef,
   dotGroupRef,
   dotCircleRef,
-  pathProgressMv,
+  pathProgressRef,
   frameTableRef,
 }) {
   const rafRef = useRef(null)
-  const pendingRef = useRef(false)
-  const lastSyncProgressRef = useRef(-1)
-  const frameCountRef = useRef(0)
+  const lastPaintAtRef = useRef(0)
   const scrollIdleTimerRef = useRef(null)
   const frameOutRef = useRef({
     pathProgress: 0,
@@ -134,8 +133,14 @@ function useMobileReadingScrollFrame({
     }
 
     const flush = () => {
-      pendingRef.current = false
       rafRef.current = null
+
+      const now = performance.now()
+      if (now - lastPaintAtRef.current < MOBILE_SCROLL_FRAME_MS) {
+        rafRef.current = requestAnimationFrame(flush)
+        return
+      }
+      lastPaintAtRef.current = now
 
       if (!anchorsVisibleRef.current) return
 
@@ -161,19 +166,7 @@ function useMobileReadingScrollFrame({
         dot.style.opacity = frame.dotOpacity > 0 ? '1' : '0'
       }
 
-      frameCountRef.current += 1
-      const delta = Math.abs(frame.pathProgress - lastSyncProgressRef.current)
-      const shouldSync =
-        lastSyncProgressRef.current < 0 ||
-        delta >= MOBILE_SYNC_PROGRESS_EPSILON ||
-        frameCountRef.current % MOBILE_FILL_SYNC_FRAME_SKIP === 0
-
-      if (shouldSync) {
-        lastSyncProgressRef.current = frame.pathProgress
-        startTransition(() => {
-          pathProgressMv.set(frame.pathProgress)
-        })
-      }
+      pathProgressRef.current = frame.pathProgress
     }
 
     const schedule = () => {
@@ -184,7 +177,6 @@ function useMobileReadingScrollFrame({
       }, SCROLL_WILL_CHANGE_IDLE_MS)
 
       if (rafRef.current !== null) return
-      pendingRef.current = true
       rafRef.current = requestAnimationFrame(flush)
     }
 
@@ -204,7 +196,7 @@ function useMobileReadingScrollFrame({
     visiblePathRef,
     dotGroupRef,
     dotCircleRef,
-    pathProgressMv,
+    pathProgressRef,
     frameTableRef,
   ])
 }
@@ -319,7 +311,12 @@ function resetReadingCta(btn) {
   btn.dataset.readingLocked = 'false'
 }
 
-const CtaFillSync = memo(function CtaFillSync({ pathProgress, glowRanges, throttleMobile = false }) {
+const CtaFillSync = memo(function CtaFillSync({
+  pathProgress,
+  pathProgressRef,
+  glowRanges,
+  pollIntervalMs = 0,
+}) {
   const buttonsRef = useRef(new Map())
   const maxFillRef = useRef({})
   const passedRef = useRef({})
@@ -340,23 +337,7 @@ const CtaFillSync = memo(function CtaFillSync({ pathProgress, glowRanges, thrott
     maxFillRef.current = {}
     passedRef.current = {}
 
-    let lastProgress = -1
-    let frameCount = 0
-
     const applyFill = (progress) => {
-      if (throttleMobile) {
-        frameCount += 1
-        const delta = Math.abs(progress - lastProgress)
-        if (
-          lastProgress >= 0 &&
-          delta < MOBILE_SYNC_PROGRESS_EPSILON &&
-          frameCount % MOBILE_FILL_SYNC_FRAME_SKIP !== 0
-        ) {
-          return
-        }
-        lastProgress = progress
-      }
-
       for (const range of glowRanges) {
         const btn = buttonsRef.current.get(range.id)
         if (!btn) continue
@@ -404,9 +385,17 @@ const CtaFillSync = memo(function CtaFillSync({ pathProgress, glowRanges, thrott
       }
     }
 
+    if (pollIntervalMs > 0 && pathProgressRef) {
+      applyFill(pathProgressRef.current ?? 0)
+      const timerId = window.setInterval(() => {
+        applyFill(pathProgressRef.current ?? 0)
+      }, pollIntervalMs)
+      return () => window.clearInterval(timerId)
+    }
+
     applyFill(pathProgress.get())
     return pathProgress.on('change', applyFill)
-  }, [pathProgress, glowRanges, throttleMobile])
+  }, [pathProgress, pathProgressRef, glowRanges, pollIntervalMs])
 
   return null
 })
@@ -420,8 +409,9 @@ function resetReadingStat(card) {
 /** Stat cards: fill sweeps on pass, reverses when scrolling back up */
 const StatCardFillSync = memo(function StatCardFillSync({
   pathProgress,
+  pathProgressRef,
   statRanges,
-  throttleMobile = false,
+  pollIntervalMs = 0,
 }) {
   const cardsRef = useRef(new Map())
 
@@ -439,23 +429,7 @@ const StatCardFillSync = memo(function StatCardFillSync({
     }
     cardsRef.current = cards
 
-    let lastProgress = -1
-    let frameCount = 0
-
     const applyFill = (progress) => {
-      if (throttleMobile) {
-        frameCount += 1
-        const delta = Math.abs(progress - lastProgress)
-        if (
-          lastProgress >= 0 &&
-          delta < MOBILE_SYNC_PROGRESS_EPSILON &&
-          frameCount % MOBILE_FILL_SYNC_FRAME_SKIP !== 0
-        ) {
-          return
-        }
-        lastProgress = progress
-      }
-
       for (const range of statRanges) {
         const card = cardsRef.current.get(range.id)
         if (!card) continue
@@ -467,9 +441,17 @@ const StatCardFillSync = memo(function StatCardFillSync({
       }
     }
 
+    if (pollIntervalMs > 0 && pathProgressRef) {
+      applyFill(pathProgressRef.current ?? 0)
+      const timerId = window.setInterval(() => {
+        applyFill(pathProgressRef.current ?? 0)
+      }, pollIntervalMs)
+      return () => window.clearInterval(timerId)
+    }
+
     applyFill(pathProgress.get())
     return pathProgress.on('change', applyFill)
-  }, [pathProgress, statRanges, throttleMobile])
+  }, [pathProgress, pathProgressRef, statRanges, pollIntervalMs])
 
   return null
 })
@@ -552,6 +534,7 @@ function ReadingPathLayer({
   const measurePathRef = useRef(null)
   const lookupRef = useRef({ totalLength: 0, samples: [] })
   const frameTableRef = useRef(new Float32Array(0))
+  const pathProgressRef = useRef(0)
   const mobileFrameOutRef = useRef({ ...MOBILE_FRAME_OUT })
   const remapTableRef = useRef([])
   const zoneConfigRef = useRef({ pathEnd: 0, scrollEnd: HERO_SCROLL_ZONE_END })
@@ -565,9 +548,9 @@ function ReadingPathLayer({
   const remeasurePath = useCallback(() => {
     const nextPoints = measureReadingPathPoints()
     setPoints(nextPoints)
-    setPathD(buildReadingPathD(nextPoints, { isMobile, simplifiedPath }))
+    setPathD(buildReadingPathD(nextPoints, { isMobile, simplifiedPath, isConstrained }))
     setPathRevision((revision) => revision + 1)
-  }, [isMobile, simplifiedPath])
+  }, [isMobile, simplifiedPath, isConstrained])
 
   useDebouncedRemeasure(remeasurePath)
   useDeferredSectionRemeasure(remeasurePath, isMobile)
@@ -619,6 +602,7 @@ function ReadingPathLayer({
         lookup.totalLength,
         remapTableRef.current,
         zoneConfigRef.current,
+        resolveMobileScrollFrameSampleCount({ isMobile, isConstrained }),
       )
     } else {
       frameTableRef.current = new Float32Array(0)
@@ -657,7 +641,7 @@ function ReadingPathLayer({
     visiblePathRef,
     dotGroupRef,
     dotCircleRef,
-    pathProgressMv: pathProgressMobile,
+    pathProgressRef,
     frameTableRef,
   })
 
@@ -704,6 +688,7 @@ function ReadingPathLayer({
         dotGroup.style.transform = `translate3d(${frame.dotX}px, ${frame.dotY}px, 0)`
         dot.style.opacity = frame.dotOpacity > 0 ? '1' : '0'
       }
+      pathProgressRef.current = frame.pathProgress
       pathProgressMobile.set(frame.pathProgress)
       return
     }
@@ -828,13 +813,15 @@ function ReadingPathLayer({
               ) : null}
               <CtaFillSync
                 pathProgress={pathProgress}
+                pathProgressRef={pathProgressRef}
                 glowRanges={glowRanges}
-                throttleMobile={isMobile}
+                pollIntervalMs={isMobile ? MOBILE_FILL_POLL_MS : 0}
               />
               <StatCardFillSync
                 pathProgress={pathProgress}
+                pathProgressRef={pathProgressRef}
                 statRanges={statRanges}
-                throttleMobile={isMobile}
+                pollIntervalMs={isMobile ? MOBILE_FILL_POLL_MS : 0}
               />
             </>
           ) : null}

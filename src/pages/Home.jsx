@@ -13,16 +13,24 @@ const pageVariants = {
 export default function Home() {
   const isMobile = useIsMobile()
   const prefersReducedMotion = useReducedMotion()
-  const lightMotion = isMobile || prefersReducedMotion
 
   usePrefetchOnIdle(['/wizard'])
+
+  if (isMobile) {
+    return (
+      <div className="relative min-h-screen">
+        <ScrollReadingLine />
+        <HomePageContent />
+      </div>
+    )
+  }
 
   return (
     <motion.div
       variants={pageVariants}
-      initial={lightMotion ? false : 'initial'}
-      animate={lightMotion ? undefined : 'animate'}
-      exit={lightMotion ? undefined : 'exit'}
+      initial={prefersReducedMotion ? false : 'initial'}
+      animate={prefersReducedMotion ? undefined : 'animate'}
+      exit={prefersReducedMotion ? undefined : 'exit'}
       transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
       className="relative min-h-screen"
     >
