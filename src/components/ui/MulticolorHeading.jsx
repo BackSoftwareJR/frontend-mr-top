@@ -39,6 +39,13 @@ function normalizeWords(words) {
   return words
 }
 
+function splitTrailingPeriod(word) {
+  if (word.endsWith('.')) {
+    return { text: word.slice(0, -1), period: '.' }
+  }
+  return { text: word, period: null }
+}
+
 export default function MulticolorHeading({
   words,
   className = '',
@@ -47,6 +54,8 @@ export default function MulticolorHeading({
   trigger = 'viewport',
   startIndex = 0,
   neutralWords = [],
+  trailingAnchorRef = null,
+  trailingAnchorProps = {},
 }) {
   const MotionTag = TAG_MAP[as] || motion.h2
   const wordList = normalizeWords(words)
@@ -68,30 +77,34 @@ export default function MulticolorHeading({
       {...motionProps}
     >
       {wordList.map((word, index) => {
+        const isLast = index === wordList.length - 1
         const isNeutral = neutralWords.includes(index)
         const colorClass = isNeutral
           ? 'text-slate-800'
           : ACCENT_PALETTE[(startIndex + index) % ACCENT_PALETTE.length]
-
-        if (animate) {
-          return (
-            <motion.span
-              key={`${word}-${index}`}
-              variants={wordVariants}
-              className={`inline-block mr-[0.25em] ${colorClass}`}
-            >
-              {word}
-            </motion.span>
-          )
-        }
+        const { text, period } =
+          isLast && trailingAnchorRef ? splitTrailingPeriod(word) : { text: word, period: null }
+        const displayWord = period ? text : word
+        const Tag = animate ? motion.span : 'span'
+        const tagProps = animate ? { variants: wordVariants } : {}
 
         return (
-          <span
+          <Tag
             key={`${word}-${index}`}
+            {...tagProps}
             className={`inline-block mr-[0.25em] ${colorClass}`}
           >
-            {word}
-          </span>
+            {displayWord}
+            {period ? (
+              <span
+                ref={trailingAnchorRef}
+                className="inline-block"
+                {...trailingAnchorProps}
+              >
+                {period}
+              </span>
+            ) : null}
+          </Tag>
         )
       })}
     </MotionTag>

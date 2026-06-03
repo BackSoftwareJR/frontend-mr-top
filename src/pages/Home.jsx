@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { HomePageContent } from '../components/home/HeroSection'
-import ScrollMorphCompanion from '../components/layout/ScrollMorphCompanion'
+import ScrollReadingLine from '../components/layout/ScrollReadingLine'
 
 const pageVariants = {
   initial: { opacity: 0 },
@@ -18,7 +18,7 @@ export default function Home() {
       transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
       className="relative min-h-screen"
     >
-      <ScrollMorphCompanion />
+      <ScrollReadingLine />
       <HomePageContent />
     </motion.div>
   )

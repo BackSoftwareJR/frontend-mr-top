@@ -8,8 +8,6 @@ export default function CTASection() {
   return (
     <section
       id="cta"
-      data-scroll-anchor="cta"
-      data-scroll-label="Inizia ora"
       className="relative overflow-x-clip px-6 py-20 sm:py-24"
     >
       <SectionBlob variant="coral" shape="wave" position="bottom-left" />
@@ -21,7 +19,7 @@ export default function CTASection() {
         viewport={{ once: true }}
         transition={{ duration: 0.55 }}
         className="relative z-10 mx-auto max-w-3xl rounded-3xl border border-[#E07A5F]/20 bg-gradient-to-br from-[#E07A5F]/8 via-white/90 to-[#E9A84A]/8 px-8 py-14 text-center shadow-sm backdrop-blur-sm sm:px-12 sm:py-16"
-        data-scroll-anchor="cta-card"
+        data-scroll-anchor="cta-final"
         data-scroll-label="CTA finale"
       >
         <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#E07A5F]/25 bg-white/80 px-4 py-1.5">

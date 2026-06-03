@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import {
   motion,
   useReducedMotion,
@@ -6,7 +7,7 @@ import {
   useTransform,
 } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { MORPH_SPRING } from '../../data/scrollMorphSchema'
+import { MORPH_SPRING } from '../../data/readingPathSchema'
 import MagneticButton from '../ui/MagneticButton'
 import MulticolorHeading from '../ui/MulticolorHeading'
 import WenandoLogo, { WenandoMark } from '../ui/WenandoLogo'
@@ -21,11 +22,11 @@ import AuroraBackground from '../layout/AuroraBackground'
 import SectionBlob from '../ui/SectionBlob'
 
 export default function HeroSection() {
+  const heroDotRef = useRef(null)
+
   return (
     <section
       id="hero"
-      data-scroll-anchor="hero"
-      data-scroll-label="Hero"
       className="relative flex min-h-[85vh] flex-col items-center justify-center overflow-x-clip px-6 pb-16 pt-32 text-center sm:min-h-screen sm:pb-20"
     >
       <SectionBlob variant="coral" shape="circle" position="top-right" />
@@ -38,6 +39,11 @@ export default function HeroSection() {
         startIndex={0}
         neutralWords={[0, 3, 4]}
         trigger="mount"
+        trailingAnchorRef={heroDotRef}
+        trailingAnchorProps={{
+          'data-scroll-anchor': 'hero-dot',
+          'data-scroll-label': 'Inizio percorso',
+        }}
       />
 
       <motion.p
