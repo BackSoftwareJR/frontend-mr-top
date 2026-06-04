@@ -2,7 +2,7 @@
  * B2B partner registration & onboarding — API when configured, localStorage mock when offline.
  */
 
-import apiClient, { AUTH_TOKEN_KEY, unwrapApiData } from './apiClient'
+import apiClient, { ApiError, AUTH_TOKEN_KEY, isApiConfigured, unwrapApiData } from './apiClient'
 import { b2bWithOfflineMock } from './b2bApiUtils'
 import { saveSession, getSession } from './authService'
 
@@ -470,10 +470,21 @@ function mapLocalOnboardingStatusPayload(email) {
  */
 export async function fetchOnboardingStatusAsync(email) {
   const normalized = normalizeEmail(email || getSession()?.email || '')
-  return b2bWithOfflineMock(
-    () => fetchOnboardingStatusFromApi(),
-    () => mapLocalOnboardingStatusPayload(normalized),
-  )
+
+  if (!isApiConfigured()) {
+    return mapLocalOnboardingStatusPayload(normalized)
+  }
+
+  try {
+    return await fetchOnboardingStatusFromApi()
+  } catch (err) {
+    // Expired/invalid token — caller should clear session and show login.
+    if (err instanceof ApiError && err.status === 401) {
+      throw err
+    }
+    // Network/5xx — fall back to cached local onboarding state.
+    return mapLocalOnboardingStatusPayload(normalized)
+  }
 }
 
 /**

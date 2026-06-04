@@ -4,9 +4,11 @@ import { useAuth } from '../../context/AuthContext'
 import { getSession } from '../../services/authService'
 import {
   fetchOnboardingStatusAsync,
+  getB2BRedirectPath,
   getB2BRedirectPathAsync,
   getOnboardingStatus,
 } from '../../services/b2bOnboardingService'
+import { ApiError } from '../../services/apiClient'
 
 export function B2BProtectedRoute({ children }) {
   const { isAuthenticated, userType, userEmail } = useAuth()
@@ -25,22 +27,33 @@ export function B2BProtectedRoute({ children }) {
 
     let cancelled = false
 
-    fetchOnboardingStatusAsync(userEmail).then((payload) => {
-      if (cancelled) return
-      const needsOnboarding =
-        !payload.onboardingComplete ||
-        payload.status === 'suspended' ||
-        payload.status === 'rejected'
-      setGate({
-        loading: false,
-        redirect: needsOnboarding ? (payload.redirectTo ?? '/pro/onboarding') : null,
+    fetchOnboardingStatusAsync(userEmail)
+      .then((payload) => {
+        if (cancelled) return
+        const needsOnboarding =
+          !payload.onboardingComplete ||
+          payload.status === 'suspended' ||
+          payload.status === 'rejected'
+        setGate({
+          loading: false,
+          redirect: needsOnboarding ? (payload.redirectTo ?? '/pro/onboarding') : null,
+        })
       })
-    })
+      .catch((err) => {
+        if (cancelled) return
+        setGate({
+          loading: false,
+          redirect:
+            err instanceof ApiError && err.status === 401
+              ? null
+              : (getB2BRedirectPath(getSession()) ?? '/pro/onboarding'),
+        })
+      })
 
     return () => {
       cancelled = true
     }
-  }, [isAuthenticated, userEmail, userType])
+  }, [gateKey, isAuthenticated, userEmail, userType])
 
   if (!isAuthenticated) {
     return <Navigate to="/pro" state={{ from: location.pathname }} replace />
@@ -71,9 +84,13 @@ export function ConsumerProtectedRoute({ children }) {
 
     let cancelled = false
 
-    getB2BRedirectPathAsync().then((path) => {
-      if (!cancelled) setB2bRedirect(path)
-    })
+    getB2BRedirectPathAsync()
+      .then((path) => {
+        if (!cancelled) setB2bRedirect(path)
+      })
+      .catch(() => {
+        if (!cancelled) setB2bRedirect(getB2BRedirectPath(getSession()) ?? '/pro/dashboard')
+      })
 
     return () => {
       cancelled = true

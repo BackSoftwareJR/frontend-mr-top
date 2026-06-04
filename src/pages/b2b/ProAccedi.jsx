@@ -29,7 +29,7 @@ function maskEmail(email) {
 export default function ProAccedi() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { isAuthenticated, userType, requestCode, login, establishSession } = useAuth()
+  const { isAuthenticated, userType, requestCode, login, establishSession, logout } = useAuth()
 
   const [authMode, setAuthMode] = useState(MODES.OTP)
   const [step, setStep] = useState(STEPS.EMAIL)
@@ -49,14 +49,21 @@ export default function ProAccedi() {
 
     let cancelled = false
 
-    getB2BRedirectPathAsync({ deepLink: redirectTarget }).then((target) => {
-      if (!cancelled) navigate(target, { replace: true })
-    })
+    getB2BRedirectPathAsync({ deepLink: redirectTarget })
+      .then((target) => {
+        if (!cancelled) navigate(target, { replace: true })
+      })
+      .catch(async (err) => {
+        if (cancelled) return
+        if (err instanceof ApiError && err.status === 401) {
+          await logout()
+        }
+      })
 
     return () => {
       cancelled = true
     }
-  }, [isAuthenticated, navigate, redirectTarget, userType])
+  }, [isAuthenticated, logout, navigate, redirectTarget, userType])
 
   useEffect(() => {
     if (resendCooldown <= 0) return
