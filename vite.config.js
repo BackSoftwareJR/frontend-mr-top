@@ -20,14 +20,18 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes('node_modules/react/jsx-runtime') || id.includes('node_modules/react/jsx-dev-runtime')) {
-            return 'vendor-react'
+          if (!id.includes('node_modules')) return undefined
+
+          if (id.includes('@sentry')) return 'vendor-sentry'
+          if (id.includes('maplibre-gl')) return 'vendor-maps'
+          if (id.includes('framer-motion')) return 'vendor-motion'
+          if (id.includes('@stripe')) return 'vendor-stripe'
+          if (id.includes('lucide-react')) return 'vendor-icons'
+          if (id.includes('react-markdown') || id.includes('remark-') || id.includes('rehype-')) {
+            return 'vendor-markdown'
           }
-          if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/')) {
-            return 'vendor-react'
-          }
-          if (id.includes('node_modules/react-router')) return 'vendor-router'
-          if (id.includes('node_modules/lucide-react')) return 'vendor-icons'
+
+          return undefined
         },
       },
     },

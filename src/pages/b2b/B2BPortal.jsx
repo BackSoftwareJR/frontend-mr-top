@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import PrefetchRouteLink from '../../components/ui/PrefetchRouteLink'
 import { motion } from 'framer-motion'
 import { ArrowRight, Building2, LogIn, UserPlus } from 'lucide-react'
 import { WenandoMark } from '../../components/ui/WenandoLogo'
@@ -101,7 +102,7 @@ export default function B2BPortal() {
 
         <div className="mt-10 grid w-full max-w-lg gap-4">
           {canResumeOnboarding && (
-            <Link
+            <PrefetchRouteLink
               to="/pro/onboarding"
               className={`${obCard} group block border-accent-coral/20 text-left transition-all hover:shadow-md`}
             >
@@ -116,10 +117,10 @@ export default function B2BPortal() {
                   </p>
                 </div>
               </div>
-            </Link>
+            </PrefetchRouteLink>
           )}
 
-          <Link
+          <PrefetchRouteLink
             to="/pro/registrati"
             className={`${obCard} group block text-left transition-all hover:shadow-md`}
           >
@@ -138,9 +139,9 @@ export default function B2BPortal() {
                 </span>
               </div>
             </div>
-          </Link>
+          </PrefetchRouteLink>
 
-          <Link
+          <PrefetchRouteLink
             to="/pro/accedi"
             className={`${obCard} group block text-left transition-all hover:shadow-md`}
           >
@@ -159,7 +160,7 @@ export default function B2BPortal() {
                 </span>
               </div>
             </div>
-          </Link>
+          </PrefetchRouteLink>
         </div>
 
         <p className="mt-10 text-center text-xs text-charcoal-muted">

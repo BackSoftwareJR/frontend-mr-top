@@ -2,16 +2,133 @@
 <html lang="it">
   <head>
     <meta charset="UTF-8" />
-    <link rel="preload" href="/wenando-logo-96.webp" as="image" type="image/webp" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=2" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/wenando-logo.png?v=2" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f8f7f4" />
     <meta
       name="description"
       content="Wenando — Trova l'assistenza ideale. Zero stress. Solo soluzioni."
     />
     <title>Wenando — Trova l'assistenza ideale</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --wenando-cream: #f8f7f4;
+        --wenando-cream-top: #fafaf8;
+        --wenando-charcoal: #1e293b;
+        --wenando-muted: #64748b;
+        --wenando-teal: #0f766e;
+        --wenando-coral: #e07a5f;
+      }
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        min-height: 100dvh;
+        background: linear-gradient(180deg, var(--wenando-cream-top) 0%, var(--wenando-cream) 50%, var(--wenando-cream-top) 100%);
+        background-color: var(--wenando-cream);
+      }
+      #root {
+        min-height: 100dvh;
+      }
+      #wenando-boot {
+        display: flex;
+        min-height: 100dvh;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1.25rem;
+        padding: 1.5rem;
+        box-sizing: border-box;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        color: var(--wenando-charcoal);
+      }
+      #wenando-boot .boot-orb {
+        position: fixed;
+        border-radius: 50%;
+        filter: blur(72px);
+        opacity: 0.35;
+        pointer-events: none;
+        z-index: 0;
+      }
+      #wenando-boot .boot-orb--coral {
+        width: 55vmax;
+        height: 55vmax;
+        top: -18%;
+        right: -12%;
+        background: radial-gradient(circle, rgb(224 122 95 / 0.12) 0%, transparent 70%);
+      }
+      #wenando-boot .boot-orb--violet {
+        width: 45vmax;
+        height: 45vmax;
+        bottom: -22%;
+        left: -8%;
+        background: radial-gradient(circle, rgb(155 142 196 / 0.1) 0%, transparent 68%);
+      }
+      #wenando-boot .boot-inner {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+      }
+      #wenando-boot .boot-logo {
+        width: 4.5rem;
+        height: 4.5rem;
+        border-radius: 1.25rem;
+        object-fit: contain;
+        animation: wenando-boot-pulse 1.6s ease-in-out infinite;
+      }
+      #wenando-boot .boot-logo-fallback {
+        width: 4.5rem;
+        height: 4.5rem;
+        border-radius: 1.25rem;
+        background: linear-gradient(135deg, var(--wenando-coral), var(--wenando-teal));
+        opacity: 0.85;
+        animation: wenando-boot-pulse 1.6s ease-in-out infinite;
+      }
+      #wenando-boot .boot-spinner {
+        width: 2rem;
+        height: 2rem;
+        border: 3px solid rgb(15 118 110 / 0.15);
+        border-top-color: var(--wenando-teal);
+        border-radius: 50%;
+        animation: wenando-boot-spin 0.75s linear infinite;
+      }
+      #wenando-boot .boot-label {
+        margin: 0;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--wenando-muted);
+      }
+      @keyframes wenando-boot-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @keyframes wenando-boot-pulse {
+        0%,
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.88;
+          transform: scale(0.97);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #wenando-boot .boot-logo,
+        #wenando-boot .boot-logo-fallback,
+        #wenando-boot .boot-spinner {
+          animation: none;
+        }
+      }
+    </style>
+    <link rel="preload" href="/wenando-logo-96.webp" as="image" type="image/webp" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=2" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/wenando-logo.png?v=2" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -19,26 +136,52 @@
       as="style"
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap"
       media="(max-width: 768px)"
+      onload="this.onload=null;this.rel='stylesheet'"
     />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap"
-      rel="stylesheet"
-      media="(max-width: 768px)"
-    />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap"
+        rel="stylesheet"
+        media="(max-width: 768px)"
+      />
+    </noscript>
     <link
       rel="preload"
       as="style"
       href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       media="(min-width: 769px)"
+      onload="this.onload=null;this.rel='stylesheet'"
     />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-      media="(min-width: 769px)"
-    />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+        media="(min-width: 769px)"
+      />
+    </noscript>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="wenando-boot" role="status" aria-live="polite" aria-busy="true" aria-label="Caricamento Wenando">
+        <span class="boot-orb boot-orb--coral" aria-hidden="true"></span>
+        <span class="boot-orb boot-orb--violet" aria-hidden="true"></span>
+        <div class="boot-inner">
+          <img
+            class="boot-logo"
+            src="/wenando-logo-96.webp"
+            alt=""
+            width="72"
+            height="72"
+            decoding="async"
+            fetchpriority="high"
+            onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.hidden=false)"
+          />
+          <span class="boot-logo-fallback" hidden aria-hidden="true"></span>
+          <span class="boot-spinner" aria-hidden="true"></span>
+          <p class="boot-label">Caricamento…</p>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

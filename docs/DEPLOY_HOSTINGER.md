@@ -347,6 +347,8 @@ VITE_API_URL=https://api.wenando.com/api/v1 npm run build
 # deploy contenuto di dist/ sullo static host (wenando.com)
 ```
 
+**Cache statica SPA:** servire `index.html` con `Cache-Control: no-cache` (o breve TTL) così i client non tengono HTML vecchio che punta a chunk JS rinominati dopo il deploy; asset in `dist/assets/*` possono usare `immutable` / hash nel nome (default Vite).
+
 | Comando | Esito |
 |---------|--------|
 | `npm ci` | ✅ Corretto — installa vite + rolldown + plugin |

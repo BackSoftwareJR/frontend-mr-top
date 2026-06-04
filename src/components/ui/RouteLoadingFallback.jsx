@@ -25,13 +25,13 @@ export default function RouteLoadingFallback({
   }
 
   return (
-    <div className={`relative min-h-screen bg-warm-cream ${className}`}>
+    <div className={`relative min-h-[100dvh] bg-warm-cream ${className}`}>
       <div className="aurora-bg" aria-hidden="true">
         <span className="aurora-orb aurora-orb--coral" />
         <span className="aurora-orb aurora-orb--violet" />
         <span className="aurora-orb aurora-orb--amber" />
       </div>
-      <div className="relative z-10 flex min-h-screen items-center justify-center px-4">{content}</div>
+      <div className="relative z-10 flex min-h-[100dvh] items-center justify-center px-4">{content}</div>
     </div>
   )
 }

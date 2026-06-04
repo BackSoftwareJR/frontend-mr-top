@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import PrefetchRouteLink from '../../components/ui/PrefetchRouteLink'
 import { ArrowLeft, Building2, KeyRound, Loader2, Mail } from 'lucide-react'
 import { WenandoMark } from '../../components/ui/WenandoLogo'
 import CodeInput from '../../components/auth/CodeInput'
@@ -447,9 +448,9 @@ export default function ProAccedi() {
 
         <p className="mt-6 text-center text-xs text-charcoal-muted">
           Nuovo partner?{' '}
-          <Link to="/pro/registrati" className={b2bLink}>
+          <PrefetchRouteLink to="/pro/registrati" className={b2bLink}>
             Registrati
-          </Link>
+          </PrefetchRouteLink>
           {' · '}
           Sei un utente?{' '}
           <Link to="/accedi" className={b2bLink}>

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-route
 import AppErrorBoundary from './components/errors/AppErrorBoundary'
 import RouteLoadingFallback from './components/ui/RouteLoadingFallback'
 import { lazyRoute } from './utils/lazyRoute'
+import Home from './pages/Home'
 import { AuthProvider } from './context/AuthContext'
 import { B2BProvider } from './context/B2BContext'
 import AdminProtectedRoute from './components/auth/AdminProtectedRoute'
@@ -12,7 +13,6 @@ import { useIsMobile } from './utils/performanceTier'
 
 const CookieBanner = lazyRoute(() => import('./components/CookieBanner'))
 
-const Home = lazyRoute(() => import('./pages/Home'))
 const Wizard = lazyRoute(() => import('./pages/Wizard'))
 const ResultsPage = lazyRoute(() => import('./pages/ResultsPage'))
 const Accedi = lazyRoute(() => import('./pages/Accedi'))
@@ -30,6 +30,7 @@ const Calendario = lazyRoute(() => import('./pages/b2b/Calendario'))
 const ExportCenter = lazyRoute(() => import('./pages/b2b/ExportCenter'))
 const Fatturazione = lazyRoute(() => import('./pages/b2b/Fatturazione'))
 const CompanyProfile = lazyRoute(() => import('./pages/b2b/CompanyProfile'))
+const Copertura = lazyRoute(() => import('./pages/b2b/Copertura'))
 const ProAccedi = lazyRoute(() => import('./pages/b2b/ProAccedi'))
 const B2BPortal = lazyRoute(() => import('./pages/b2b/B2BPortal'))
 const B2BRegister = lazyRoute(() => import('./pages/b2b/Register'))
@@ -131,6 +132,7 @@ function AppRoutes() {
             <Route path="calendario" element={<Calendario />} />
             <Route path="exports" element={<ExportCenter />} />
             <Route path="fatturazione" element={<Fatturazione />} />
+            <Route path="copertura" element={<Copertura />} />
             <Route path="profilo" element={<CompanyProfile />} />
           </Route>
         </Route>
