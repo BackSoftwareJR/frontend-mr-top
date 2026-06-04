@@ -1,4 +1,5 @@
 import apiClient, { getBearerToken, isApiConfigured, unwrapApiData } from './apiClient'
+import { cachedRequest, invalidateRequestCache } from '../lib/requestCache'
 import { userWithOfflineMock } from './userApiUtils'
 import { getDiagnosis } from '../data/autonomyInfo'
 import { getMatchesForLocation, mockAdvisor } from '../data/mockMatches'
@@ -7,6 +8,7 @@ import { getSession } from './authService'
 import { recordWizardConsents, getSessionId } from './consentService'
 import { CONSENT_TEXT_HASH } from '../constants/wizardConsent'
 import { LEGAL_VERSION } from '../constants/legalVersions'
+import { wizardConfig } from '../data/wizardConfig'
 
 /** localStorage key for wizard lead awaiting consumer login attach */
 export const PENDING_LEAD_KEY = 'wenando-pending-lead-uuid'
@@ -55,6 +57,7 @@ export async function attachPendingLead() {
     const response = await apiClient.post('/user/leads', { lead_uuid: leadUuid })
     const data = unwrapApiData(response)
     clearPendingLeadUuid()
+    invalidateRequestCache('user:')
     notifyLeadAttached(data)
     return data
   } catch (error) {
@@ -87,6 +90,22 @@ export function mapLeadMatch(apiMatch) {
  * @param {Record<string, unknown>} answers
  * @param {{ privacy: boolean, terms: boolean, partnerContact: boolean, marketing?: boolean }} consents
  */
+function resolveWizardBudget(answers) {
+  const raw = answers.budget
+  const min = raw?.min != null ? Number(raw.min) : null
+  const max = raw?.max != null ? Number(raw.max) : null
+  if (Number.isFinite(min) && Number.isFinite(max)) {
+    return { min, max }
+  }
+
+  const budgetStep = wizardConfig.steps.find((s) => s.id === 'budget')
+  if (budgetStep?.defaultMin != null && budgetStep?.defaultMax != null) {
+    return { min: budgetStep.defaultMin, max: budgetStep.defaultMax }
+  }
+
+  return undefined
+}
+
 export function mapWizardToLeadPayload(answers, consents) {
   const contact = { ...answers.contact }
   const email = typeof contact.email === 'string' ? contact.email.trim() : ''
@@ -96,12 +115,14 @@ export function mapWizardToLeadPayload(answers, consents) {
     delete contact.email
   }
 
+  const budget = resolveWizardBudget(answers)
+
   return {
     sector_slug: 'senior-care',
     payload: {
       autonomy: answers.autonomy,
       location: answers.location,
-      budget: answers.budget,
+      budget,
       contact,
     },
     consent: {
@@ -175,14 +196,20 @@ function createMockLeadResults(answers) {
  * @param {Record<string, unknown>} [answers] — for dev mock fallback
  */
 export async function fetchLeadResults(leadUuid, answers) {
-  const response = await apiClient.get(`/b2c/leads/${leadUuid}/results`)
-  const data = unwrapApiData(response)
+  return cachedRequest(
+    `b2c:lead-results:${leadUuid}`,
+    async () => {
+      const response = await apiClient.get(`/b2c/leads/${leadUuid}/results`)
+      const data = unwrapApiData(response)
 
-  return {
-    diagnosis: data.diagnosis ?? getDiagnosis(answers?.autonomy),
-    matches: Array.isArray(data.matches) ? data.matches.map(mapLeadMatch) : [],
-    advisor: mapAdvisor(data.advisor),
-  }
+      return {
+        diagnosis: data.diagnosis ?? getDiagnosis(answers?.autonomy),
+        matches: Array.isArray(data.matches) ? data.matches.map(mapLeadMatch) : [],
+        advisor: mapAdvisor(data.advisor),
+      }
+    },
+    { ttlMs: 10 * 60_000, staleMs: 30 * 60_000 },
+  )
 }
 
 /**

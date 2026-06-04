@@ -218,6 +218,19 @@ export function BudgetStep({ step, value, onChange, onNext, onBack }) {
   const [minVal, setMinVal] = useState(value?.min ?? step.defaultMin)
   const [maxVal, setMaxVal] = useState(value?.max ?? step.defaultMax)
 
+  useEffect(() => {
+    if (value?.min != null && value?.max != null) return
+    onChange({ min: step.defaultMin, max: step.defaultMax })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync defaults once per step mount
+  }, [])
+
+  const persistBudget = () => onChange({ min: minVal, max: maxVal })
+
+  const handleContinue = () => {
+    persistBudget()
+    onNext()
+  }
+
   const handleMinChange = (nextMin) => {
     const clamped = Math.min(nextMin, maxVal - budgetStep)
     setMinVal(clamped)
@@ -256,7 +269,7 @@ export function BudgetStep({ step, value, onChange, onNext, onBack }) {
         />
       </div>
 
-      <StepNav onBack={onBack} onPrimary={onNext} primaryLabel="Continua" />
+      <StepNav onBack={onBack} onPrimary={handleContinue} primaryLabel="Continua" />
     </div>
   )
 }
