@@ -76,7 +76,15 @@ export function getRedirectForUserType(type) {
   return type === 'b2b' ? '/pro/dashboard' : '/area-personale'
 }
 
+/**
+ * Offline portal routing (MOCK_USERS + email heuristics).
+ * When VITE_API_URL is set, portal eligibility is enforced by POST /auth/otp/request.
+ */
 export function validateEmailForPortal(email, portal) {
+  if (isApiConfigured()) {
+    return { ok: true }
+  }
+
   const normalized = normalizeEmail(email)
   const profile = resolveUserType(normalized)
 
