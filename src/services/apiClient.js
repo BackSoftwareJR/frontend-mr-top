@@ -118,6 +118,28 @@ function getApiOrigin() {
 let csrfCookieReady = false
 let csrfCookiePromise = null
 
+/** Read XSRF-TOKEN from document.cookie (domain=.wenando.com after csrf-cookie prefetch). */
+function readXsrfTokenFromCookie() {
+  if (typeof document === 'undefined') {
+    return null
+  }
+
+  for (const part of document.cookie.split(';')) {
+    const cookie = part.replace(/^\s+/, '')
+    const eq = cookie.indexOf('=')
+    if (eq !== -1 && cookie.slice(0, eq) === 'XSRF-TOKEN') {
+      return decodeURIComponent(cookie.slice(eq + 1))
+    }
+  }
+
+  return null
+}
+
+export function resetCsrfCookieState() {
+  csrfCookieReady = false
+  csrfCookiePromise = null
+}
+
 /** Stateful SPA (wenando.com → api.wenando.com) needs CSRF cookie before POST/PATCH/PUT/DELETE. */
 export async function ensureCsrfCookie() {
   if (!isApiConfigured() || typeof window === 'undefined') {
@@ -153,6 +175,8 @@ export async function ensureCsrfCookie() {
 const apiClient = axios.create({
   baseURL,
   withCredentials: true,
+  // wenando.com → api.wenando.com is cross-origin; axios skips XSRF unless explicitly enabled.
+  withXSRFToken: true,
   xsrfCookieName: 'XSRF-TOKEN',
   xsrfHeaderName: 'X-XSRF-TOKEN',
   headers: {
@@ -165,6 +189,11 @@ apiClient.interceptors.request.use(async (config) => {
   const method = (config.method ?? 'get').toLowerCase()
   if (['post', 'put', 'patch', 'delete'].includes(method)) {
     await ensureCsrfCookie()
+
+    const xsrfToken = readXsrfTokenFromCookie()
+    if (xsrfToken) {
+      config.headers['X-XSRF-TOKEN'] = xsrfToken
+    }
   }
 
   const token = getBearerToken()
@@ -179,6 +208,10 @@ apiClient.interceptors.response.use(
   (error) => {
     const status = error.response?.status
     const data = error.response?.data
+
+    if (status === 419) {
+      resetCsrfCookieState()
+    }
 
     if (status === 401 && typeof window !== 'undefined') {
       if (isImpersonating()) {
