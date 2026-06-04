@@ -1,6 +1,8 @@
-import { lazy, Suspense } from 'react'
+import { Suspense } from 'react'
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import AppErrorBoundary from './components/errors/AppErrorBoundary'
+import RouteLoadingFallback from './components/ui/RouteLoadingFallback'
+import { lazyRoute } from './utils/lazyRoute'
 import { AuthProvider } from './context/AuthContext'
 import { B2BProvider } from './context/B2BContext'
 import AdminProtectedRoute from './components/auth/AdminProtectedRoute'
@@ -8,48 +10,48 @@ import { B2BProtectedRoute, ConsumerProtectedRoute } from './components/auth/Pro
 import { usePlausibleAnalytics } from './hooks/usePlausibleAnalytics'
 import { useIsMobile } from './utils/performanceTier'
 
-const CookieBanner = lazy(() => import('./components/CookieBanner'))
+const CookieBanner = lazyRoute(() => import('./components/CookieBanner'))
 
-const Home = lazy(() => import('./pages/Home'))
-const Wizard = lazy(() => import('./pages/Wizard'))
-const ResultsPage = lazy(() => import('./pages/ResultsPage'))
-const Accedi = lazy(() => import('./pages/Accedi'))
-const UserLayout = lazy(() => import('./components/user/UserLayout'))
-const UserHome = lazy(() => import('./pages/user/UserHome'))
-const UserSearches = lazy(() => import('./pages/user/UserSearches'))
-const UserSearchDetail = lazy(() => import('./pages/user/UserSearchDetail'))
-const UserHelp = lazy(() => import('./pages/user/UserHelp'))
-const UserProfile = lazy(() => import('./pages/user/UserProfile'))
-const B2BLayout = lazy(() => import('./components/b2b/B2BLayout'))
-const DashboardHome = lazy(() => import('./pages/b2b/DashboardHome'))
-const LeadMarketplace = lazy(() => import('./pages/b2b/LeadMarketplace'))
-const SmartCRM = lazy(() => import('./pages/b2b/SmartCRM'))
-const Calendario = lazy(() => import('./pages/b2b/Calendario'))
-const ExportCenter = lazy(() => import('./pages/b2b/ExportCenter'))
-const Fatturazione = lazy(() => import('./pages/b2b/Fatturazione'))
-const CompanyProfile = lazy(() => import('./pages/b2b/CompanyProfile'))
-const ProAccedi = lazy(() => import('./pages/b2b/ProAccedi'))
-const B2BPortal = lazy(() => import('./pages/b2b/B2BPortal'))
-const B2BRegister = lazy(() => import('./pages/b2b/Register'))
-const B2BOnboarding = lazy(() => import('./pages/b2b/Onboarding'))
-const AdminLayout = lazy(() => import('./components/admin/AdminLayout'))
-const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'))
-const AdminHome = lazy(() => import('./pages/admin/AdminHome'))
-const AdminPortfolio = lazy(() => import('./pages/admin/AdminPortfolio'))
-const AdminTransactions = lazy(() => import('./pages/admin/AdminTransactions'))
-const AdminPendingTransfers = lazy(() => import('./pages/admin/AdminPendingTransfers'))
-const ManagePartners = lazy(() => import('./pages/admin/ManagePartners'))
-const LeadRouter = lazy(() => import('./pages/admin/LeadRouter'))
-const AdminAdvisorBookings = lazy(() => import('./pages/admin/AdminAdvisorBookings'))
-const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'))
-const ImpersonateBootstrap = lazy(() => import('./pages/b2b/ImpersonateBootstrap'))
-const DesktopRouteTransitions = lazy(() => import('./DesktopRouteTransitions'))
-const PrivacyPage = lazy(() => import('./pages/legal/PrivacyPage'))
-const CookiesPage = lazy(() => import('./pages/legal/CookiesPage'))
-const TermsPage = lazy(() => import('./pages/legal/TermsPage'))
-const TermsPartnersPage = lazy(() => import('./pages/legal/TermsPartnersPage'))
-const NotFoundPage = lazy(() => import('./pages/errors/NotFoundPage'))
-const ErrorStatusPage = lazy(() => import('./pages/errors/ErrorStatusPage'))
+const Home = lazyRoute(() => import('./pages/Home'))
+const Wizard = lazyRoute(() => import('./pages/Wizard'))
+const ResultsPage = lazyRoute(() => import('./pages/ResultsPage'))
+const Accedi = lazyRoute(() => import('./pages/Accedi'))
+const UserLayout = lazyRoute(() => import('./components/user/UserLayout'))
+const UserHome = lazyRoute(() => import('./pages/user/UserHome'))
+const UserSearches = lazyRoute(() => import('./pages/user/UserSearches'))
+const UserSearchDetail = lazyRoute(() => import('./pages/user/UserSearchDetail'))
+const UserHelp = lazyRoute(() => import('./pages/user/UserHelp'))
+const UserProfile = lazyRoute(() => import('./pages/user/UserProfile'))
+const B2BLayout = lazyRoute(() => import('./components/b2b/B2BLayout'))
+const DashboardHome = lazyRoute(() => import('./pages/b2b/DashboardHome'))
+const LeadMarketplace = lazyRoute(() => import('./pages/b2b/LeadMarketplace'))
+const SmartCRM = lazyRoute(() => import('./pages/b2b/SmartCRM'))
+const Calendario = lazyRoute(() => import('./pages/b2b/Calendario'))
+const ExportCenter = lazyRoute(() => import('./pages/b2b/ExportCenter'))
+const Fatturazione = lazyRoute(() => import('./pages/b2b/Fatturazione'))
+const CompanyProfile = lazyRoute(() => import('./pages/b2b/CompanyProfile'))
+const ProAccedi = lazyRoute(() => import('./pages/b2b/ProAccedi'))
+const B2BPortal = lazyRoute(() => import('./pages/b2b/B2BPortal'))
+const B2BRegister = lazyRoute(() => import('./pages/b2b/Register'))
+const B2BOnboarding = lazyRoute(() => import('./pages/b2b/Onboarding'))
+const AdminLayout = lazyRoute(() => import('./components/admin/AdminLayout'))
+const AdminLogin = lazyRoute(() => import('./pages/admin/AdminLogin'))
+const AdminHome = lazyRoute(() => import('./pages/admin/AdminHome'))
+const AdminPortfolio = lazyRoute(() => import('./pages/admin/AdminPortfolio'))
+const AdminTransactions = lazyRoute(() => import('./pages/admin/AdminTransactions'))
+const AdminPendingTransfers = lazyRoute(() => import('./pages/admin/AdminPendingTransfers'))
+const ManagePartners = lazyRoute(() => import('./pages/admin/ManagePartners'))
+const LeadRouter = lazyRoute(() => import('./pages/admin/LeadRouter'))
+const AdminAdvisorBookings = lazyRoute(() => import('./pages/admin/AdminAdvisorBookings'))
+const AdminSettings = lazyRoute(() => import('./pages/admin/AdminSettings'))
+const ImpersonateBootstrap = lazyRoute(() => import('./pages/b2b/ImpersonateBootstrap'))
+const DesktopRouteTransitions = lazyRoute(() => import('./DesktopRouteTransitions'))
+const PrivacyPage = lazyRoute(() => import('./pages/legal/PrivacyPage'))
+const CookiesPage = lazyRoute(() => import('./pages/legal/CookiesPage'))
+const TermsPage = lazyRoute(() => import('./pages/legal/TermsPage'))
+const TermsPartnersPage = lazyRoute(() => import('./pages/legal/TermsPartnersPage'))
+const NotFoundPage = lazyRoute(() => import('./pages/errors/NotFoundPage'))
+const ErrorStatusPage = lazyRoute(() => import('./pages/errors/ErrorStatusPage'))
 
 function AppShell() {
   usePlausibleAnalytics()
@@ -94,7 +96,7 @@ function AppRoutes() {
   const isMobile = useIsMobile()
 
   const routes = (
-    <Suspense fallback={null}>
+    <Suspense fallback={<RouteLoadingFallback />}>
       <Routes location={location} key={location.pathname}>
         <Route path="/" element={<Home />} />
         <Route path="/wizard" element={<Wizard />} />

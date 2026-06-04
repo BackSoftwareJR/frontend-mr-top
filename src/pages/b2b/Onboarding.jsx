@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react'
 import B2BLoadError from '../../components/b2b/B2BLoadError'
 import OnboardingLayout from '../../components/b2b/OnboardingLayout'
+import RouteLoadingFallback from '../../components/ui/RouteLoadingFallback'
 import StepLegal from '../../components/b2b/onboarding/StepLegal'
 import StepOperations from '../../components/b2b/onboarding/StepOperations'
 import StepTrustTest from '../../components/b2b/onboarding/StepTrustTest'
@@ -204,11 +205,15 @@ export default function Onboarding() {
     (isAuthenticated && userType === 'b2b') || session?.type === 'b2b'
 
   if (!hasB2BAccess) {
-    return null
+    return <RouteLoadingFallback label="Verifica accesso partner…" />
   }
 
   if (onboardingGate.loading) {
-    return null
+    return (
+      <OnboardingLayout currentStepIndex={0} title="" subtitle="">
+        <RouteLoadingFallback inline label="Caricamento onboarding…" />
+      </OnboardingLayout>
+    )
   }
 
   const gateError = isApiConfigured() ? onboardingGate.error : null

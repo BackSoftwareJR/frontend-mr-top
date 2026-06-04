@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import RouteLoadingFallback from '../ui/RouteLoadingFallback'
 import { getSession } from '../../services/authService'
 import {
   fetchOnboardingStatusAsync,
@@ -64,7 +65,7 @@ export function B2BProtectedRoute({ children }) {
   }
 
   if (gate.loading) {
-    return null
+    return <RouteLoadingFallback label="Verifico profilo partner…" />
   }
 
   if (gate.redirect) {
@@ -102,7 +103,9 @@ export function ConsumerProtectedRoute({ children }) {
   }
 
   if (userType === 'b2b') {
-    if (!b2bRedirect) return null
+    if (!b2bRedirect) {
+      return <RouteLoadingFallback label="Reindirizzamento area partner…" />
+    }
     return <Navigate to={b2bRedirect} replace />
   }
 
