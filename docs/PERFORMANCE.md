@@ -301,6 +301,55 @@ Desktop path unchanged: `HomeDesktop.jsx` eager `ScrollReadingLine`, full Framer
 
 ---
 
+## Round 8 (mobile navigation pass — route speed)
+
+Targets **4–5s felt latency on every mobile route change** (wizard, results, accedi, B2B onboarding).
+
+### Before / after (production build, gzip)
+
+| Chunk | Before | After |
+|-------|--------|-------|
+| `index` (app shell) | 82.7 kB | **24.2 kB** |
+| `vendor-react` | (in index) | **57.2 kB** (cacheable) |
+| `vendor-router` | (in index) | **15.1 kB** (cacheable) |
+| `vendor-motion` | 44.2 kB | 44.2 kB — **not loaded on mobile consumer/B2B onboarding paths** |
+| `Wizard` | 9.2 kB | **6.6 kB** (no sync motion) |
+| `ResultsPage` | 6.5 kB | **6.6 kB** (no sync motion) |
+| `vendor-maps` | 273 kB | unchanged — only `/wizard` location step + B2B copertura |
+
+**First-visit mobile JS (home):** ~96 kB gzip parallel (`index` + `vendor-react` + `vendor-router`) vs ~135 kB monolith before.
+
+### Strategies
+
+| Area | Change |
+|------|--------|
+| **A. Route warm-up** | `prefetchMobileCriticalRoutes()` on bootstrap + `useMobileRouteWarmup`; expanded `routePrefetch.js` (`/wizard`, `/results`, `/accedi`, `/pro/*`) |
+| **B. Mobile motion diet** | `motionProxy.jsx` — lazy `vendor-motion` on desktop only; static DOM on ≤768px for wizard, results, onboarding, cookie banner |
+| **C. Analyzing screen** | `AnalyzingStateStatic.jsx` on mobile; `AnalyzingStateMotion.jsx` lazy on desktop |
+| **D. Deferred non-critical UI** | `DeferredCookieBanner` (idle); no CookieBanner on critical path |
+| **E. API gates** | B2B protected route + onboarding show branded shell + inline skeleton (not blank/full-page swap) while API resolves |
+| **F. Build** | `vendor-react` + `vendor-router` manualChunks; `preconnect`/`dns-prefetch` → `api.wenando.com` |
+| **G. Desktop unchanged** | `DesktopRouteTransitions` still desktop-only; motion lazy-loaded via proxy |
+
+### Realistic mobile target
+
+On **4G + mid-range phone**: FCP **&lt;2s**, route change to prefetched chunk **&lt;1s** after first visit. Maps step and hCaptcha login remain heavier (~+1–2s) — fundamental network/JS limits.
+
+### Files (Round 8)
+
+| File | Change |
+|------|--------|
+| `motionProxy.jsx`, `motionLazyBundle.jsx` | Desktop-only framer-motion |
+| `bootstrap.jsx`, `routePrefetch.js`, `useMobileRouteWarmup.js` | Immediate mobile prefetch |
+| `DeferredCookieBanner.jsx`, `App.jsx` | Idle cookie banner |
+| `Wizard.jsx`, `WizardSteps.jsx`, `AnalyzingState*.jsx` | Mobile static path |
+| `ResultsPage.jsx`, `MatchCard.jsx`, `AdvisorCard.jsx`, `PostSearch*.jsx` | Motion proxy |
+| `OnboardingLayout.jsx`, `B2BOnboardingShell.jsx`, onboarding steps | Motion proxy |
+| `ProtectedRoute.jsx`, `Onboarding.jsx` | Shell-first loading |
+| `vite.config.js`, `index.html` | Vendor splits + API preconnect |
+
+---
+
 ## Verification
 
 ```bash

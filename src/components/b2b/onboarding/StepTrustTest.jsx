@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { MaybeAnimatePresence, MotionDiv } from '../../../utils/motionProxy'
 import { ChevronLeft, ChevronRight, Shield } from 'lucide-react'
 import {
   obGlassCard,
@@ -135,7 +135,7 @@ export default function StepTrustTest({ sector, answers, onChange, onQuestionsLo
       </div>
 
       <div className={obProgressTrack}>
-        <motion.div
+        <MotionDiv
           className={obProgressFill}
           animate={{ width: `${progress}%` }}
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
@@ -143,8 +143,8 @@ export default function StepTrustTest({ sector, answers, onChange, onQuestionsLo
       </div>
 
       <div className={obGlassCard}>
-        <AnimatePresence mode="wait">
-          <motion.div
+        <MaybeAnimatePresence mode="wait">
+          <MotionDiv
             key={question.id}
             initial={{ opacity: 0, x: 16 }}
             animate={{ opacity: 1, x: 0 }}
@@ -160,8 +160,8 @@ export default function StepTrustTest({ sector, answers, onChange, onQuestionsLo
               value={value}
               onSelect={(next) => onChange({ [question.id]: next })}
             />
-          </motion.div>
-        </AnimatePresence>
+          </MotionDiv>
+        </MaybeAnimatePresence>
       </div>
 
       <div className="flex gap-3">

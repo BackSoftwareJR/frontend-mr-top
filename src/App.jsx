@@ -9,9 +9,9 @@ import { B2BProvider } from './context/B2BContext'
 import AdminProtectedRoute from './components/auth/AdminProtectedRoute'
 import { B2BProtectedRoute, ConsumerProtectedRoute } from './components/auth/ProtectedRoute'
 import { usePlausibleAnalytics } from './hooks/usePlausibleAnalytics'
+import { useMobileRouteWarmup } from './hooks/useMobileRouteWarmup'
 import { useIsMobile } from './utils/performanceTier'
-
-const CookieBanner = lazyRoute(() => import('./components/CookieBanner'))
+import DeferredCookieBanner from './components/DeferredCookieBanner'
 
 const Wizard = lazyRoute(() => import('./pages/Wizard'))
 const ResultsPage = lazyRoute(() => import('./pages/ResultsPage'))
@@ -56,12 +56,11 @@ const ErrorStatusPage = lazyRoute(() => import('./pages/errors/ErrorStatusPage')
 
 function AppShell() {
   usePlausibleAnalytics()
+  useMobileRouteWarmup()
   return (
     <AppErrorBoundary>
       <AppRoutes />
-      <Suspense fallback={null}>
-        <CookieBanner />
-      </Suspense>
+      <DeferredCookieBanner />
     </AppErrorBoundary>
   )
 }

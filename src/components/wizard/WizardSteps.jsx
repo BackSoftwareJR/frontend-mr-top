@@ -1,39 +1,46 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { MotionButton, MotionInput, MotionP } from '../../utils/motionProxy'
 import BudgetRangeSlider from './BudgetRangeSlider'
 import InfoDrawer, { InfoHelpButton } from '../ui/InfoDrawer'
+import MapEditorFallback from '../maps/MapEditorFallback'
+
+const InterestAreaMapEditor = lazy(() => import('../maps/InterestAreaMapEditor'))
 import { autonomyInfo } from '../../data/autonomyInfo'
 import { WIZARD_CONSENT_LABELS, WIZARD_CONSENT_UI } from '../../constants/wizardConsent'
-import { searchLocations } from '../../services/locationService'
-
-const LOCATION_DEBOUNCE_MS = 300
 
 const stepEase = [0.25, 0.46, 0.45, 0.94]
 
 const glassInputClass =
   'w-full rounded-2xl border border-slate-200/50 bg-white/70 px-5 py-3.5 text-base font-medium text-slate-800 placeholder:text-slate-400 shadow-sm backdrop-blur-xl transition-colors focus:border-teal-800/30 focus:bg-white/90 focus:outline-none focus:ring-2 focus:ring-teal-800/15'
 
-function StepNav({ onBack, onPrimary, primaryLabel, primaryDisabled = false }) {
+function StepNav({
+  onBack,
+  onPrimary,
+  primaryLabel,
+  primaryDisabled = false,
+  primaryTestId,
+}) {
   return (
     <div className="flex items-center justify-between gap-4 pt-1">
-      <motion.button
+      <MotionButton
         type="button"
         onClick={onBack}
         whileTap={{ scale: 0.96 }}
         className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-500 transition-colors hover:bg-white/80 hover:text-slate-700"
       >
         Indietro
-      </motion.button>
-      <motion.button
+      </MotionButton>
+      <MotionButton
         type="button"
         onClick={onPrimary}
         disabled={primaryDisabled}
+        data-testid={primaryTestId}
         whileTap={primaryDisabled ? undefined : { scale: 0.97 }}
         className="inline-flex items-center rounded-xl border border-teal-800/20 bg-teal-800/[0.06] px-5 py-2.5 text-sm font-medium text-teal-800 transition-colors hover:border-teal-800/30 hover:bg-teal-800/[0.1] disabled:cursor-not-allowed disabled:opacity-40"
       >
         {primaryLabel}
-      </motion.button>
+      </MotionButton>
     </div>
   )
 }
@@ -69,7 +76,7 @@ export default function AutonomyStep({ step, onSelect }) {
 
       <div className="grid gap-2.5">
         {step.options.map((option, index) => (
-          <motion.button
+          <MotionButton
             key={option.value}
             type="button"
             onClick={() => onSelect(option.value)}
@@ -81,127 +88,85 @@ export default function AutonomyStep({ step, onSelect }) {
             style={{ willChange: 'transform, opacity' }}
           >
             <span className="text-base font-semibold text-slate-800">{option.label}</span>
-          </motion.button>
+          </MotionButton>
         ))}
       </div>
     </>
   )
 }
 
-export function LocationStep({ step, value, onSelect }) {
-  const [query, setQuery] = useState(value?.label || '')
-  const [open, setOpen] = useState(false)
-  const [suggestions, setSuggestions] = useState([])
-  const [loading, setLoading] = useState(false)
-  const containerRef = useRef(null)
-  const requestIdRef = useRef(0)
+export function LocationStep({ step, value, onChange, onNext, onBack }) {
+  const initialAreas = value?.interestAreas ?? value?.areas ?? []
+  const [areas, setAreas] = useState(initialAreas)
 
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
-        setOpen(false)
-      }
+    if (value?.interestAreas || value?.areas) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync wizard answer from navigation
+      setAreas(value.interestAreas ?? value.areas ?? [])
     }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  }, [value])
 
-  useEffect(() => {
-    const trimmed = query.trim()
+  const buildLocationValue = (nextAreas) => {
+    const primary = nextAreas[0]
+    const label = primary?.label || nextAreas.map((area) => area.label).filter(Boolean).join(' · ') || step.placeholder
 
-    if (trimmed.length < 2) {
-      return undefined
+    const city = primary?.label?.split(',')[0]?.trim() || 'area'
+    const slug = city
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .trim()
+      .replace(/\s+/g, '-')
+
+    return {
+      label,
+      value: `${slug || 'area'}-${nextAreas.length}`,
+      interestAreas: nextAreas,
     }
+  }
 
-    const requestId = requestIdRef.current + 1
-    requestIdRef.current = requestId
+  const handleAreasChange = (nextAreas) => {
+    setAreas(nextAreas)
+    onChange(buildLocationValue(nextAreas))
+  }
 
-    const timer = window.setTimeout(async () => {
-      setLoading(true)
+  const canContinue = areas.length > 0
 
-      try {
-        const results = await searchLocations(trimmed)
-
-        if (requestIdRef.current !== requestId) {
-          return
-        }
-
-        setSuggestions(results)
-      } catch (error) {
-        console.error('[Wenando] Location autocomplete failed:', error)
-
-        if (requestIdRef.current === requestId) {
-          setSuggestions([])
-        }
-      } finally {
-        if (requestIdRef.current === requestId) {
-          setLoading(false)
-        }
-      }
-    }, LOCATION_DEBOUNCE_MS)
-
-    return () => window.clearTimeout(timer)
-  }, [query])
-
-  const visibleSuggestions = query.trim().length >= 2 ? suggestions : []
+  const handleContinue = () => {
+    if (!canContinue) return
+    onChange(buildLocationValue(areas))
+    onNext?.()
+  }
 
   return (
-    <div ref={containerRef} className="relative">
-      <p className="mb-3 text-sm text-slate-500">Inizia a digitare il comune o la città</p>
+    <div className="space-y-4">
+      <p className="text-sm text-slate-500">
+        Cerca una località o disegna una o più aree sulla mappa
+      </p>
 
-      <motion.input
-        type="text"
-        value={query}
-        onChange={(e) => {
-          const nextQuery = e.target.value
-          setQuery(nextQuery)
-          setOpen(true)
-          if (nextQuery.trim().length < 2) {
-            setSuggestions([])
-            setLoading(false)
-          }
-        }}
-        onFocus={() => setOpen(true)}
-        placeholder={step.placeholder}
-        className={glassInputClass}
-        autoComplete="off"
-        whileFocus={{ scale: 1.005 }}
-        transition={{ duration: 0.2, ease: stepEase }}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]" data-testid="wizard-location-step">
+        <Suspense fallback={<MapEditorFallback label="Caricamento mappa aree…" />}>
+          <InterestAreaMapEditor areas={areas} onChange={handleAreasChange} />
+        </Suspense>
+
+        <div className="hidden rounded-2xl border border-slate-200/50 bg-white/60 p-4 backdrop-blur-xl lg:block">
+          <p className="text-sm font-semibold text-slate-800">Come funziona</p>
+          <ul className="mt-3 space-y-2 text-xs leading-relaxed text-slate-600">
+            <li>Cerca un comune per aggiungere un cerchio di circa 15 km.</li>
+            <li>Usa la modalità cerchio o poligono per aree personalizzate.</li>
+            <li>Puoi selezionare più zone di interesse.</li>
+          </ul>
+        </div>
+      </div>
+
+      <StepNav
+        onBack={onBack}
+        onPrimary={handleContinue}
+        primaryLabel="Continua"
+        primaryDisabled={!canContinue}
+        primaryTestId="wizard-location-continue"
       />
-
-      {open && loading && visibleSuggestions.length === 0 ? (
-        <p className="mt-2 px-1 text-sm text-slate-500">Ricerca in corso…</p>
-      ) : null}
-
-      {open && visibleSuggestions.length > 0 && (
-        <motion.ul
-          initial={{ opacity: 0, y: -6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, ease: stepEase }}
-          className="absolute left-0 right-0 top-full z-10 mt-2 overflow-hidden rounded-2xl border border-slate-200/50 bg-white/70 shadow-lg backdrop-blur-xl"
-          style={{ willChange: 'transform, opacity' }}
-        >
-          {visibleSuggestions.map((loc, index) => (
-            <li key={loc.value}>
-              <motion.button
-                type="button"
-                onClick={() => {
-                  setQuery(loc.label)
-                  setOpen(false)
-                  onSelect(loc)
-                }}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: index * 0.04, duration: 0.2 }}
-                whileTap={{ scale: 0.98 }}
-                className="w-full px-5 py-3 text-left text-sm font-medium text-slate-800 transition-colors hover:bg-teal-800/[0.04] focus:outline-none focus-visible:bg-teal-800/[0.06]"
-              >
-                {loc.label}
-              </motion.button>
-            </li>
-          ))}
-        </motion.ul>
-      )}
     </div>
   )
 }
@@ -245,7 +210,7 @@ export function BudgetStep({ step, value, onChange, onNext, onBack }) {
 
   return (
     <div>
-      <motion.p
+      <MotionP
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: stepEase }}
@@ -255,7 +220,7 @@ export function BudgetStep({ step, value, onChange, onNext, onBack }) {
         <span className="font-semibold text-teal-800">{formatEuro(minVal)} €</span>
         {' '}a{' '}
         <span className="font-semibold text-teal-800/80">{formatEuro(maxVal)} €</span>
-      </motion.p>
+      </MotionP>
 
       <div className="mb-10">
         <BudgetRangeSlider
@@ -325,7 +290,7 @@ export function ContactStep({
 
       <div className="mb-6 space-y-3">
         {step.fields.map((field, index) => (
-          <motion.input
+          <MotionInput
             key={field.name}
             id={field.name}
             type={field.type}

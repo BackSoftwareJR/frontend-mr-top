@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
 import { COOKIE_CONSENT_VERSION, hasCookieConsentChoice } from '../constants/cookieConsent'
 import { syncAnalyticsCookiePreference } from '../utils/analyticsCookieSync'
+import { MaybeAnimatePresence, MotionDiv } from '../utils/motionProxy'
 
 const bannerBtnClass =
   'flex-1 min-w-0 rounded-xl border border-slate-200/60 bg-white/90 px-3 py-2.5 text-center text-sm font-semibold text-charcoal shadow-sm backdrop-blur-xl transition-colors hover:border-teal-800/25 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-800/20'
@@ -21,8 +21,8 @@ export default function CookieBanner() {
   if (!visible) return null
 
   return (
-    <AnimatePresence>
-      <motion.div
+    <MaybeAnimatePresence>
+      <MotionDiv
         role="dialog"
         aria-labelledby="cookie-banner-title"
         aria-describedby="cookie-banner-desc"
@@ -44,9 +44,9 @@ export default function CookieBanner() {
             </Link>
           </p>
 
-          <AnimatePresence>
+          <MaybeAnimatePresence>
             {customizeOpen && (
-              <motion.div
+              <MotionDiv
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
@@ -89,9 +89,9 @@ export default function CookieBanner() {
                     Salva preferenze
                   </button>
                 </div>
-              </motion.div>
+              </MotionDiv>
             )}
-          </AnimatePresence>
+          </MaybeAnimatePresence>
 
           {!customizeOpen && (
             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:gap-3">
@@ -118,7 +118,7 @@ export default function CookieBanner() {
             Versione preferenze {COOKIE_CONSENT_VERSION}
           </p>
         </div>
-      </motion.div>
-    </AnimatePresence>
+      </MotionDiv>
+    </MaybeAnimatePresence>
   )
 }

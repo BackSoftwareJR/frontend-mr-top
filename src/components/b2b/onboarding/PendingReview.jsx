@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { MotionDiv, MotionP, MotionSpan } from '../../../utils/motionProxy'
 import { Lock, Mail } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { usePendingReviewPoll } from '../../../hooks/usePendingReviewPoll'
@@ -8,23 +8,23 @@ export default function PendingReview({ email }) {
   usePendingReviewPoll(true)
   return (
     <div className="flex min-h-[50vh] flex-col items-center justify-center px-2 text-center">
-      <motion.div
+      <MotionDiv
         className="relative mb-8 flex h-24 w-24 items-center justify-center rounded-3xl border border-black/5 bg-white/80 shadow-lg backdrop-blur-xl"
         animate={{ scale: [1, 1.04, 1] }}
         transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
       >
-        <motion.span
+        <MotionSpan
           className="absolute inset-0 rounded-3xl border-2 border-accent-violet/30"
           animate={{ opacity: [0.35, 0.85, 0.35], scale: [1, 1.06, 1] }}
           transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
         />
-        <motion.span
+        <MotionSpan
           className="absolute inset-2 rounded-2xl border border-accent-coral/20"
           animate={{ opacity: [0.5, 1, 0.5] }}
           transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
         />
         <Lock className="relative h-10 w-10 text-accent-violet-dark" />
-      </motion.div>
+      </MotionDiv>
 
       <h2 className="text-2xl font-semibold tracking-tight text-charcoal sm:text-3xl">
         <span className="text-gradient-multicolor">Profilo</span> in revisione
@@ -35,14 +35,14 @@ export default function PendingReview({ email }) {
       </p>
 
       {email && (
-        <motion.p
+        <MotionP
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           className="mt-5 inline-flex items-center gap-2 rounded-full border border-black/5 bg-white/80 px-5 py-2.5 text-sm font-medium text-charcoal shadow-sm backdrop-blur-md"
         >
           <Mail className="h-4 w-4 text-accent-coral" />
           {email}
-        </motion.p>
+        </MotionP>
       )}
 
       <p className="mt-6 text-xs text-charcoal-muted">

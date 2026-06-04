@@ -1,17 +1,15 @@
-import { motion, useReducedMotion } from 'framer-motion'
 import { Phone, User } from 'lucide-react'
 import GlassCard from '../ui/GlassCard'
+import { MotionDiv, MotionButton } from '../../utils/motionProxy'
 
 const spring = { type: 'spring', stiffness: 400, damping: 28 }
 
 export default function AdvisorCard({ advisor, onBookCall }) {
-  const prefersReducedMotion = useReducedMotion()
-
   return (
-    <motion.div
-      initial={prefersReducedMotion ? false : { opacity: 0, y: 24 }}
+    <MotionDiv
+      initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={prefersReducedMotion ? { duration: 0 } : { ...spring, delay: 0.2 }}
+      transition={{ ...spring, delay: 0.2 }}
     >
       <GlassCard
         hover={false}
@@ -43,22 +41,20 @@ export default function AdvisorCard({ advisor, onBookCall }) {
               {advisor.story}
             </p>
 
-            <motion.button
+            <MotionButton
               type="button"
               onClick={onBookCall}
-              whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
+              whileTap={{ scale: 0.97 }}
               transition={spring}
               aria-label={advisor.ctaLabel}
-              className={`group inline-flex min-h-[3rem] w-fit items-center gap-2 rounded-full border border-teal-800/15 bg-teal-800/[0.06] px-5 py-3 text-sm font-medium text-teal-800 transition-colors hover:border-teal-800/25 hover:bg-teal-800/[0.1] ${
-                prefersReducedMotion ? '' : '[&_svg]:transition-transform [&_svg]:group-hover:scale-105'
-              }`}
+              className="group inline-flex min-h-[3rem] w-fit items-center gap-2 rounded-full border border-teal-800/15 bg-teal-800/[0.06] px-5 py-3 text-sm font-medium text-teal-800 transition-colors hover:border-teal-800/25 hover:bg-teal-800/[0.1] [&_svg]:transition-transform [&_svg]:group-hover:scale-105"
             >
               <Phone className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
               {advisor.ctaLabel}
-            </motion.button>
+            </MotionButton>
           </div>
         </div>
       </GlassCard>
-    </motion.div>
+    </MotionDiv>
   )
 }

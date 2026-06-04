@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AnimatePresence, motion } from 'framer-motion'
 import { wizardConfig } from '../data/wizardConfig'
 import AuroraBackground from '../components/layout/AuroraBackground'
 import { WizardHeader } from '../components/wizard/WizardShell'
 import AnalyzingState from '../components/wizard/AnalyzingState'
 import MulticolorHeading from '../components/ui/MulticolorHeading'
 import SectionBlob from '../components/ui/SectionBlob'
+import { MaybeAnimatePresence, MotionDiv } from '../utils/motionProxy'
 import AutonomyStep, {
   LocationStep,
   BudgetStep,
@@ -134,7 +134,9 @@ export default function Wizard() {
           <LocationStep
             step={step}
             value={answers[step.id]}
-            onSelect={(loc) => handleAutoAdvance(step.id, loc)}
+            onChange={(loc) => updateAnswer(step.id, loc)}
+            onNext={goNext}
+            onBack={goBack}
           />
         )
       case 'range-slider':
@@ -179,8 +181,8 @@ export default function Wizard() {
         <WizardHeader progress={progress} />
 
         <div className="flex flex-1 items-center justify-center px-4 pb-12 pt-28 sm:px-6">
-          <AnimatePresence mode="wait" custom={direction}>
-            <motion.div
+          <MaybeAnimatePresence mode="wait" custom={direction}>
+            <MotionDiv
               key={step.id}
               custom={direction}
               variants={slideVariants}
@@ -188,7 +190,7 @@ export default function Wizard() {
               animate="center"
               exit="exit"
               transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
-              className="w-full max-w-xl"
+              className="w-full max-w-xl lg:max-w-5xl"
             >
               <MulticolorHeading
                 as="h2"
@@ -206,8 +208,8 @@ export default function Wizard() {
                   {submitError}
                 </p>
               ) : null}
-            </motion.div>
-          </AnimatePresence>
+            </MotionDiv>
+          </MaybeAnimatePresence>
         </div>
 
         <footer className="pb-8 text-center text-sm font-medium text-slate-400">

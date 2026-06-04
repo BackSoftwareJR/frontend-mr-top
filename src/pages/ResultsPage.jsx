@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, Navigate } from 'react-router-dom'
-import { motion, useReducedMotion } from 'framer-motion'
 import { ArrowLeft, Check, Loader2, X as XIcon } from 'lucide-react'
 import AuroraBackground from '../components/layout/AuroraBackground'
 import SectionBlob from '../components/ui/SectionBlob'
@@ -15,6 +14,8 @@ import PostSearchJourney from '../components/results/PostSearchJourney'
 import { WenandoMark } from '../components/ui/WenandoLogo'
 import { useAuth } from '../context/AuthContext'
 import { PERSONAL_AREA_HOME } from '../constants/consumerJourney'
+import { MotionDiv, MotionSection } from '../utils/motionProxy'
+import { useIsMobile } from '../utils/performanceTier'
 import {
   getDiagnosis,
   careComparison,
@@ -143,7 +144,7 @@ function ComparisonCell({ items, Icon, iconClass, bordered = false }) {
 export default function ResultsPage() {
   const location = useLocation()
   const { isAuthenticated, userType } = useAuth()
-  const prefersReducedMotion = useReducedMotion()
+  const isMobile = useIsMobile()
   const answers = location.state?.answers
   const isConsumerLoggedIn = isAuthenticated && userType === 'consumer'
   const personalAreaTo = isConsumerLoggedIn ? PERSONAL_AREA_HOME : '/accedi'
@@ -263,11 +264,11 @@ export default function ResultsPage() {
     setDetailsOpen(false)
   }
 
-  const motionContainerVariants = prefersReducedMotion
+  const motionContainerVariants = isMobile
     ? { hidden: { opacity: 1 }, visible: { opacity: 1 } }
     : containerVariants
 
-  const motionSectionVariants = prefersReducedMotion
+  const motionSectionVariants = isMobile
     ? { hidden: { opacity: 1, y: 0 }, visible: { opacity: 1, y: 0 } }
     : sectionVariants
 
@@ -311,10 +312,10 @@ export default function ResultsPage() {
           </p>
         )}
 
-        <motion.div
-          initial={prefersReducedMotion ? false : { opacity: 0, y: 16 }}
+        <MotionDiv
+          initial={isMobile ? false : { opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={prefersReducedMotion ? { duration: 0 } : spring}
+          transition={isMobile ? { duration: 0 } : spring}
           className="mb-14 sm:mb-16"
         >
           <p className="mb-2 text-sm font-medium tracking-wide text-teal-800">
@@ -332,7 +333,7 @@ export default function ResultsPage() {
               <PersonalAreaCta isAuthenticated={isConsumerLoggedIn} />
             </div>
           ) : null}
-        </motion.div>
+        </MotionDiv>
 
         {loading ? (
           <div className="flex flex-col items-center justify-center gap-3 py-24 text-slate-500">
@@ -345,24 +346,24 @@ export default function ResultsPage() {
             onRetry={() => setRetryCount((n) => n + 1)}
           />
         ) : (
-          <motion.div
+          <MotionDiv
             variants={motionContainerVariants}
-            initial={prefersReducedMotion ? false : 'hidden'}
+            initial={isMobile ? false : 'hidden'}
             animate="visible"
             className="space-y-16 sm:space-y-20"
           >
-            <motion.section variants={motionSectionVariants}>
+            <MotionSection variants={motionSectionVariants}>
               <PostSearchJourney
                 personalAreaTo={personalAreaTo}
                 personalAreaState={personalAreaState}
               />
-            </motion.section>
+            </MotionSection>
 
-            <motion.section variants={motionSectionVariants}>
+            <MotionSection variants={motionSectionVariants}>
               <PostSearchBenefits />
-            </motion.section>
+            </MotionSection>
 
-            <motion.section variants={motionSectionVariants}>
+            <MotionSection variants={motionSectionVariants}>
               <GlassCard
                 hover={false}
                 className="border-white/20 bg-white/70 p-6 shadow-none sm:p-9"
@@ -389,9 +390,9 @@ export default function ResultsPage() {
                   </span>
                 </div>
               </GlassCard>
-            </motion.section>
+            </MotionSection>
 
-            <motion.section variants={motionSectionVariants}>
+            <MotionSection variants={motionSectionVariants}>
               {saveError ? (
                 <p
                   className="mb-4 rounded-xl border border-red-200/70 bg-red-50/90 px-4 py-3 text-sm leading-relaxed text-red-950"
@@ -416,6 +417,7 @@ export default function ResultsPage() {
               </div>
 
               <div
+                data-testid="match-results-list"
                 className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [-ms-overflow-style:none] sm:mx-0 sm:grid sm:snap-none sm:grid-cols-3 sm:gap-5 sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden"
                 role="list"
                 aria-label={`${matches.length} opzioni consigliate`}
@@ -431,9 +433,9 @@ export default function ResultsPage() {
                   />
                 ))}
               </div>
-            </motion.section>
+            </MotionSection>
 
-            <motion.section variants={motionSectionVariants}>
+            <MotionSection variants={motionSectionVariants}>
               <div className="mb-7">
                 <h2 className="text-lg font-semibold text-slate-800 sm:text-xl">
                   Un consulente che capisce
@@ -456,9 +458,9 @@ export default function ResultsPage() {
                 advisor={advisor}
                 onBookCall={() => setBookingOpen(true)}
               />
-            </motion.section>
+            </MotionSection>
 
-            <motion.section variants={motionSectionVariants}>
+            <MotionSection variants={motionSectionVariants}>
               <GlassCard
                 hover={false}
                 className="border-teal-800/10 bg-gradient-to-br from-teal-800/[0.06] to-white/70 p-6 text-center sm:p-9"
@@ -481,8 +483,8 @@ export default function ResultsPage() {
                   </Link>
                 </div>
               </GlassCard>
-            </motion.section>
-          </motion.div>
+            </MotionSection>
+          </MotionDiv>
         )}
       </main>
 

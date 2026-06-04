@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { MotionDiv } from '../../../utils/motionProxy'
 import { Building2, FileCheck2 } from 'lucide-react'
 import DynamicFormField from './DynamicFormField'
 import FileDropZone from './FileDropZone'
@@ -27,7 +27,7 @@ export default function StepLegal({ data, onChange, onDocumentUpload, documentUp
 
   return (
     <div className="space-y-6">
-      <motion.div
+      <MotionDiv
         className={`${obGlassCard} flex items-start gap-3`}
         initial={{ opacity: 0, x: -8 }}
         animate={{ opacity: 1, x: 0 }}
@@ -41,7 +41,7 @@ export default function StepLegal({ data, onChange, onDocumentUpload, documentUp
             I dati devono corrispondere alla visura camerale della struttura partner.
           </p>
         </div>
-      </motion.div>
+      </MotionDiv>
 
       <div className="grid gap-4 sm:grid-cols-2">
         {LEGAL_FIELDS.map((field) => (
@@ -81,7 +81,7 @@ export default function StepLegal({ data, onChange, onDocumentUpload, documentUp
       </div>
 
       {(data.visura || data.identityDoc) && (
-        <motion.div
+        <MotionDiv
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
           className="flex items-center gap-2 rounded-2xl border border-emerald-200/70 bg-emerald-50/90 px-4 py-3 text-sm font-medium text-emerald-800 backdrop-blur-sm"
@@ -92,7 +92,7 @@ export default function StepLegal({ data, onChange, onDocumentUpload, documentUp
               ? 'Entrambi i documenti caricati.'
               : 'Documento caricato — completa l\'altro file per procedere.'}
           </span>
-        </motion.div>
+        </MotionDiv>
       )}
     </div>
   )

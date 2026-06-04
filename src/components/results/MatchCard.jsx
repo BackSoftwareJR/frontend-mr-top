@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
 import { Heart, MapPin, ChevronRight } from 'lucide-react'
+import { MotionArticle, MotionButton } from '../../utils/motionProxy'
 import { isMatchSaved, toggleSavedMatch } from '../../utils/savedMatches'
 
 const spring = { type: 'spring', stiffness: 400, damping: 28 }
@@ -22,7 +22,8 @@ export default function MatchCard({ match, index = 0, onSave, onDetails, initial
   }
 
   return (
-    <motion.article
+    <MotionArticle
+      data-testid="match-card"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ ...spring, delay: index * 0.08 }}
@@ -39,6 +40,16 @@ export default function MatchCard({ match, index = 0, onSave, onDetails, initial
         <span className="absolute right-3 top-3 rounded-full border border-emerald-200/50 bg-emerald-50/95 px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-emerald-700 backdrop-blur-sm">
           {match.compatibility}% Compatibilità
         </span>
+        {match.coversZone ? (
+          <span
+            className="absolute left-3 top-3 rounded-full border border-teal-200/60 bg-teal-50/95 px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-teal-800 backdrop-blur-sm"
+            data-testid="match-covers-zone-badge"
+          >
+            {match.distanceKm != null
+              ? `Zona coperta · ~${Math.round(match.distanceKm)} km`
+              : 'Zona coperta'}
+          </span>
+        ) : null}
       </div>
 
       <div className="flex flex-1 flex-col p-4 sm:p-5">
@@ -55,7 +66,7 @@ export default function MatchCard({ match, index = 0, onSave, onDetails, initial
         </div>
 
         <div className="mt-auto flex items-center gap-2">
-          <motion.button
+          <MotionButton
             type="button"
             onClick={handleSave}
             whileTap={{ scale: 0.94 }}
@@ -73,9 +84,9 @@ export default function MatchCard({ match, index = 0, onSave, onDetails, initial
               strokeWidth={2}
             />
             Salva
-          </motion.button>
+          </MotionButton>
 
-          <motion.button
+          <MotionButton
             type="button"
             onClick={() => onDetails?.(match)}
             whileTap={{ scale: 0.94 }}
@@ -84,9 +95,9 @@ export default function MatchCard({ match, index = 0, onSave, onDetails, initial
           >
             Dettagli
             <ChevronRight className="h-3.5 w-3.5" strokeWidth={2} />
-          </motion.button>
+          </MotionButton>
         </div>
       </div>
-    </motion.article>
+    </MotionArticle>
   )
 }

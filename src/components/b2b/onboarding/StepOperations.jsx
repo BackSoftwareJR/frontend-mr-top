@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { MotionDiv } from '../../../utils/motionProxy'
 import { Clock, Copy, Settings2 } from 'lucide-react'
 import DynamicFormField from './DynamicFormField'
 import { DAYS, OPERATIONS_FORM_CONFIG, SCHEDULE_PRESETS } from '../../../constants/b2bOperationsConfig'
@@ -182,7 +182,7 @@ export default function StepOperations({ data, onChange }) {
 
   return (
     <div className="space-y-6">
-      <motion.div
+      <MotionDiv
         className={`${obGlassCard} flex items-start gap-3`}
         initial={{ opacity: 0, x: -8 }}
         animate={{ opacity: 1, x: 0 }}
@@ -201,7 +201,7 @@ export default function StepOperations({ data, onChange }) {
             </span>
           )}
         </div>
-      </motion.div>
+      </MotionDiv>
 
       <div className="space-y-4">
         {OPERATIONS_FORM_CONFIG.map((field) => (

@@ -1,5 +1,5 @@
-import { motion, useReducedMotion } from 'framer-motion'
 import GlassCard from '../ui/GlassCard'
+import { MotionDiv } from '../../utils/motionProxy'
 import { POST_SEARCH_BENEFITS } from '../../constants/consumerJourney'
 
 const spring = { type: 'spring', stiffness: 400, damping: 28 }
@@ -12,8 +12,6 @@ const accentRing = {
 }
 
 export default function PostSearchBenefits() {
-  const prefersReducedMotion = useReducedMotion()
-
   return (
     <section aria-labelledby="post-search-benefits-heading">
       <div className="mb-6">
@@ -33,12 +31,12 @@ export default function PostSearchBenefits() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         {POST_SEARCH_BENEFITS.map((benefit, index) => (
-          <motion.div
+          <MotionDiv
             key={benefit.id}
-            initial={prefersReducedMotion ? false : { opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-40px' }}
-            transition={{ ...spring, delay: prefersReducedMotion ? 0 : index * 0.06 }}
+            transition={{ ...spring, delay: index * 0.06 }}
           >
             <GlassCard
               hover={false}
@@ -57,7 +55,7 @@ export default function PostSearchBenefits() {
                 {benefit.why}
               </p>
             </GlassCard>
-          </motion.div>
+          </MotionDiv>
         ))}
       </div>
     </section>

@@ -65,7 +65,16 @@ export function B2BProtectedRoute({ children }) {
   }
 
   if (gate.loading) {
-    return <RouteLoadingFallback label="Verifico profilo partner…" />
+    return (
+      <div className="relative min-h-[100dvh] bg-warm-cream">
+        <div className="aurora-bg" aria-hidden="true">
+          <span className="aurora-orb aurora-orb--coral" />
+          <span className="aurora-orb aurora-orb--violet" />
+          <span className="aurora-orb aurora-orb--amber" />
+        </div>
+        <RouteLoadingFallback inline label="Verifico profilo partner…" />
+      </div>
+    )
   }
 
   if (gate.redirect) {

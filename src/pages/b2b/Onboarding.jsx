@@ -6,6 +6,7 @@ import OnboardingLayout from '../../components/b2b/OnboardingLayout'
 import RouteLoadingFallback from '../../components/ui/RouteLoadingFallback'
 import StepLegal from '../../components/b2b/onboarding/StepLegal'
 import StepOperations from '../../components/b2b/onboarding/StepOperations'
+import StepCoverageZone from '../../components/b2b/onboarding/StepCoverageZone'
 import StepTrustTest from '../../components/b2b/onboarding/StepTrustTest'
 import PendingReview from '../../components/b2b/onboarding/PendingReview'
 import RejectedReview from '../../components/b2b/onboarding/RejectedReview'
@@ -30,6 +31,10 @@ import {
 } from '../../services/b2bOnboardingService'
 import { ApiError } from '../../services/apiClient'
 import { trustQuestionsComplete } from '../../utils/b2bTrustQuestions'
+import {
+  isCoverageZoneComplete,
+  saveCoverageZone,
+} from '../../services/coverageZoneService'
 
 const STEP_META = [
   {
@@ -39,6 +44,10 @@ const STEP_META = [
   {
     title: 'Operatività',
     subtitle: 'Configura orari, slot e parametri specifici del tuo settore.',
+  },
+  {
+    title: 'Zona di copertura',
+    subtitle: 'Indica l\'area geografica in cui la struttura può operare.',
   },
   {
     title: 'Trust Test',
@@ -68,6 +77,9 @@ function canProceed(stepIndex, data, trustQuestions) {
     return hasSector && hasSchedule
   }
   if (stepIndex === 2) {
+    return isCoverageZoneComplete(data.coverageZone)
+  }
+  if (stepIndex === 3) {
     return trustQuestionsComplete(trustQuestions, data.trustAnswers)
   }
   return true
@@ -87,6 +99,8 @@ export default function Onboarding() {
   const [loadError, setLoadError] = useState(null)
   const [submitError, setSubmitError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const [stepSaving, setStepSaving] = useState(false)
+  const [stepError, setStepError] = useState(null)
   const [retrySeconds, setRetrySeconds] = useState(null)
   const [trustQuestions, setTrustQuestions] = useState([])
   const [documentUpload, setDocumentUpload] = useState({
@@ -205,7 +219,11 @@ export default function Onboarding() {
     (isAuthenticated && userType === 'b2b') || session?.type === 'b2b'
 
   if (!hasB2BAccess) {
-    return <RouteLoadingFallback label="Verifica accesso partner…" />
+    return (
+      <OnboardingLayout currentStepIndex={0} title="" subtitle="">
+        <RouteLoadingFallback inline label="Verifica accesso partner…" />
+      </OnboardingLayout>
+    )
   }
 
   if (onboardingGate.loading) {
@@ -239,7 +257,7 @@ export default function Onboarding() {
 
   if (status === 'pending_review') {
     return (
-      <OnboardingLayout currentStepIndex={3} title="" subtitle="">
+      <OnboardingLayout currentStepIndex={4} title="" subtitle="">
         <PendingReview email={email} />
       </OnboardingLayout>
     )
@@ -247,7 +265,7 @@ export default function Onboarding() {
 
   if (status === 'rejected') {
     return (
-      <OnboardingLayout currentStepIndex={3} title="" subtitle="">
+      <OnboardingLayout currentStepIndex={4} title="" subtitle="">
         <RejectedReview email={email} rejectionReason={onboardingGate.rejectionReason} />
       </OnboardingLayout>
     )
@@ -255,13 +273,34 @@ export default function Onboarding() {
 
   if (status === 'suspended') {
     return (
-      <OnboardingLayout currentStepIndex={3} title="" subtitle="">
+      <OnboardingLayout currentStepIndex={4} title="" subtitle="">
         <SuspendedReview email={email} />
       </OnboardingLayout>
     )
   }
 
   const meta = STEP_META[stepIndex]
+
+  const handleContinue = async () => {
+    if (!canProceed(stepIndex, data, trustQuestions) || stepSaving) return
+
+    if (stepIndex === 2 && data.coverageZone) {
+      setStepError(null)
+      setStepSaving(true)
+      try {
+        const saved = await saveCoverageZone(data.coverageZone)
+        persist({ coverageZone: saved })
+        setStepIndex((index) => index + 1)
+      } catch (err) {
+        setStepError(err?.message ?? 'Impossibile salvare la zona di copertura.')
+      } finally {
+        setStepSaving(false)
+      }
+      return
+    }
+
+    setStepIndex((index) => index + 1)
+  }
 
   const handleSubmitReview = async () => {
     if (!termsAccepted || submitting || retrySeconds) return
@@ -295,14 +334,14 @@ export default function Onboarding() {
         {stepIndex === 0 ? 'Esci' : 'Indietro'}
       </button>
 
-      {stepIndex < 3 ? (
+      {stepIndex < 4 ? (
         <button
           type="button"
-          disabled={!canProceed(stepIndex, data, trustQuestions)}
-          onClick={() => setStepIndex((i) => i + 1)}
+          disabled={!canProceed(stepIndex, data, trustQuestions) || stepSaving}
+          onClick={handleContinue}
           className={`${obPrimaryBtn} sm:!w-auto sm:min-w-[160px]`}
         >
-          Continua
+          {stepSaving ? 'Salvataggio…' : 'Continua'}
           <ArrowRight className="h-4 w-4" />
         </button>
       ) : (
@@ -340,6 +379,12 @@ export default function Onboarding() {
       )}
       {stepIndex === 1 && <StepOperations data={data} onChange={persist} />}
       {stepIndex === 2 && (
+        <StepCoverageZone
+          value={data.coverageZone}
+          onChange={(coverageZone) => persist({ coverageZone })}
+        />
+      )}
+      {stepIndex === 3 && (
         <StepTrustTest
           key={data.dynamic?.sector ?? 'none'}
           sector={data.dynamic?.sector}
@@ -350,7 +395,7 @@ export default function Onboarding() {
           }
         />
       )}
-      {stepIndex === 3 && (
+      {stepIndex === 4 && (
         <div className="space-y-4">
           <div className={obGlassCard}>
             <h3 className="text-sm font-semibold text-charcoal">Riepilogo invio</h3>
@@ -368,11 +413,25 @@ export default function Onboarding() {
                 <span>{SECTOR_LABELS[data.dynamic?.sector] ?? data.dynamic?.sector ?? '—'}</span>
               </li>
               <li className="flex justify-between gap-4 rounded-xl bg-warm-cream/80 px-3 py-2">
+                <span className="font-medium text-charcoal">Zona di copertura</span>
+                <span>
+                  {data.coverageZone?.label ||
+                    (data.coverageZone?.radiusKm
+                      ? `${Number(data.coverageZone.radiusKm).toFixed(1)} km`
+                      : '—')}
+                </span>
+              </li>
+              <li className="flex justify-between gap-4 rounded-xl bg-warm-cream/80 px-3 py-2">
                 <span className="font-medium text-charcoal">Trust Test</span>
                 <span>{trustQuestions.length || '—'} risposte</span>
               </li>
             </ul>
           </div>
+          {stepError && (
+            <p className="rounded-2xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700" role="alert">
+              {stepError}
+            </p>
+          )}
           <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200/60 bg-white/70 p-4">
             <input
               type="checkbox"

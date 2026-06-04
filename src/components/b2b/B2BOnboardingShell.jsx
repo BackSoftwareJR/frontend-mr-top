@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { MotionDiv } from '../../utils/motionProxy'
 
 export default function B2BOnboardingShell({ children, className = '' }) {
   return (
@@ -8,14 +8,14 @@ export default function B2BOnboardingShell({ children, className = '' }) {
         <span className="aurora-orb aurora-orb--violet" />
         <span className="aurora-orb aurora-orb--amber" />
       </div>
-      <motion.div
+      <MotionDiv
         className="relative z-10"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       >
         {children}
-      </motion.div>
+      </MotionDiv>
     </div>
   )
 }

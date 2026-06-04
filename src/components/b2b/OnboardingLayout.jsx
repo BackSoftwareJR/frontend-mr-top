@@ -1,10 +1,10 @@
-import { AnimatePresence, motion } from 'framer-motion'
 import { Check } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { WenandoMark } from '../ui/WenandoLogo'
 import B2BOnboardingShell from './B2BOnboardingShell'
 import { ONBOARDING_STEP_LABELS } from '../../services/b2bOnboardingService'
 import { STEP_ACCENTS, obGlassCardSm, obGlassPanel } from './onboardingStyles'
+import { MaybeAnimatePresence, MotionDiv, MotionLi } from '../../utils/motionProxy'
 
 const stepMotion = {
   initial: { opacity: 0, y: 20 },
@@ -27,7 +27,7 @@ function StepIndicator({ steps, currentIndex }) {
             : 'border-transparent bg-white/40 opacity-60'
 
         return (
-          <motion.li
+          <MotionLi
             key={step.id}
             layout
             className={`flex items-start gap-3 rounded-2xl border px-3 py-3 backdrop-blur-md transition-colors ${base}`}
@@ -55,7 +55,7 @@ function StepIndicator({ steps, currentIndex }) {
               </p>
               <p className="text-xs text-charcoal-muted">{step.description}</p>
             </div>
-          </motion.li>
+          </MotionLi>
         )
       })}
     </ol>
@@ -108,7 +108,7 @@ export default function OnboardingLayout({
           <main className="flex flex-1 flex-col px-4 py-8 sm:px-8 lg:px-12 lg:py-12">
             <div className="mx-auto w-full max-w-2xl">
               {title && (
-                <motion.div
+                <MotionDiv
                   className="mb-8"
                   key={title}
                   initial={{ opacity: 0, y: 8 }}
@@ -120,15 +120,15 @@ export default function OnboardingLayout({
                     {title.split(' ').slice(1).join(' ')}
                   </h1>
                   {subtitle && <p className="mt-2 text-sm leading-relaxed text-charcoal-muted">{subtitle}</p>}
-                </motion.div>
+                </MotionDiv>
               )}
 
               <div className={title ? '' : obGlassPanel + ' p-6 sm:p-8'}>
-                <AnimatePresence mode="wait">
-                  <motion.div key={currentStepIndex} {...stepMotion}>
+                <MaybeAnimatePresence mode="wait">
+                  <MotionDiv key={currentStepIndex} {...stepMotion}>
                     {children}
-                  </motion.div>
-                </AnimatePresence>
+                  </MotionDiv>
+                </MaybeAnimatePresence>
               </div>
 
               {footer && (

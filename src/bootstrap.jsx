@@ -2,6 +2,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
+import { isMobileViewport } from './utils/performanceTier'
+import { prefetchMobileCriticalRoutes } from './utils/routePrefetch'
 
 const rootEl = document.getElementById('root')
 
@@ -10,6 +12,10 @@ createRoot(rootEl).render(
     <App />
   </StrictMode>,
 )
+
+if (isMobileViewport()) {
+  prefetchMobileCriticalRoutes()
+}
 
 function scheduleDeferredInit() {
   const run = () => {

@@ -27,6 +27,15 @@ export default defineConfig({
           if (id.includes('framer-motion')) return 'vendor-motion'
           if (id.includes('@stripe')) return 'vendor-stripe'
           if (id.includes('lucide-react')) return 'vendor-icons'
+          if (id.includes('react-router') || id.includes('react-router-dom')) return 'vendor-router'
+          if (
+            id.includes('/react-dom/') ||
+            id.includes('/react/') ||
+            id.endsWith('/react-dom') ||
+            id.endsWith('/react')
+          ) {
+            return 'vendor-react'
+          }
           if (id.includes('react-markdown') || id.includes('remark-') || id.includes('rehype-')) {
             return 'vendor-markdown'
           }

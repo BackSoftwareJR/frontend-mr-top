@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { motion } from 'framer-motion'
 import { ArrowLeft, ArrowRight, Building2, Mail } from 'lucide-react'
+import { MotionDiv } from '../../utils/motionProxy'
 import { WenandoMark } from '../../components/ui/WenandoLogo'
 import B2BOnboardingShell from '../../components/b2b/B2BOnboardingShell'
 import {
@@ -99,7 +99,7 @@ export default function Register() {
       </header>
 
       <main className="flex flex-1 flex-col items-center justify-center px-4 py-12">
-        <motion.div
+        <MotionDiv
           className={`${obGlassPanel} w-full max-w-md p-6 sm:p-8`}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -212,7 +212,7 @@ export default function Register() {
               Accedi
             </Link>
           </p>
-        </motion.div>
+        </MotionDiv>
       </main>
     </B2BOnboardingShell>
   )

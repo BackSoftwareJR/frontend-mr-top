@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { ArrowRight, Check, ChevronRight, LayoutDashboard, X } from 'lucide-react'
 import GlassCard from '../ui/GlassCard'
+import { MaybeAnimatePresence, MotionDiv } from '../../utils/motionProxy'
 import { CONSUMER_JOURNEY_STEPS } from '../../constants/consumerJourney'
 import {
   isPostResultsJourneyComplete,
@@ -12,7 +12,6 @@ import {
 const spring = { type: 'spring', stiffness: 400, damping: 28 }
 
 export default function PostSearchJourney({ personalAreaTo, personalAreaState }) {
-  const prefersReducedMotion = useReducedMotion()
   const [dismissed, setDismissed] = useState(() => isPostResultsJourneyComplete())
   const [activeIndex, setActiveIndex] = useState(0)
 
@@ -89,11 +88,11 @@ export default function PostSearchJourney({ personalAreaTo, personalAreaState })
           aria-valuemax={100}
           aria-label="Avanzamento guida"
         >
-          <motion.div
+          <MotionDiv
             className="h-full rounded-full bg-gradient-to-r from-teal-800 to-accent-coral"
             initial={false}
             animate={{ width: `${progress}%` }}
-            transition={prefersReducedMotion ? { duration: 0 } : spring}
+            transition={spring}
           />
         </div>
 
@@ -131,15 +130,15 @@ export default function PostSearchJourney({ personalAreaTo, personalAreaState })
           })}
         </div>
 
-        <AnimatePresence mode="wait">
-          <motion.div
+        <MaybeAnimatePresence mode="wait">
+          <MotionDiv
             key={active.id}
             id="post-search-journey-panel"
             role="tabpanel"
-            initial={prefersReducedMotion ? false : { opacity: 0, x: 12 }}
+            initial={{ opacity: 0, x: 12 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={prefersReducedMotion ? undefined : { opacity: 0, x: -12 }}
-            transition={prefersReducedMotion ? { duration: 0 } : spring}
+            exit={{ opacity: 0, x: -12 }}
+            transition={spring}
             className="space-y-4"
           >
             <div className="flex gap-4">
@@ -194,8 +193,8 @@ export default function PostSearchJourney({ personalAreaTo, personalAreaState })
                 )}
               </button>
             </div>
-          </motion.div>
-        </AnimatePresence>
+          </MotionDiv>
+        </MaybeAnimatePresence>
       </GlassCard>
     </section>
   )
