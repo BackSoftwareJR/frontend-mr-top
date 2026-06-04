@@ -182,9 +182,19 @@ chmod +x deploy/hostinger-post-deploy.sh
 
 | Ambiente | `migrate` | `db:seed` |
 |----------|-----------|-----------|
-| **Produzione** | `php artisan migrate --force` | **Non eseguire** — niente utenti demo su dati reali |
+| **Produzione** | `php artisan migrate --force` | **Non eseguire** `db:seed` completo — niente utenti demo |
+| **Produzione (una tantum)** | — | `php artisan wenando:seed-sectors` — solo righe `sectors` (wizard B2C) |
 | **Staging** | `php artisan migrate --force` | `php artisan db:seed --force` (DB vuoto / greenfield) |
 | **Staging distruttivo** | `migrate:fresh --seed` solo con DB vuoto e conferma esplicita | |
+
+Dopo il primo deploy in produzione, se `POST /api/v1/b2c/leads` risponde `sector_slug: Settore non trovato`, eseguire **solo**:
+
+```bash
+cd "$API_DIR"   # es. ~/domains/api.wenando.com/api
+php artisan wenando:seed-sectors
+```
+
+Equivalente idempotente: `php artisan db:seed --class=Database\\Seeders\\SectorSeeder --force` (stesso effetto, nessun utente demo).
 
 ```bash
 # Produzione

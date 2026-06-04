@@ -14,7 +14,8 @@ import AutonomyStep, {
   isContactSubmitReady,
 } from '../components/wizard/WizardSteps'
 import { buildWizardConsentPayload } from '../constants/wizardConsent'
-import { ApiError, isApiConfigured } from '../services/apiClient'
+import { formatApiErrorMessage } from '../lib/apiErrorMessage'
+import { isApiConfigured } from '../services/apiClient'
 import { submitLead } from '../services/leadService'
 
 const slideVariants = {
@@ -87,11 +88,7 @@ export default function Wizard() {
     } catch (error) {
       console.error('[Wenando] Wizard lead submit failed:', error)
       if (isApiConfigured()) {
-        const message =
-          error instanceof ApiError
-            ? error.message
-            : (error?.message ?? 'Invio non riuscito. Riprova tra poco.')
-        setSubmitError(message)
+        setSubmitError(formatApiErrorMessage(error))
       }
     } finally {
       setSubmitting(false)
