@@ -1,54 +1,123 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronLeft, ChevronRight, Shield } from 'lucide-react'
 import {
   obGlassCard,
-  obInput,
   obPrimaryBtn,
   obProgressFill,
   obProgressTrack,
   obSecondaryBtn,
 } from '../onboardingStyles'
+import { fetchTrustQuestionsAsync } from '../../../services/b2bOnboardingService'
 
-export const TRUST_QUESTIONS = [
-  {
-    id: 'emergency',
-    title: 'Emergenza medica notturna',
-    prompt: 'Qual è la procedura in caso di emergenza medica notturna?',
-    type: 'textarea',
-    placeholder:
-      'Descrivi escalation, contatti medici, tempi di intervento e protocollo con familiari…',
-  },
-  {
-    id: 'fall',
-    title: 'Caduta ospite',
-    prompt: 'Un ospite cade in corridoio alle 02:00. Quali sono i primi 3 passi obbligatori?',
-    type: 'textarea',
-    placeholder: 'Valutazione, assistenza, documentazione…',
-  },
-  {
-    id: 'family',
-    title: 'Comunicazione familiari',
-    prompt: 'Come gestite una richiesta urgente da un familiare fuori orario?',
-    type: 'textarea',
-    placeholder: 'Canali, SLA, referente…',
-  },
-  {
-    id: 'quality',
-    title: 'Standard qualità',
-    prompt: 'Quale metrica usate per misurare la qualità del servizio erogato?',
-    type: 'text',
-    placeholder: 'es. NPS familiari, audit interni mensili…',
-  },
-]
+function QuestionOptions({ question, value, onSelect }) {
+  if (question.type === 'select') {
+    return (
+      <select
+        className="mt-4 w-full rounded-2xl border border-black/10 bg-white/90 px-4 py-3 text-sm text-charcoal focus:border-teal-800/40 focus:outline-none focus:ring-2 focus:ring-teal-800/15"
+        value={value}
+        onChange={(e) => onSelect(e.target.value)}
+      >
+        <option value="">Seleziona una risposta…</option>
+        {question.options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    )
+  }
 
-export default function StepTrustTest({ answers, onChange }) {
+  return (
+    <fieldset className="mt-4 space-y-2">
+      <legend className="sr-only">{question.prompt}</legend>
+      {question.options.map((opt) => {
+        const checked = value === opt.value
+        return (
+          <label
+            key={opt.value}
+            className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 text-sm transition ${
+              checked
+                ? 'border-teal-800/30 bg-teal-800/5 text-charcoal'
+                : 'border-black/5 bg-white/70 text-charcoal-muted hover:border-teal-800/15'
+            }`}
+          >
+            <input
+              type="radio"
+              name={question.id}
+              value={opt.value}
+              checked={checked}
+              onChange={() => onSelect(opt.value)}
+              className="mt-0.5 h-4 w-4 border-slate-300 text-teal-800 focus:ring-teal-800/20"
+            />
+            <span>{opt.label}</span>
+          </label>
+        )
+      })}
+    </fieldset>
+  )
+}
+
+export default function StepTrustTest({ sector, answers, onChange, onQuestionsLoaded }) {
+  const [questions, setQuestions] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(null)
   const [index, setIndex] = useState(0)
-  const question = TRUST_QUESTIONS[index]
-  const value = answers[question.id] ?? ''
-  const progress = ((index + 1) / TRUST_QUESTIONS.length) * 100
 
-  const goNext = () => setIndex((i) => Math.min(i + 1, TRUST_QUESTIONS.length - 1))
+  useEffect(() => {
+    if (!sector) return undefined
+
+    let cancelled = false
+
+    fetchTrustQuestionsAsync(sector)
+      .then((payload) => {
+        if (cancelled) return
+        const loaded = payload.questions ?? []
+        setQuestions(loaded)
+        setLoading(false)
+        onQuestionsLoaded?.(loaded)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        setLoadError(err?.message ?? 'Impossibile caricare le domande.')
+        setLoading(false)
+        onQuestionsLoaded?.([])
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [sector, onQuestionsLoaded])
+
+  if (!sector) {
+    return (
+      <p className="text-sm text-charcoal-muted">
+        Seleziona prima il settore operativo nel passo precedente.
+      </p>
+    )
+  }
+
+  if (loading) {
+    return (
+      <p className="text-sm text-charcoal-muted" aria-live="polite">
+        Caricamento questionario Trust Test…
+      </p>
+    )
+  }
+
+  if (loadError || questions.length === 0) {
+    return (
+      <p className="rounded-2xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700" role="alert">
+        {loadError ?? 'Nessuna domanda disponibile per questo settore.'}
+      </p>
+    )
+  }
+
+  const question = questions[index]
+  const value = answers[question.id] ?? ''
+  const progress = ((index + 1) / questions.length) * 100
+
+  const goNext = () => setIndex((i) => Math.min(i + 1, questions.length - 1))
   const goPrev = () => setIndex((i) => Math.max(i - 1, 0))
 
   return (
@@ -61,7 +130,7 @@ export default function StepTrustTest({ answers, onChange }) {
           <span className="text-sm font-semibold text-charcoal">Trust Test</span>
         </div>
         <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-charcoal-muted ring-1 ring-black/5">
-          {index + 1} / {TRUST_QUESTIONS.length}
+          {index + 1} / {questions.length}
         </span>
       </div>
 
@@ -86,23 +155,11 @@ export default function StepTrustTest({ answers, onChange }) {
               {question.title}
             </p>
             <p className="mt-2 text-base font-medium text-charcoal">{question.prompt}</p>
-
-            {question.type === 'textarea' ? (
-              <textarea
-                className={`${obInput} mt-4 min-h-[140px] resize-y`}
-                value={value}
-                onChange={(e) => onChange({ [question.id]: e.target.value })}
-                placeholder={question.placeholder}
-              />
-            ) : (
-              <input
-                type="text"
-                className={`${obInput} mt-4`}
-                value={value}
-                onChange={(e) => onChange({ [question.id]: e.target.value })}
-                placeholder={question.placeholder}
-              />
-            )}
+            <QuestionOptions
+              question={question}
+              value={value}
+              onSelect={(next) => onChange({ [question.id]: next })}
+            />
           </motion.div>
         </AnimatePresence>
       </div>
@@ -117,11 +174,11 @@ export default function StepTrustTest({ answers, onChange }) {
           <ChevronLeft className="h-4 w-4" />
           Indietro
         </button>
-        {index < TRUST_QUESTIONS.length - 1 ? (
+        {index < questions.length - 1 ? (
           <button
             type="button"
             onClick={goNext}
-            disabled={!value.trim()}
+            disabled={!value}
             className={`${obPrimaryBtn} !w-auto flex-1 sm:flex-none sm:px-6`}
           >
             Avanti

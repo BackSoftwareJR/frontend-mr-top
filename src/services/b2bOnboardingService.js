@@ -60,14 +60,14 @@ export const DEMO_ONBOARDING_DATA = {
     sun: { open: false, slots: '' },
   },
   trustAnswers: {
-    emergency:
-      'Allerta personale notturno, valutazione parametri vitali, contatto medico di turno e familiari entro 15 minuti. Documentazione su registro eventi avversi.',
-    fall:
-      '1) Non spostare fino a valutazione 2) Infermiere responsabile + medico 3) Compilazione scheda incidente e comunicazione familiari.',
-    family:
-      'Linea dedicata H24 con escalation al coordinatore; risposta entro 30 minuti per urgenze certificate.',
-    quality:
-      'Audit mensili interni, NPS familiari trimestrale, KPI su tempi risposta emergenze.',
+    emergency_night: 'nurse_h24_med_oncall',
+    fall_protocol: 'assess_no_move',
+    family_contact: 'h24_line_30m',
+    quality_metric: 'nps_quarterly',
+    medication: 'nurse_double_check',
+    infection_control: 'isolation_asl',
+    staff_training: 'annual',
+    dementia_care: 'secured_areas',
   },
 }
 
@@ -82,6 +82,61 @@ function readJson(key, fallback) {
 
 function writeJson(key, value) {
   localStorage.setItem(key, JSON.stringify(value))
+}
+
+const ONBOARDING_PATCH_DEBOUNCE_MS = 700
+let onboardingPatchTimer = null
+let onboardingPatchPending = null
+let onboardingPatchResolvers = []
+
+async function flushOnboardingPatchToApi() {
+  if (!onboardingPatchPending) {
+    return
+  }
+
+  const patch = onboardingPatchPending
+  onboardingPatchPending = null
+  onboardingPatchTimer = null
+
+  try {
+    await b2bWithOfflineMock(
+      () => patchOnboardingToApi(patch),
+      () => undefined,
+    )
+    onboardingPatchResolvers.forEach((resolve) => resolve())
+  } catch (err) {
+    onboardingPatchResolvers.forEach((reject) => reject(err))
+    throw err
+  } finally {
+    onboardingPatchResolvers = []
+  }
+}
+
+function scheduleOnboardingPatchToApi(patch) {
+  onboardingPatchPending = { ...onboardingPatchPending, ...patch }
+
+  if (onboardingPatchTimer) {
+    clearTimeout(onboardingPatchTimer)
+  }
+
+  return new Promise((resolve, reject) => {
+    onboardingPatchResolvers.push(resolve)
+    onboardingPatchTimer = setTimeout(() => {
+      flushOnboardingPatchToApi().catch(reject)
+    }, ONBOARDING_PATCH_DEBOUNCE_MS)
+  })
+}
+
+/** Flush debounced onboarding PATCH before submit or navigation. */
+export async function flushOnboardingSaveAsync() {
+  if (onboardingPatchTimer) {
+    clearTimeout(onboardingPatchTimer)
+    onboardingPatchTimer = null
+  }
+
+  if (onboardingPatchPending) {
+    await flushOnboardingPatchToApi()
+  }
 }
 
 export function getOnboardingStatus(email) {
@@ -282,6 +337,19 @@ function mapOnboardingDataFromApi(data) {
   }
 }
 
+function cleanScheduleForApi(schedule) {
+  if (!schedule || typeof schedule !== 'object') return schedule
+  return Object.fromEntries(
+    Object.entries(schedule).map(([day, entry]) => [
+      day,
+      {
+        open: Boolean(entry?.open),
+        slots: String(entry?.slots ?? ''),
+      },
+    ]),
+  )
+}
+
 function mapOnboardingDataToApi(patch) {
   return {
     vat: patch.vat,
@@ -289,7 +357,7 @@ function mapOnboardingDataToApi(patch) {
     visura: patch.visura,
     identity_doc: patch.identityDoc,
     dynamic: patch.dynamic,
-    schedule: patch.schedule,
+    schedule: cleanScheduleForApi(patch.schedule),
     trust_answers: patch.trustAnswers,
   }
 }
@@ -315,9 +383,24 @@ async function patchOnboardingToApi(patch) {
   }
 }
 
-async function submitOnboardingToApi(consentPayload) {
-  const response = await apiClient.post('/b2b/onboarding/submit', consentPayload)
+async function submitOnboardingToApi(consentPayload, idempotencyKey) {
+  const headers = {}
+  if (idempotencyKey) {
+    headers['Idempotency-Key'] = idempotencyKey
+  }
+
+  const response = await apiClient.post('/b2b/onboarding/submit', consentPayload, { headers })
   return unwrapApiData(response)
+}
+
+async function fetchTrustQuestionsFromApi(sector) {
+  const params = sector ? { sector } : undefined
+  const response = await apiClient.get('/b2b/onboarding/trust-questions', { params })
+  const data = unwrapApiData(response)
+  return {
+    sector: data.sector ?? sector ?? 'rsa',
+    questions: data.questions ?? [],
+  }
 }
 
 /**
@@ -475,22 +558,45 @@ export async function saveOnboardingDataAsync(email, patch) {
   saveOnboardingData(normalized, patch)
 
   await b2bWithOfflineMock(
-    () => patchOnboardingToApi(patch),
+    () => scheduleOnboardingPatchToApi(patch),
     () => undefined,
   )
 
   return getOnboardingData(normalized)
 }
 
+let onboardingSubmitIdempotencyKey = null
+
 export async function submitOnboardingForReviewAsync(email, consentPayload) {
   const normalized = normalizeEmail(email || getSession()?.email || '')
 
+  await flushOnboardingSaveAsync()
+
+  if (!onboardingSubmitIdempotencyKey) {
+    onboardingSubmitIdempotencyKey = crypto.randomUUID()
+  }
+
   await b2bWithOfflineMock(
-    () => submitOnboardingToApi(consentPayload),
+    () => submitOnboardingToApi(consentPayload, onboardingSubmitIdempotencyKey),
     () => undefined,
   )
 
+  onboardingSubmitIdempotencyKey = null
   submitOnboardingForReview(normalized)
+}
+
+/**
+ * @param {string} [sector]
+ * @returns {Promise<{ sector: string, questions: Array<{ id: string, title: string, prompt: string, type: string, options: Array<{ value: string, label: string }> }> }>}
+ */
+export async function fetchTrustQuestionsAsync(sector) {
+  return b2bWithOfflineMock(
+    () => fetchTrustQuestionsFromApi(sector),
+    () => ({
+      sector: sector || 'rsa',
+      questions: [],
+    }),
+  )
 }
 
 /**

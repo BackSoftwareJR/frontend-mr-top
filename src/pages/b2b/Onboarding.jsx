@@ -5,7 +5,7 @@ import B2BLoadError from '../../components/b2b/B2BLoadError'
 import OnboardingLayout from '../../components/b2b/OnboardingLayout'
 import StepLegal from '../../components/b2b/onboarding/StepLegal'
 import StepOperations from '../../components/b2b/onboarding/StepOperations'
-import StepTrustTest, { TRUST_QUESTIONS } from '../../components/b2b/onboarding/StepTrustTest'
+import StepTrustTest from '../../components/b2b/onboarding/StepTrustTest'
 import PendingReview from '../../components/b2b/onboarding/PendingReview'
 import RejectedReview from '../../components/b2b/onboarding/RejectedReview'
 import SuspendedReview from '../../components/b2b/onboarding/SuspendedReview'
@@ -27,6 +27,8 @@ import {
   submitOnboardingForReviewAsync,
   uploadOnboardingDocumentAsync,
 } from '../../services/b2bOnboardingService'
+import { ApiError } from '../../services/apiClient'
+import { trustQuestionsComplete } from '../../utils/b2bTrustQuestions'
 
 const STEP_META = [
   {
@@ -54,7 +56,7 @@ const SECTOR_LABELS = {
   clinica: 'Clinica / Ambulatorio',
 }
 
-function canProceed(stepIndex, data) {
+function canProceed(stepIndex, data, trustQuestions) {
   if (stepIndex === 0) {
     return Boolean(data.vat?.trim() && data.sdi?.trim() && data.visura && data.identityDoc)
   }
@@ -65,7 +67,7 @@ function canProceed(stepIndex, data) {
     return hasSector && hasSchedule
   }
   if (stepIndex === 2) {
-    return TRUST_QUESTIONS.every((q) => data.trustAnswers?.[q.id]?.trim())
+    return trustQuestionsComplete(trustQuestions, data.trustAnswers)
   }
   return true
 }
@@ -83,6 +85,9 @@ export default function Onboarding() {
   const [loadRetry, bumpLoadRetry] = useReducer((n) => n + 1, 0)
   const [loadError, setLoadError] = useState(null)
   const [submitError, setSubmitError] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [retrySeconds, setRetrySeconds] = useState(null)
+  const [trustQuestions, setTrustQuestions] = useState([])
   const [documentUpload, setDocumentUpload] = useState({
     visura: { loading: false, progress: 0, error: null },
     identityDoc: { loading: false, progress: 0, error: null },
@@ -124,6 +129,18 @@ export default function Onboarding() {
       cancelled = true
     }
   }, [email, loadRetry])
+
+  useEffect(() => {
+    if (!retrySeconds || retrySeconds <= 0) return undefined
+    const timer = setTimeout(() => {
+      setRetrySeconds((seconds) => (seconds !== null && seconds > 1 ? seconds - 1 : null))
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [retrySeconds])
+
+  const handleTrustQuestionsLoaded = useCallback((questions) => {
+    setTrustQuestions(questions)
+  }, [])
 
   const persist = useCallback(
     (patch) => {
@@ -242,13 +259,21 @@ export default function Onboarding() {
   const meta = STEP_META[stepIndex]
 
   const handleSubmitReview = async () => {
-    if (!termsAccepted) return
+    if (!termsAccepted || submitting || retrySeconds) return
     setSubmitError(null)
+    setSubmitting(true)
     try {
       await submitOnboardingForReviewAsync(email, buildB2bOnboardingSubmitPayload())
       bumpStatus()
     } catch (err) {
-      setSubmitError(err?.message ?? 'Invio non riuscito. Riprova.')
+      if (err instanceof ApiError && err.code === 'RATE_LIMITED' && err.retryAfterSeconds) {
+        setRetrySeconds(err.retryAfterSeconds)
+        setSubmitError(`Troppe richieste. Riprova tra ${err.retryAfterSeconds} secondi.`)
+      } else {
+        setSubmitError(err?.message ?? 'Invio non riuscito. Riprova.')
+      }
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -266,7 +291,7 @@ export default function Onboarding() {
       {stepIndex < 3 ? (
         <button
           type="button"
-          disabled={!canProceed(stepIndex, data)}
+          disabled={!canProceed(stepIndex, data, trustQuestions)}
           onClick={() => setStepIndex((i) => i + 1)}
           className={`${obPrimaryBtn} sm:!w-auto sm:min-w-[160px]`}
         >
@@ -276,12 +301,16 @@ export default function Onboarding() {
       ) : (
         <button
           type="button"
-          disabled={!termsAccepted}
+          disabled={!termsAccepted || submitting || Boolean(retrySeconds)}
           onClick={handleSubmitReview}
-          className={`${obPrimaryBtn} sm:!w-auto sm:min-w-[200px]`}
+          className={`${obPrimaryBtn} sm:!w-auto sm:min-w-[200px] disabled:opacity-60`}
         >
           <CheckCircle2 className="h-4 w-4" />
-          Invia per revisione
+          {submitting
+            ? 'Invio in corso…'
+            : retrySeconds
+              ? `Attendi ${retrySeconds}s`
+              : 'Invia per revisione'}
         </button>
       )}
     </div>
@@ -305,7 +334,10 @@ export default function Onboarding() {
       {stepIndex === 1 && <StepOperations data={data} onChange={persist} />}
       {stepIndex === 2 && (
         <StepTrustTest
+          key={data.dynamic?.sector ?? 'none'}
+          sector={data.dynamic?.sector}
           answers={data.trustAnswers ?? {}}
+          onQuestionsLoaded={handleTrustQuestionsLoaded}
           onChange={(patch) =>
             persist({ trustAnswers: { ...(data.trustAnswers ?? {}), ...patch } })
           }
@@ -330,7 +362,7 @@ export default function Onboarding() {
               </li>
               <li className="flex justify-between gap-4 rounded-xl bg-warm-cream/80 px-3 py-2">
                 <span className="font-medium text-charcoal">Trust Test</span>
-                <span>{TRUST_QUESTIONS.length} risposte</span>
+                <span>{trustQuestions.length || '—'} risposte</span>
               </li>
             </ul>
           </div>

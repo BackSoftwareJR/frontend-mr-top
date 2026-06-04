@@ -17,13 +17,14 @@ export function isApiConfigured() {
 }
 
 export class ApiError extends Error {
-  constructor(message, { code, status, details, traceId } = {}) {
+  constructor(message, { code, status, details, traceId, retryAfterSeconds } = {}) {
     super(message)
     this.name = 'ApiError'
     this.code = code ?? 'API_ERROR'
     this.status = status
     this.details = details
     this.traceId = traceId
+    this.retryAfterSeconds = retryAfterSeconds
   }
 }
 
@@ -73,13 +74,17 @@ function resolveLoginPath() {
   return '/accedi'
 }
 
-function parseApiError(data, status) {
+function parseApiError(data, status, headers = {}) {
   if (data?.success === false && data?.error) {
+    const retryAfterHeader = headers['retry-after'] ?? headers['Retry-After']
+    const retryAfterSeconds = retryAfterHeader ? Number.parseInt(String(retryAfterHeader), 10) : undefined
+
     return new ApiError(data.error.message ?? 'Richiesta non riuscita.', {
       code: data.error.code,
       status,
       details: data.error.details,
       traceId: data.trace_id ?? data.request_id,
+      retryAfterSeconds: Number.isFinite(retryAfterSeconds) ? retryAfterSeconds : undefined,
     })
   }
 
@@ -227,7 +232,7 @@ apiClient.interceptors.response.use(
     }
 
     if (data) {
-      const apiError = parseApiError(data, status ?? 0)
+      const apiError = parseApiError(data, status ?? 0, error.response?.headers ?? {})
       captureApiError(apiError, error.config)
       return Promise.reject(apiError)
     }
