@@ -20,7 +20,7 @@ const RATE_LIMIT_KEY = 'wenando-auth-rate-limit'
 const CODE_TTL_MS = 10 * 60 * 1000
 const RESEND_COOLDOWN_MS = 60 * 1000
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000
-const MAX_SEND_ATTEMPTS = 3
+const MAX_SEND_ATTEMPTS = 10
 const MIN_FORM_DURATION_MS = 2000
 
 export const MOCK_USERS = {
@@ -289,12 +289,30 @@ function mockVerifyLoginCode(email, code) {
  * @param {Record<string, unknown>} captchaPayload
  * @param {'consumer' | 'partner' | 'admin'} [portal='consumer']
  */
+export function resolveOtpRequestError(result) {
+  if (result.ok) return null
+
+  if (result.code === 'RATE_LIMITED' && result.retryAfterSeconds) {
+    return {
+      message: `Troppe richieste. Riprova tra ${result.retryAfterSeconds} secondi.`,
+      retryAfterSeconds: result.retryAfterSeconds,
+    }
+  }
+
+  return { message: result.error, retryAfterSeconds: undefined }
+}
+
 function authApiErrorResult(error) {
   const message =
     error instanceof ApiError
       ? error.message
       : (error?.message ?? 'Errore di connessione. Riprova tra poco.')
-  return { ok: false, error: message }
+  return {
+    ok: false,
+    error: message,
+    code: error instanceof ApiError ? error.code : undefined,
+    retryAfterSeconds: error instanceof ApiError ? error.retryAfterSeconds : undefined,
+  }
 }
 
 export async function sendLoginCode(email, captchaPayload, portal = 'consumer') {

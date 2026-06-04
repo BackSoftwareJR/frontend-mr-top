@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Loader2, Mail, Shield } from 'lucide-react'
 import { WenandoMark } from '../../components/ui/WenandoLogo'
@@ -10,6 +10,7 @@ import { ApiError, getBearerToken, isApiConfigured } from '../../services/apiCli
 import {
   buildCaptchaPayload,
   getResendCooldown,
+  resolveOtpRequestError,
   validateEmailForPortal,
 } from '../../services/authService'
 
@@ -35,6 +36,8 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [resendCooldown, setResendCooldown] = useState(0)
+  const [rateLimitRetry, setRateLimitRetry] = useState(0)
+  const otpRequestInFlight = useRef(false)
 
   const redirectTarget = location.state?.from || '/admin'
 
@@ -51,6 +54,22 @@ export default function AdminLogin() {
     }, 1000)
     return () => clearInterval(timer)
   }, [resendCooldown])
+
+  useEffect(() => {
+    if (rateLimitRetry <= 0) return
+    const timer = setInterval(() => {
+      setRateLimitRetry((s) => Math.max(0, s - 1))
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [rateLimitRetry])
+
+  const applyOtpRequestFailure = (result) => {
+    const errInfo = resolveOtpRequestError(result)
+    if (errInfo?.retryAfterSeconds) {
+      setRateLimitRetry(errInfo.retryAfterSeconds)
+    }
+    setError(errInfo?.message ?? result.error ?? 'Errore di connessione. Riprova.')
+  }
 
   const handleEmailSubmit = (e) => {
     e.preventDefault()
@@ -70,6 +89,8 @@ export default function AdminLogin() {
   }
 
   const handleCaptchaVerified = async (payload) => {
+    if (otpRequestInFlight.current || loading || rateLimitRetry > 0) return
+    otpRequestInFlight.current = true
     setCaptchaPayload(payload)
     setLoading(true)
     setError('')
@@ -79,7 +100,7 @@ export default function AdminLogin() {
       const result = await requestCode(email, buildCaptchaPayload(formData, payload), 'admin')
 
       if (!result.ok) {
-        setError(result.error)
+        applyOtpRequestFailure(result)
         return
       }
 
@@ -89,11 +110,17 @@ export default function AdminLogin() {
       setStep(STEPS.CODE)
     } catch (err) {
       if (isApiConfigured()) {
-        setError(err instanceof ApiError ? err.message : 'Errore di connessione. Riprova.')
+        if (err instanceof ApiError && err.code === 'RATE_LIMITED' && err.retryAfterSeconds) {
+          setRateLimitRetry(err.retryAfterSeconds)
+          setError(`Troppe richieste. Riprova tra ${err.retryAfterSeconds} secondi.`)
+        } else {
+          setError(err instanceof ApiError ? err.message : 'Errore di connessione. Riprova.')
+        }
       } else {
         throw err
       }
     } finally {
+      otpRequestInFlight.current = false
       setLoading(false)
     }
   }
@@ -134,7 +161,10 @@ export default function AdminLogin() {
   }
 
   const handleResend = async () => {
-    if (resendCooldown > 0 || !captchaPayload) return
+    if (resendCooldown > 0 || !captchaPayload || loading || rateLimitRetry > 0 || otpRequestInFlight.current) {
+      return
+    }
+    otpRequestInFlight.current = true
     setLoading(true)
     setError('')
 
@@ -143,7 +173,7 @@ export default function AdminLogin() {
       const result = await requestCode(email, buildCaptchaPayload(formData, captchaPayload), 'admin')
 
       if (!result.ok) {
-        setError(result.error)
+        applyOtpRequestFailure(result)
         return
       }
 
@@ -153,11 +183,17 @@ export default function AdminLogin() {
       setResendCooldown(Math.ceil(cooldownMs / 1000) || 60)
     } catch (err) {
       if (isApiConfigured()) {
-        setError(err instanceof ApiError ? err.message : 'Errore di connessione. Riprova.')
+        if (err instanceof ApiError && err.code === 'RATE_LIMITED' && err.retryAfterSeconds) {
+          setRateLimitRetry(err.retryAfterSeconds)
+          setError(`Troppe richieste. Riprova tra ${err.retryAfterSeconds} secondi.`)
+        } else {
+          setError(err instanceof ApiError ? err.message : 'Errore di connessione. Riprova.')
+        }
       } else {
         throw err
       }
     } finally {
+      otpRequestInFlight.current = false
       setLoading(false)
     }
   }
@@ -238,6 +274,7 @@ export default function AdminLogin() {
                   <HumanVerification
                     onVerified={handleCaptchaVerified}
                     onChallengeReady={handleChallengeReady}
+                    disabled={loading || rateLimitRetry > 0}
                   />
                 )}
                 {error && (

@@ -10,7 +10,6 @@ use App\Http\Controllers\Api\V1\Admin\PartnersController;
 use App\Http\Controllers\Api\V1\Admin\PrivacyErasureController;
 use App\Http\Controllers\Api\V1\Admin\SearchController;
 use App\Http\Controllers\Api\V1\Admin\SettingsController as AdminSettingsController;
-use App\Http\Controllers\Api\V1\Admin\SystemLogsController;
 use App\Http\Controllers\Api\V1\Admin\TransactionsController as AdminTransactionsController;
 use App\Http\Controllers\Api\V1\Admin\WalletController as AdminWalletController;
 use App\Http\Controllers\Api\V1\Admin\WebhooksController as AdminWebhooksController;
@@ -22,8 +21,6 @@ use App\Http\Controllers\Api\V1\B2B\AuthController as B2BAuthController;
 use App\Http\Controllers\Api\V1\B2B\CompanyProfileController;
 use App\Http\Controllers\Api\V1\B2B\CrmController;
 use App\Http\Controllers\Api\V1\B2B\DashboardController as B2BDashboardController;
-use App\Http\Controllers\Api\V1\B2B\ExportController;
-use App\Http\Controllers\Api\V1\B2B\GoogleCalendarController;
 use App\Http\Controllers\Api\V1\B2B\LeadMarketplaceController;
 use App\Http\Controllers\Api\V1\B2B\OnboardingController;
 use App\Http\Controllers\Api\V1\B2B\RegisterController;
@@ -131,11 +128,22 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/register', [RegisterController::class, 'store']);
 
         Route::middleware(['auth:sanctum', 'role:partner'])->group(function (): void {
-            Route::get('/onboarding', [OnboardingController::class, 'show']);
-            Route::patch('/onboarding', [OnboardingController::class, 'update']);
-            Route::post('/onboarding/documents', [OnboardingController::class, 'uploadDocument']);
-            Route::post('/onboarding/submit', [OnboardingController::class, 'submit']);
-            Route::get('/onboarding/status', [OnboardingController::class, 'status']);
+            Route::middleware(['throttle:b2b-onboarding'])
+                ->withoutMiddleware([ThrottleRequests::class.':api'])
+                ->group(function (): void {
+                    Route::get('/onboarding', [OnboardingController::class, 'show']);
+                    Route::patch('/onboarding', [OnboardingController::class, 'update']);
+                    Route::post('/onboarding/documents', [OnboardingController::class, 'uploadDocument']);
+                    Route::get('/onboarding/trust-questions', [OnboardingController::class, 'trustQuestions']);
+                    Route::get('/onboarding/status', [OnboardingController::class, 'status']);
+                });
+
+            Route::post('/onboarding/submit', [OnboardingController::class, 'submit'])
+                ->middleware([
+                    'throttle:b2b-onboarding-submit',
+                    'idempotent:b2b.onboarding.submit,60',
+                ])
+                ->withoutMiddleware([ThrottleRequests::class.':api']);
 
             Route::get('/company/profile', [CompanyProfileController::class, 'show']);
             Route::patch('/company/profile', [CompanyProfileController::class, 'update']);
@@ -163,15 +171,6 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/appointments', [AppointmentsController::class, 'index']);
             Route::post('/appointments', [AppointmentsController::class, 'store'])
                 ->middleware('idempotent:b2b.appointments.create,60');
-            Route::patch('/appointments/{id}', [AppointmentsController::class, 'update']);
-
-            Route::get('/exports', [ExportController::class, 'index']);
-            Route::post('/exports', [ExportController::class, 'store']);
-
-            Route::get('/integrations/google/connect', [GoogleCalendarController::class, 'connect']);
-            Route::get('/integrations/google/callback', [GoogleCalendarController::class, 'callback']);
-            Route::post('/integrations/google/disconnect', [GoogleCalendarController::class, 'disconnect']);
-            Route::get('/integrations/google/status', [GoogleCalendarController::class, 'status']);
 
             Route::get('/notifications', [B2BDashboardController::class, 'notifications']);
             Route::patch('/notifications/{id}/read', [B2BDashboardController::class, 'markNotificationRead']);
@@ -232,7 +231,6 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('/privacy/erasure-requests/{id}', [PrivacyErasureController::class, 'update']);
 
         Route::get('/webhooks/events', [AdminWebhooksController::class, 'events']);
-        Route::get('/system/logs', [SystemLogsController::class, 'index']);
     });
 
     /*
@@ -246,7 +244,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/otp/verify', [OtpController::class, 'verify'])
             ->middleware('throttle:auth-otp-verify');
         Route::get('/resend-cooldown', [OtpController::class, 'resendCooldown'])
-            ->middleware('throttle:auth-otp-request');
+            ->middleware('throttle:auth-otp-resend-cooldown');
 
         Route::middleware('auth:sanctum')->group(function (): void {
             Route::post('/logout', [SessionController::class, 'logout']);

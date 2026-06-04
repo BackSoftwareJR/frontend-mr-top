@@ -22,7 +22,7 @@ function generateChallenge() {
   return String(Math.floor(1000 + Math.random() * 9000))
 }
 
-export default function HumanVerification({ onVerified, onChallengeReady }) {
+export default function HumanVerification({ onVerified, onChallengeReady, disabled = false }) {
   const hcaptchaRef = useRef(null)
   const [challenge, setChallenge] = useState(() => generateChallenge())
   const [answer, setAnswer] = useState('')
@@ -66,6 +66,7 @@ export default function HumanVerification({ onVerified, onChallengeReady }) {
   }, [])
 
   const handleVerify = () => {
+    if (disabled) return
     setError('')
 
     if (hasHcaptcha) {
@@ -176,7 +177,12 @@ export default function HumanVerification({ onVerified, onChallengeReady }) {
         </p>
       )}
 
-      <button type="button" onClick={handleVerify} className={`w-full ${b2bPrimaryBtn}`}>
+      <button
+        type="button"
+        onClick={handleVerify}
+        disabled={disabled}
+        className={`w-full ${b2bPrimaryBtn} disabled:cursor-not-allowed disabled:opacity-60`}
+      >
         Continua
       </button>
     </div>
