@@ -427,6 +427,16 @@ input[type="range"].glass-range.range-overlay::-moz-range-thumb {
 }
 
 @media (max-width: 768px) {
+  /*
+   * iOS Safari zooms the viewport when a focused input has font-size < 16px.
+   * Keep text controls at 16px on mobile without disabling user scaling.
+   */
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']):not([type='file']):not([type='button']):not([type='submit']):not([type='reset']):not([type='image']),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
   html,
   body {
     overscroll-behavior-y: none;
