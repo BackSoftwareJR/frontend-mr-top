@@ -332,7 +332,46 @@ Minimo da compilare prima del go-live:
 | Build Vite | `VITE_API_URL=https://api.wenando.com/api/v1` |
 | SPA routing | `public/.htaccess` → copiato in `dist/` — rewrite verso `index.html` (fix refresh su `/accedi`, ecc.) |
 
-#### Build frontend su Hostinger (Node.js)
+#### Checklist hPanel — frontend `wenando.com` (Node.js Website)
+
+In **hPanel → Websites → wenando.com → Deploy / Node.js** (preset **Vite**). Conferma **campo per campo** — se coincide con la tabella sotto, **non modificare nulla** nel pannello; serve solo un **Redeploy** dopo il push del fix (`.npmrc`, `.htaccess`, fix mobile).
+
+| Campo hPanel | Valore atteso | Cosa fare |
+|--------------|---------------|-----------|
+| **Framework / preset** | **Vite** | ✅ Lasciare così |
+| **Repository branch** | **`main`** | ✅ Lasciare così |
+| **Node.js version** | **22.x** | ✅ Lasciare così |
+| **Build command** | **`npm run build`** | ✅ Lasciare così — **non** usare `npm ci --omit=dev` né `npm prune --production` |
+| **Output / publish directory** | **`dist`** | ✅ Lasciare così |
+| **Variabile d’ambiente (build)** | **`VITE_API_URL`** = `https://api.wenando.com/api/v1` | ✅ Lasciare così (deve includere **`/api/v1`**) |
+
+**Fix build già nel repo (da committare / pushare, non si imposta in hPanel):**
+
+- File **`.npmrc`** alla root del frontend con `production=false` — Hostinger imposta spesso `NODE_ENV=production` durante `npm ci`, che **salta le devDependencies** e fa fallire `vite build` (`vite: command not found` / `Cannot find package 'rolldown'`).
+
+**Redeploy (dopo push su `main`):**
+
+1. hPanel → **Websites** → **wenando.com** → **Deployments** (o **Node.js** → area deploy).
+2. Clic **Redeploy** / **Deploy now** (Hostinger fa pull da `main` + build automatico).
+3. Attendere build **verde** nei log (cercare `vite build` completato e cartella `dist` pubblicata).
+4. Se il telefono mostra ancora schermo bianco su route profonde: **svuota cache browser** (Safari: Impostazioni → Safari → Cancella cronologia) oppure prova in **scheda privata** — `index.html` non deve restare in cache (vedi `.htaccess` sotto).
+
+**Verifica post-deploy (telefono):**
+
+1. Apri `https://wenando.com` — home visibile, niente flash bianco prolungato.
+2. Vai a **`/accedi`**, fai refresh — pagina carica (rewrite SPA + `index.html` non in cache stale).
+3. Login consumer → **`/area-personale/home`** → tab **Ricerche**, **Profilo**, **Aiuto** — **nessuno schermo bianco** al cambio tab (fix `App.jsx` + `UserLayout.jsx` su mobile).
+4. DevTools desktop (opzionale): Network → `index.html` con `Cache-Control: no-cache`; asset `*.js` in `/assets/` con hash nel nome.
+
+**Se la build fallisce ancora nei log Hostinger:**
+
+| Messaggio log | Causa | Fix |
+|---------------|-------|-----|
+| `vite: command not found` | devDependencies non installate | Verificare che `.npmrc` con `production=false` sia su `main`; Redeploy |
+| `Cannot find package 'rolldown'` | `node_modules` incompleto / lockfile cross-OS | Redeploy pulito; in ultima istanza in SSH (se disponibile): `rm -rf node_modules && npm ci && npm run build` |
+| Build OK ma sito bianco | `index.html` cached con chunk JS vecchi | Redeploy + `.htaccess` cache headers; svuota cache client |
+
+#### Build frontend su Hostinger (Node.js) — dettaglio tecnico
 
 Vite 8 usa **rolldown** come bundler. `vite`, `rolldown` e i plugin React/Tailwind sono in **`devDependencies`**: servono solo in fase di build, non a runtime.
 

@@ -205,17 +205,21 @@ export default function UserLayout() {
             : 'pb-12 pt-[calc(5.5rem+env(safe-area-inset-top))]'
         }`}
       >
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={location.pathname}
-            initial={pageInitial}
-            animate={pageAnimate}
-            exit={pageExit}
-            transition={pageTransition}
-          >
-            <Outlet />
-          </motion.div>
-        </AnimatePresence>
+        {isMobile ? (
+          <Outlet />
+        ) : (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={pageInitial}
+              animate={pageAnimate}
+              exit={pageExit}
+              transition={pageTransition}
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
+        )}
       </main>
 
       {isMobile && <BottomNavigationBar />}

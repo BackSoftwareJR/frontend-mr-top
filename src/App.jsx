@@ -97,7 +97,7 @@ function AppRoutes() {
 
   const routes = (
     <Suspense fallback={<RouteLoadingFallback />}>
-      <Routes location={location} key={location.pathname}>
+      <Routes location={location} key={isMobile ? undefined : location.pathname}>
         <Route path="/" element={<Home />} />
         <Route path="/wizard" element={<Wizard />} />
         <Route path="/results" element={<ResultsPage />} />

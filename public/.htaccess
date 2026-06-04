@@ -7,3 +7,14 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ index.html [L]
 </IfModule>
+
+<IfModule mod_headers.c>
+    # After deploy, stale index.html can reference renamed JS chunks → white screen.
+    <FilesMatch "\.(html)$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+    </FilesMatch>
+    # Vite hashes filenames — safe to cache aggressively.
+    <FilesMatch "\.(js|css|webp|png|svg|woff2?)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+</IfModule>
