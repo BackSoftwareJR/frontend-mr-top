@@ -9,7 +9,12 @@ import MatchCard from '../components/results/MatchCard'
 import MatchDetailsDrawer from '../components/results/MatchDetailsDrawer'
 import AdvisorCard from '../components/results/AdvisorCard'
 import BookingSheet from '../components/results/BookingSheet'
+import PersonalAreaCta from '../components/results/PersonalAreaCta'
+import PostSearchBenefits from '../components/results/PostSearchBenefits'
+import PostSearchJourney from '../components/results/PostSearchJourney'
 import { WenandoMark } from '../components/ui/WenandoLogo'
+import { useAuth } from '../context/AuthContext'
+import { PERSONAL_AREA_HOME } from '../constants/consumerJourney'
 import {
   getDiagnosis,
   careComparison,
@@ -137,8 +142,12 @@ function ComparisonCell({ items, Icon, iconClass, bordered = false }) {
 
 export default function ResultsPage() {
   const location = useLocation()
+  const { isAuthenticated, userType } = useAuth()
   const prefersReducedMotion = useReducedMotion()
   const answers = location.state?.answers
+  const isConsumerLoggedIn = isAuthenticated && userType === 'consumer'
+  const personalAreaTo = isConsumerLoggedIn ? PERSONAL_AREA_HOME : '/accedi'
+  const personalAreaState = isConsumerLoggedIn ? undefined : { from: PERSONAL_AREA_HOME }
   const leadUuid = location.state?.leadUuid ?? answers?._leadUuid
 
   const [selectedMatch, setSelectedMatch] = useState(null)
@@ -271,11 +280,13 @@ export default function ResultsPage() {
       <header className="sticky top-0 z-50 border-b border-black/[0.06] bg-[#FDFBF7]/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-5 py-3.5 sm:px-8">
           <Link
-            to="/area-personale/ricerche"
+            to={isConsumerLoggedIn ? '/area-personale/ricerche' : '/wizard'}
             className="inline-flex min-h-[3rem] items-center gap-1.5 text-sm font-medium text-slate-600 transition-colors hover:text-teal-800"
           >
             <ArrowLeft className="h-4 w-4" strokeWidth={2} aria-hidden />
-            <span className="hidden sm:inline">Le tue ricerche</span>
+            <span className="hidden sm:inline">
+              {isConsumerLoggedIn ? 'Le tue ricerche' : 'Indietro'}
+            </span>
           </Link>
           <Link to="/area-personale/home" aria-label="Area personale Wenando" className="shrink-0">
             <WenandoMark className="h-8 w-8" />
@@ -289,7 +300,11 @@ export default function ResultsPage() {
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-16">
+      <main
+        className={`relative z-10 mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-16 ${
+          !loading && !loadError ? 'pb-28 sm:pb-16' : ''
+        }`}
+      >
         {leadUuid && (
           <p className="mb-4 font-mono text-[10px] uppercase tracking-wider text-slate-400">
             Rif. {leadUuid.slice(0, 8)}…
@@ -308,6 +323,15 @@ export default function ResultsPage() {
           <h1 className="text-2xl font-bold tracking-tight text-slate-800 sm:text-[2rem] sm:leading-tight">
             Ecco il piano per te.
           </h1>
+          <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-600 sm:text-base">
+            Salva le strutture che ti interessano, poi continua nell&apos;area personale per
+            confrontarle con calma e avviare una nuova ricerca quando vuoi.
+          </p>
+          {!loading && !loadError ? (
+            <div className="mt-6">
+              <PersonalAreaCta isAuthenticated={isConsumerLoggedIn} />
+            </div>
+          ) : null}
         </motion.div>
 
         {loading ? (
@@ -327,6 +351,17 @@ export default function ResultsPage() {
             animate="visible"
             className="space-y-16 sm:space-y-20"
           >
+            <motion.section variants={motionSectionVariants}>
+              <PostSearchJourney
+                personalAreaTo={personalAreaTo}
+                personalAreaState={personalAreaState}
+              />
+            </motion.section>
+
+            <motion.section variants={motionSectionVariants}>
+              <PostSearchBenefits />
+            </motion.section>
+
             <motion.section variants={motionSectionVariants}>
               <GlassCard
                 hover={false}
@@ -422,9 +457,43 @@ export default function ResultsPage() {
                 onBookCall={() => setBookingOpen(true)}
               />
             </motion.section>
+
+            <motion.section variants={motionSectionVariants}>
+              <GlassCard
+                hover={false}
+                className="border-teal-800/10 bg-gradient-to-br from-teal-800/[0.06] to-white/70 p-6 text-center sm:p-9"
+              >
+                <h2 className="text-lg font-semibold text-slate-800 sm:text-xl">
+                  Pronto a continuare?
+                </h2>
+                <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-600">
+                  {isConsumerLoggedIn
+                    ? 'Apri l’area personale per ritrovare questa ricerca, i preferiti e i prossimi passi.'
+                    : 'Accedi con la tua email per salvare tutto in un unico posto — ci vogliono pochi secondi.'}
+                </p>
+                <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                  <PersonalAreaCta isAuthenticated={isConsumerLoggedIn} />
+                  <Link
+                    to="/wizard"
+                    className="inline-flex min-h-[3rem] items-center rounded-2xl px-5 py-2.5 text-sm font-semibold text-teal-800 ring-1 ring-teal-800/25 transition-colors hover:bg-teal-800/[0.06]"
+                  >
+                    Nuova ricerca
+                  </Link>
+                </div>
+              </GlassCard>
+            </motion.section>
           </motion.div>
         )}
       </main>
+
+      {!loading && !loadError ? (
+        <div
+          className="fixed inset-x-0 bottom-0 z-40 border-t border-white/60 bg-[#FDFBF7]/90 px-4 py-3 backdrop-blur-xl sm:hidden"
+          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+        >
+          <PersonalAreaCta isAuthenticated={isConsumerLoggedIn} className="!w-full !justify-center" />
+        </div>
+      ) : null}
 
       <MatchDetailsDrawer
         match={selectedMatch}

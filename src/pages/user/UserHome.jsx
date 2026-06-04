@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from 'framer-motion'
 import { ArrowRight, Plus, ShieldCheck, Sparkles } from 'lucide-react'
 import { getLatestSearch } from '../../data/mockUserSearches'
 import SearchTitleInlineEdit from '../../components/user/SearchTitleInlineEdit'
+import ConsumerDashboardGuide from '../../components/user/ConsumerDashboardGuide'
 import UserLoadError from '../../components/user/UserLoadError'
 import { ApiError, isApiConfigured } from '../../services/apiClient'
 import { fetchUserHomeWithFallback } from '../../services/userService'
@@ -171,15 +172,32 @@ function StatusWidget({ reducedMotion, latest, onLatestRenamed }) {
             <p className="text-lg leading-relaxed text-slate-600">
               Selezionate con cura in base alle tue risposte.
             </p>
-            <motion.div whileHover={reducedMotion ? undefined : { scale: 1.02 }} whileTap={reducedMotion ? undefined : { scale: 0.98 }}>
-              <Link
-                to="/area-personale/ricerche"
-                className="inline-flex min-h-[3rem] items-center gap-2 text-lg font-medium text-teal-800 transition-colors hover:text-teal-900"
+            <div className="flex flex-wrap gap-4">
+              <motion.div
+                whileHover={reducedMotion ? undefined : { scale: 1.02 }}
+                whileTap={reducedMotion ? undefined : { scale: 0.98 }}
               >
-                Vedi le ricerche
-                <ArrowRight className="h-5 w-5" strokeWidth={2} />
-              </Link>
-            </motion.div>
+                <Link
+                  to="/area-personale/ricerche"
+                  className="inline-flex min-h-[3rem] items-center gap-2 rounded-2xl bg-teal-800 px-6 py-3 text-base font-semibold text-white shadow-[0_8px_28px_rgba(17,94,89,0.3)] transition-colors hover:bg-teal-900"
+                >
+                  Vedi i risultati
+                  <ArrowRight className="h-5 w-5" strokeWidth={2} />
+                </Link>
+              </motion.div>
+              <motion.div
+                whileHover={reducedMotion ? undefined : { scale: 1.02 }}
+                whileTap={reducedMotion ? undefined : { scale: 0.98 }}
+              >
+                <Link
+                  to="/wizard"
+                  className="inline-flex min-h-[3rem] items-center gap-2 text-base font-medium text-teal-800 transition-colors hover:text-teal-900"
+                >
+                  Nuova ricerca
+                  <Plus className="h-5 w-5" strokeWidth={2} />
+                </Link>
+              </motion.div>
+            </div>
           </div>
         </div>
       </motion.div>
@@ -254,6 +272,13 @@ export default function UserHome() {
     setLatestSearch((current) => (current ? { ...current, ...updated } : updated))
   }
 
+  const hasRecentSearch = Boolean(latestSearch?.status)
+  const welcomeSubtitle = hasRecentSearch
+    ? latestSearch?.status === 'completed'
+      ? 'I risultati della tua ultima ricerca sono pronti: puoi rivederli o avviarne una nuova.'
+      : 'Stiamo lavorando sulla tua ultima ricerca: qui trovi aggiornamenti e i prossimi passi.'
+    : 'Avvia una ricerca guidata per trovare la soluzione più adatta a chi ami.'
+
   const pageInitial = prefersReducedMotion ? false : { opacity: 0, y: 20 }
   const itemInitial = prefersReducedMotion ? false : { opacity: 0, y: 20 }
 
@@ -281,9 +306,13 @@ export default function UserHome() {
             Ciao, {displayName}.
           </h1>
           <p className="mt-4 max-w-lg text-lg leading-relaxed text-slate-600 sm:text-xl">
-            Ecco com&apos;è andata con le tue ricerche.
+            {welcomeSubtitle}
           </p>
         </motion.header>
+
+        {!loadError && !loading ? (
+          <ConsumerDashboardGuide hasRecentSearch={hasRecentSearch} />
+        ) : null}
 
         {loadError && !loading ? (
           <UserLoadError message={loadError} onRetry={() => setRetryCount((n) => n + 1)} />
@@ -324,7 +353,7 @@ export default function UserHome() {
               className="inline-flex min-h-[3.75rem] items-center gap-3 rounded-[1.75rem] bg-teal-800 px-8 py-4 text-lg font-semibold text-white shadow-[0_8px_32px_rgba(17,94,89,0.35)] transition-[box-shadow,background-color] hover:bg-teal-900 hover:shadow-[0_12px_40px_rgba(17,94,89,0.42)]"
             >
               <Plus className="h-5 w-5" strokeWidth={2.5} />
-              Avvia una nuova ricerca
+              Nuova ricerca
             </Link>
           </motion.div>
         </motion.div>

@@ -42,9 +42,9 @@ export default function Accedi() {
 
   useEffect(() => {
     if (isAuthenticated && userType === 'consumer') {
-      navigate('/area-personale', { replace: true })
+      navigate(redirectTarget, { replace: true })
     }
-  }, [isAuthenticated, navigate, userType])
+  }, [isAuthenticated, navigate, redirectTarget, userType])
 
   useEffect(() => {
     if (resendCooldown <= 0) return
