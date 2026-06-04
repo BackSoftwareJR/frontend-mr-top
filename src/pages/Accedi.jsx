@@ -181,6 +181,11 @@ export default function Accedi() {
                 ? `Ti abbiamo inviato un codice a ${maskEmail(email)}`
                 : 'Inserisci la tua email per ricevere un codice di accesso.'}
             </p>
+            {step === STEPS.CODE && (
+              <p className="mt-2 text-xs text-charcoal-muted/80">
+                Non trovi l&apos;email? Controlla spam o promozioni, poi usa &quot;Reinvia codice&quot;.
+              </p>
+            )}
           </div>
 
           <form id="auth-form" onSubmit={step === STEPS.CODE ? handleVerifyCode : handleEmailSubmit}>
@@ -269,7 +274,9 @@ export default function Accedi() {
                       ? `Reinvia codice tra ${resendCooldown}s`
                       : 'Reinvia codice'}
                   </button>
-                  <p className="mt-2 text-xs text-charcoal-muted/70">Il codice scade tra 10 minuti</p>
+                  <p className="mt-2 text-xs text-charcoal-muted/70">
+                    Il codice scade tra 10 minuti. Controlla anche la cartella spam.
+                  </p>
                 </div>
               </div>
             )}
