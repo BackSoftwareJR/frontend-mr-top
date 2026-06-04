@@ -75,6 +75,15 @@ Template: [`backend/.env.production.example`](../backend/.env.production.example
 
 Structured API logs: [OBSERVABILITY.md](./OBSERVABILITY.md)
 
+### Geographic coverage (B2B zones & B2C interest areas)
+
+| Variable | Layer | Notes |
+|----------|-------|-------|
+| `VITE_MAP_STYLE_URL` | Frontend | MapLibre style URL for `CoverageMapEditor` / `InterestAreaMapEditor`; falls back to bundled style when unset |
+| — | Backend data | `backend/resources/data/italian_comuni.json.gz` (~7900 comuni, CAP primario, coordinate) powers `GET /api/v1/geo/search` |
+| Rate limiter `geo-search` | Backend | Throttles `/geo/search` and `/geo/reverse` per IP; clear in tests via `RateLimiter::clear('geo-search')` |
+| Photon (Komoot) | Backend | Fallback geocoder when local index has no match; used for street-level addresses |
+
 ---
 
 ## CI jobs summary

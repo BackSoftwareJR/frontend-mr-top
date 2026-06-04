@@ -15,6 +15,13 @@ export default function MatchDetailsDrawer({ match, open, onClose }) {
             <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" strokeWidth={2} />
             <span>{match.location}</span>
           </div>
+          {(match.coversZone || match.spatialMatch) && (
+            <p className="mt-2 rounded-xl border border-teal-800/15 bg-teal-800/[0.05] px-3 py-2 text-xs font-medium text-teal-900">
+              {match.distanceKm != null
+                ? `Questa struttura copre la tua zona di interesse (circa ${Math.round(match.distanceKm)} km dal centro dell'area).`
+                : 'Questa struttura copre la tua zona di interesse.'}
+            </p>
+          )}
         </div>
 
         <p className="text-sm leading-relaxed text-slate-600">{match.description}</p>

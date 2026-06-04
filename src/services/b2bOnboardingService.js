@@ -5,6 +5,7 @@
 import apiClient, { ApiError, AUTH_TOKEN_KEY, isApiConfigured, unwrapApiData } from './apiClient'
 import { b2bWithOfflineMock } from './b2bApiUtils'
 import { saveSession, getSession } from './authService'
+import { coverageZoneToApi, mapCoverageZone } from './coverageZoneService'
 
 function normalizeEmail(email) {
   return email.trim().toLowerCase()
@@ -24,6 +25,7 @@ export const ONBOARDING_DOCUMENT_API_TYPES = {
 export const ONBOARDING_STEP_LABELS = [
   { id: 'legal', label: 'Identità', description: 'Dati legali e documenti' },
   { id: 'operations', label: 'Operatività', description: 'Orari e servizi' },
+  { id: 'coverage', label: 'Copertura', description: 'Zona operativa' },
   { id: 'trust', label: 'Trust Test', description: 'Standard di qualità' },
   { id: 'review', label: 'Revisione', description: 'Invio per approvazione' },
 ]
@@ -334,6 +336,7 @@ function mapOnboardingDataFromApi(data) {
     dynamic: data.dynamic ?? {},
     schedule: data.schedule ?? {},
     trustAnswers: data.trust_answers ?? data.trustAnswers ?? {},
+    coverageZone: mapCoverageZone(data.coverage_zone ?? data.coverageZone),
   }
 }
 
@@ -359,6 +362,7 @@ function mapOnboardingDataToApi(patch) {
     dynamic: patch.dynamic,
     schedule: cleanScheduleForApi(patch.schedule),
     trust_answers: patch.trustAnswers,
+    coverage_zone: coverageZoneToApi(patch.coverageZone),
   }
 }
 

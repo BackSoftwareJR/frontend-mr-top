@@ -7,6 +7,7 @@ import {
   Download,
   LayoutDashboard,
   LogOut,
+  MapPinned,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
@@ -44,6 +45,11 @@ const NAV_ITEMS = [
   { icon: Download, label: 'Export Center', to: '/pro/exports' },
 ]
 
+const SETTINGS_ITEMS = [
+  { icon: Settings, label: 'Profilo Azienda', to: '/pro/profilo' },
+  { icon: MapPinned, label: 'Zona di copertura', to: '/pro/copertura' },
+]
+
 const ROUTE_LABELS = {
   '/pro/dashboard': 'Dashboard',
   '/pro/marketplace': 'Marketplace Lead',
@@ -52,6 +58,7 @@ const ROUTE_LABELS = {
   '/pro/fatturazione': 'Fatturazione',
   '/pro/exports': 'Export Center',
   '/pro/profilo': 'Profilo Azienda',
+  '/pro/copertura': 'Zona di copertura',
 }
 
 function NavItem({ item, collapsed, onNavigate }) {
@@ -234,6 +241,15 @@ function SidebarShell({ collapsed, onToggleCollapse, onNavigate, className = '' 
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
         {NAV_ITEMS.map((item) => (
+          <NavItem key={item.to} item={item} collapsed={collapsed} onNavigate={onNavigate} />
+        ))}
+
+        {!collapsed && (
+          <p className="px-3 pb-1 pt-4 text-[10px] font-bold uppercase tracking-widest text-charcoal-muted/80">
+            Impostazioni
+          </p>
+        )}
+        {SETTINGS_ITEMS.map((item) => (
           <NavItem key={item.to} item={item} collapsed={collapsed} onNavigate={onNavigate} />
         ))}
       </nav>

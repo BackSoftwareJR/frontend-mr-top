@@ -9,6 +9,7 @@ import { recordWizardConsents, getSessionId } from './consentService'
 import { CONSENT_TEXT_HASH } from '../constants/wizardConsent'
 import { LEGAL_VERSION } from '../constants/legalVersions'
 import { wizardConfig } from '../data/wizardConfig'
+import { interestAreasToPayload } from './locationService'
 
 /** localStorage key for wizard lead awaiting consumer login attach */
 export const PENDING_LEAD_KEY = 'wenando-pending-lead-uuid'
@@ -80,6 +81,9 @@ export function mapLeadMatch(apiMatch) {
     pros: Array.isArray(apiMatch.pros) ? apiMatch.pros : [],
     contactHint: apiMatch.contact_hint ?? apiMatch.contactHint ?? '',
     companyId: apiMatch.company_id ?? null,
+    coversZone: apiMatch.covers_zone ?? apiMatch.coversZone ?? false,
+    spatialMatch: apiMatch.spatial_match ?? apiMatch.spatialMatch ?? false,
+    distanceKm: apiMatch.distance_km ?? apiMatch.distanceKm ?? null,
   }
 }
 
@@ -116,12 +120,14 @@ export function mapWizardToLeadPayload(answers, consents) {
   }
 
   const budget = resolveWizardBudget(answers)
+  const interestAreas = answers.location?.interestAreas ?? answers.location?.areas ?? []
 
   return {
     sector_slug: 'senior-care',
     payload: {
       autonomy: answers.autonomy,
       location: answers.location,
+      interest_areas: interestAreas.length > 0 ? interestAreasToPayload(interestAreas) : undefined,
       budget,
       contact,
     },

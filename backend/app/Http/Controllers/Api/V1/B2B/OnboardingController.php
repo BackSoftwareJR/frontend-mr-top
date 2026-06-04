@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\V1\B2B\SubmitOnboardingRequest;
 use App\Http\Resources\Concerns\ApiEnvelope;
 use App\Services\B2bOnboardingService;
+use App\Services\B2bTrustQuestionsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -15,6 +16,7 @@ class OnboardingController extends Controller
 {
     public function __construct(
         private readonly B2bOnboardingService $onboardingService,
+        private readonly B2bTrustQuestionsService $trustQuestionsService,
     ) {}
 
     public function show(Request $request): JsonResponse
@@ -33,6 +35,13 @@ class OnboardingController extends Controller
             'dynamic' => ['sometimes', 'array'],
             'schedule' => ['sometimes', 'array'],
             'trust_answers' => ['sometimes', 'array'],
+            'coverage_zone' => ['sometimes', 'nullable', 'array'],
+            'coverage_zone.center_lat' => ['required_with:coverage_zone', 'numeric', 'between:-90,90'],
+            'coverage_zone.center_lng' => ['required_with:coverage_zone', 'numeric', 'between:-180,180'],
+            'coverage_zone.radius_km' => ['required_with:coverage_zone', 'numeric', 'min:0.5', 'max:80'],
+            'coverage_zone.label' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'coverage_zone.geocode_place_id' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'coverage_zone.geocode_meta' => ['sometimes', 'nullable', 'array'],
         ]);
 
         $patch = $validated['data'] ?? $validated;
@@ -82,5 +91,17 @@ class OnboardingController extends Controller
         $company = $this->onboardingService->companyForUser($request->user());
 
         return ApiEnvelope::success($this->onboardingService->status($company));
+    }
+
+    public function trustQuestions(Request $request): JsonResponse
+    {
+        $company = $this->onboardingService->companyForUser($request->user());
+        $sector = (string) ($request->query('sector')
+            ?? ($company->dynamic_attributes['sector'] ?? 'rsa'));
+
+        return ApiEnvelope::success([
+            'sector' => $this->trustQuestionsService->normalizeSector($sector),
+            'questions' => $this->trustQuestionsService->forSector($sector),
+        ]);
     }
 }

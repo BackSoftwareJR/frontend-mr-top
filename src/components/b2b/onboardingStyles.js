@@ -68,4 +68,9 @@ export const STEP_ACCENTS = [
     dot: 'bg-accent-teal-dark text-white ring-4 ring-accent-teal/20',
     label: 'text-accent-teal-dark',
   },
+  {
+    active: 'border-accent-coral/25 bg-accent-coral/10',
+    dot: 'bg-accent-coral text-white ring-4 ring-accent-coral/20',
+    label: 'text-accent-coral-dark',
+  },
 ]
