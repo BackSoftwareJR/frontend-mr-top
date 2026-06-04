@@ -57,7 +57,7 @@ function PdfDownloadButton({ disabled = true }) {
     <button
       type="button"
       disabled={disabled}
-      title="Download PDF non disponibile nella demo"
+      title="Download PDF non ancora disponibile"
       className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-charcoal-muted transition-colors enabled:hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-40"
     >
       <Download className="h-3.5 w-3.5" />

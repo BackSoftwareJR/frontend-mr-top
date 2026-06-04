@@ -23,7 +23,6 @@ import { ApiError } from '../../services/apiClient'
 import {
   clearAutoDemo,
   DEMO_ONBOARDING_DATA,
-  DEMO_REGISTRATION,
   getB2BRedirectPathAsync,
   registerB2BPartnerAsync,
   restartAutoDemoTour,
@@ -33,9 +32,9 @@ import {
 export default function Register() {
   const navigate = useNavigate()
   const { establishSession } = useAuth()
-  const [email, setEmail] = useState(DEMO_REGISTRATION.email)
-  const [organizationName, setOrganizationName] = useState(DEMO_REGISTRATION.organizationName)
-  const [legalName, setLegalName] = useState(DEMO_REGISTRATION.legalName)
+  const [email, setEmail] = useState('')
+  const [organizationName, setOrganizationName] = useState('')
+  const [legalName, setLegalName] = useState('')
   const [privacyAccepted, setPrivacyAccepted] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)

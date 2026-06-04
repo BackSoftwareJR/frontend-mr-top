@@ -151,7 +151,7 @@ export default function B2BPortal() {
               <div className="min-w-0 flex-1">
                 <p className="text-base font-semibold text-charcoal">Accedi</p>
                 <p className="mt-1 text-sm text-charcoal-muted">
-                  Partner già approvato: <span className="font-medium">partner@care.it</span>
+                  Accedi con l&apos;email aziendale del partner già registrato.
                 </p>
                 <span className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-charcoal-muted group-hover:text-charcoal">
                   Vai al login

@@ -16,12 +16,3 @@ export function authWithOfflineMock(apiFn, mockData) {
   return apiFn()
 }
 
-/**
- * Show OTP dev hint in UI: offline mock (dev build) or API `dev_code` in dev only.
- * @param {string | null | undefined} devCode
- */
-export function shouldShowOtpDevHint(devCode) {
-  if (!devCode) return false
-  if (!isApiConfigured()) return import.meta.env.DEV
-  return import.meta.env.DEV
-}

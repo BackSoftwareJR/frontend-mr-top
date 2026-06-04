@@ -5,7 +5,6 @@ import { WenandoMark } from '../../components/ui/WenandoLogo'
 import CodeInput from '../../components/auth/CodeInput'
 import HumanVerification from '../../components/auth/HumanVerification'
 import { useAuth } from '../../context/AuthContext'
-import { shouldShowOtpDevHint } from '../../services/authApiUtils'
 import { ApiError, getBearerToken, isApiConfigured } from '../../services/apiClient'
 import {
   buildCaptchaPayload,
@@ -32,7 +31,6 @@ export default function AdminLogin() {
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [captchaPayload, setCaptchaPayload] = useState(null)
-  const [devCode, setDevCode] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [resendCooldown, setResendCooldown] = useState(0)
@@ -104,7 +102,6 @@ export default function AdminLogin() {
         return
       }
 
-      setDevCode(result.devCode ?? null)
       const cooldownMs = await getResendCooldown(result.email)
       setResendCooldown(Math.ceil(cooldownMs / 1000) || 60)
       setStep(STEPS.CODE)
@@ -177,7 +174,6 @@ export default function AdminLogin() {
         return
       }
 
-      setDevCode(result.devCode ?? null)
       setCode('')
       const cooldownMs = await getResendCooldown(result.email)
       setResendCooldown(Math.ceil(cooldownMs / 1000) || 60)
@@ -289,15 +285,6 @@ export default function AdminLogin() {
               <div className="space-y-6">
                 <CodeInput value={code} onChange={setCode} disabled={loading} error={error} />
 
-                {shouldShowOtpDevHint(devCode) && (
-                  <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 text-center">
-                    <p className="text-xs font-medium text-cyan-400">
-                      Sviluppo — codice:{' '}
-                      <span className="font-mono text-sm font-bold">{devCode}</span>
-                    </p>
-                  </div>
-                )}
-
                 <button
                   type="submit"
                   disabled={loading || code.length !== 6}
@@ -339,11 +326,6 @@ export default function AdminLogin() {
           )}
         </div>
 
-        {import.meta.env.DEV && (
-          <p className="mt-6 text-center text-xs text-zinc-500">
-            Demo: <span className="text-zinc-300">admin@wenando.it</span>
-          </p>
-        )}
       </div>
     </div>
   )

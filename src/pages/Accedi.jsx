@@ -2,12 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Loader2, Mail } from 'lucide-react'
 import AuroraBackground from '../components/layout/AuroraBackground'
+import MagneticButton from '../components/ui/MagneticButton'
 import { WenandoMark } from '../components/ui/WenandoLogo'
 import CodeInput from '../components/auth/CodeInput'
 import HumanVerification from '../components/auth/HumanVerification'
 import { b2bInputFocus, b2bLink, b2bPrimaryBtn } from '../components/b2b/b2bStyles'
 import { useAuth } from '../context/AuthContext'
-import { shouldShowOtpDevHint } from '../services/authApiUtils'
 import { ApiError, isApiConfigured } from '../services/apiClient'
 import {
   buildCaptchaPayload,
@@ -34,7 +34,6 @@ export default function Accedi() {
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [captchaPayload, setCaptchaPayload] = useState(null)
-  const [devCode, setDevCode] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [resendCooldown, setResendCooldown] = useState(0)
@@ -106,7 +105,6 @@ export default function Accedi() {
         return
       }
 
-      setDevCode(result.devCode ?? null)
       const cooldownMs = await getResendCooldown(result.email)
       setResendCooldown(Math.ceil(cooldownMs / 1000) || 60)
       setStep(STEPS.CODE)
@@ -174,7 +172,6 @@ export default function Accedi() {
         return
       }
 
-      setDevCode(result.devCode ?? null)
       setCode('')
       const cooldownMs = await getResendCooldown(result.email)
       setResendCooldown(Math.ceil(cooldownMs / 1000) || 60)
@@ -203,8 +200,15 @@ export default function Accedi() {
     <div className="relative flex min-h-screen flex-col">
       <AuroraBackground />
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-10">
+        <div className="mb-6 w-full max-w-md">
+          <MagneticButton to="/" variant="outline-coral" className="w-full">
+            <ArrowLeft className="h-4 w-4" aria-hidden />
+            Torna alla home
+          </MagneticButton>
+        </div>
+
         <div className="mb-8 flex flex-col items-center">
-          <Link to="/" aria-label="Torna alla home">
+          <Link to="/" aria-label="Home Wenando">
             <WenandoMark className="h-12 w-12" />
           </Link>
         </div>
@@ -282,15 +286,6 @@ export default function Accedi() {
               <div className="space-y-6">
                 <CodeInput value={code} onChange={setCode} disabled={loading} error={error} />
 
-                {shouldShowOtpDevHint(devCode) && (
-                  <div className="rounded-2xl bg-accent-coral/10 px-4 py-3 text-center ring-1 ring-accent-coral/20">
-                    <p className="text-xs font-medium text-accent-coral-dark">
-                      Modalità sviluppo — codice:{' '}
-                      <span className="font-mono text-sm font-bold">{devCode}</span>
-                    </p>
-                  </div>
-                )}
-
                 <button
                   type="submit"
                   disabled={loading || code.length !== 6}
@@ -334,10 +329,6 @@ export default function Accedi() {
             </button>
           )}
         </div>
-
-        <p className="mt-8 text-center text-xs text-charcoal-muted/70">
-          Demo utente: <span className="font-medium text-charcoal-muted">user@example.com</span>
-        </p>
       </div>
     </div>
   )

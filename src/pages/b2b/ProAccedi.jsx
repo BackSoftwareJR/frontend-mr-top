@@ -6,7 +6,6 @@ import CodeInput from '../../components/auth/CodeInput'
 import HumanVerification from '../../components/auth/HumanVerification'
 import { b2bInputFocus, b2bLink, b2bPrimaryBtn } from '../../components/b2b/b2bStyles'
 import { useAuth } from '../../context/AuthContext'
-import { shouldShowOtpDevHint } from '../../services/authApiUtils'
 import {
   buildCaptchaPayload,
   getResendCooldown,
@@ -38,7 +37,6 @@ export default function ProAccedi() {
   const [password, setPassword] = useState('')
   const [code, setCode] = useState('')
   const [captchaPayload, setCaptchaPayload] = useState(null)
-  const [devCode, setDevCode] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [resendCooldown, setResendCooldown] = useState(0)
@@ -160,7 +158,6 @@ export default function ProAccedi() {
         return
       }
 
-      setDevCode(result.devCode ?? null)
       const cooldownMs = await getResendCooldown(result.email)
       setResendCooldown(Math.ceil(cooldownMs / 1000) || 60)
       setStep(STEPS.CODE)
@@ -233,7 +230,6 @@ export default function ProAccedi() {
         return
       }
 
-      setDevCode(result.devCode ?? null)
       setCode('')
       const cooldownMs = await getResendCooldown(result.email)
       setResendCooldown(Math.ceil(cooldownMs / 1000) || 60)
@@ -344,7 +340,7 @@ export default function ProAccedi() {
                       autoComplete="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="partner@care.it"
+                      placeholder="referente@struttura.it"
                       className={`w-full rounded-xl border border-black/5 bg-white/90 py-3 pl-10 pr-4 text-sm text-charcoal placeholder:text-charcoal-muted/50 ${b2bInputFocus}`}
                     />
                   </div>
@@ -407,15 +403,6 @@ export default function ProAccedi() {
               <div className="space-y-6">
                 <CodeInput value={code} onChange={setCode} disabled={loading} error={error} />
 
-                {shouldShowOtpDevHint(devCode) && (
-                  <div className="rounded-2xl border border-accent-coral/20 bg-accent-coral/5 px-4 py-3 text-center">
-                    <p className="text-xs font-medium text-accent-coral-dark">
-                      Sviluppo — codice:{' '}
-                      <span className="font-mono text-sm font-bold">{devCode}</span>
-                    </p>
-                  </div>
-                )}
-
                 <button
                   type="submit"
                   disabled={loading || code.length !== 6}
@@ -459,9 +446,6 @@ export default function ProAccedi() {
         </div>
 
         <p className="mt-6 text-center text-xs text-charcoal-muted">
-          Demo partner: <span className="font-medium text-charcoal">partner@care.it</span>
-        </p>
-        <p className="mt-2 text-center text-xs text-charcoal-muted">
           Nuovo partner?{' '}
           <Link to="/pro/registrati" className={b2bLink}>
             Registrati

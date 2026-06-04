@@ -46,7 +46,7 @@ export default function PendingReview({ email }) {
       )}
 
       <p className="mt-6 text-xs text-charcoal-muted">
-        Tempo medio di revisione: 24–48 ore lavorative (demo: pochi secondi)
+        Tempo medio di revisione: 24–48 ore lavorative
       </p>
 
       <Link to="/" className={`mt-8 ${obSecondaryBtn} !w-auto px-8`}>
