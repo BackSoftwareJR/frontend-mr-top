@@ -1,12 +1,14 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
+import AppErrorBoundary from './components/errors/AppErrorBoundary'
 import { AuthProvider } from './context/AuthContext'
-import { B2BProvider } from './context/B2BContext'
 import AdminProtectedRoute from './components/auth/AdminProtectedRoute'
-import { B2BProtectedRoute, ConsumerProtectedRoute } from './components/auth/ProtectedRoute'
-import CookieBanner from './components/CookieBanner'
+import ConsumerProtectedRoute from './components/auth/ConsumerProtectedRoute'
 import { usePlausibleAnalytics } from './hooks/usePlausibleAnalytics'
 import { useIsMobile } from './utils/performanceTier'
+
+const CookieBanner = lazy(() => import('./components/CookieBanner'))
+const B2BShell = lazy(() => import('./shells/B2BShell'))
 
 const Home = lazy(() => import('./pages/Home'))
 const Wizard = lazy(() => import('./pages/Wizard'))
@@ -18,7 +20,6 @@ const UserSearches = lazy(() => import('./pages/user/UserSearches'))
 const UserSearchDetail = lazy(() => import('./pages/user/UserSearchDetail'))
 const UserHelp = lazy(() => import('./pages/user/UserHelp'))
 const UserProfile = lazy(() => import('./pages/user/UserProfile'))
-const B2BLayout = lazy(() => import('./components/b2b/B2BLayout'))
 const DashboardHome = lazy(() => import('./pages/b2b/DashboardHome'))
 const LeadMarketplace = lazy(() => import('./pages/b2b/LeadMarketplace'))
 const SmartCRM = lazy(() => import('./pages/b2b/SmartCRM'))
@@ -46,24 +47,18 @@ const PrivacyPage = lazy(() => import('./pages/legal/PrivacyPage'))
 const CookiesPage = lazy(() => import('./pages/legal/CookiesPage'))
 const TermsPage = lazy(() => import('./pages/legal/TermsPage'))
 const TermsPartnersPage = lazy(() => import('./pages/legal/TermsPartnersPage'))
+const NotFoundPage = lazy(() => import('./pages/errors/NotFoundPage'))
+const ErrorStatusPage = lazy(() => import('./pages/errors/ErrorStatusPage'))
 
 function AppShell() {
   usePlausibleAnalytics()
   return (
-    <>
+    <AppErrorBoundary>
       <AppRoutes />
-      <CookieBanner />
-    </>
-  )
-}
-
-function B2BShell() {
-  return (
-    <B2BProtectedRoute>
-      <B2BProvider>
-        <B2BLayout />
-      </B2BProvider>
-    </B2BProtectedRoute>
+      <Suspense fallback={null}>
+        <CookieBanner />
+      </Suspense>
+    </AppErrorBoundary>
   )
 }
 
@@ -144,6 +139,8 @@ function AppRoutes() {
           <Route path="advisor-bookings" element={<AdminAdvisorBookings />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>
+        <Route path="/errore/:code" element={<ErrorStatusPage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Suspense>
   )

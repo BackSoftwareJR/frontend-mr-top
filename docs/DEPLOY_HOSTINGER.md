@@ -18,22 +18,138 @@ Runbook operativo per l’API Laravel su Hostinger (shared o VPS). Complementa [
 
 ---
 
-## 2. Document root e layout
+## 2. Document root e layout (sicurezza)
 
-Il web server deve servire **solo** la cartella `public` di Laravel, non la root del progetto.
+### 2.1 Principio
 
-| Layout repo | Document root su Hostinger |
-|-------------|----------------------------|
-| Monorepo clonato in `~/wenando` | `/home/USER/wenando/backend/public` |
-| Solo cartella `backend/` come `~/wenando-api` | `/home/USER/wenando-api/public` |
+Il web server deve esporre **solo** ciò che sta in `public/` di Laravel (equivalente Hostinger: **`public_html`**). Tutto il resto dell’applicazione resta **fuori** dalla document root, così non sono raggiungibili via URL:
 
-In hPanel → Siti → `api.wenando.com` → imposta la document root su **`backend/public`** (percorso assoluto sul server).
+| Fuori da `public_html` (mai servito dal web) | Dentro `public_html` (solo questo è pubblico) |
+|---------------------------------------------|-----------------------------------------------|
+| `.env`, `vendor/`, `app/`, `bootstrap/`, `config/`, `database/`, `routes/`, `artisan` | `index.php` (front controller) |
+| `storage/` (log, cache, upload non linkati) | `.htaccess` (rewrite verso `index.php`) |
+| Segreti, chiavi, codice sorgente | `robots.txt`, eventuali asset statici (`favicon.ico`, CSS/JS buildati in `public/`) |
+| | Symlink `storage` → `../api/storage/app/public` (solo file **già** destinati al download pubblico) |
+
+**Regola d’oro:** se un file non andrebbe in `backend/public/` in locale, **non** va in `public_html` in produzione.
+
+### 2.2 Hostinger Cloud — `public_html` fisso
+
+Su **Hostinger Cloud** per `api.wenando.com` la document root è **`…/api.wenando.com/public_html`** e **non si può** spostarla su `backend/public`. Layout consigliato:
+
+```text
+~/domains/api.wenando.com/
+├── public_html/          ← document root (fissa)
+│   ├── index.php         ← bootstrap; punta a ../api
+│   ├── .htaccess
+│   ├── robots.txt
+│   └── storage → ../api/storage/app/public
+└── api/                  ← clone repo Laravel (NON nella docroot)
+    ├── .env
+    ├── vendor/
+    ├── app/
+    └── ...
+```
+
+Su Hostinger, di norma **solo** `public_html` è mappato sul dominio: la cartella sorella `api/` non è servita dal web server. Aggiungere comunque `api/.htaccess` con `Require all denied` è difesa in profondità se un giorno la root venisse configurata male.
+
+### 2.3 `index.php` in `public_html` (ponte verso Laravel)
+
+Laravel standard usa `public/index.php` con percorsi `__DIR__.'/../…'`. Con app in `../api`, sostituire il contenuto di `public_html/index.php` con:
+
+```php
+<?php
+
+use Illuminate\Foundation\Application;
+use Illuminate\Http\Request;
+
+define('LARAVEL_START', microtime(true));
+
+$laravelRoot = dirname(__DIR__) . '/api';
+
+if (file_exists($maintenance = $laravelRoot.'/storage/framework/maintenance.php')) {
+    require $maintenance;
+}
+
+require $laravelRoot.'/vendor/autoload.php';
+
+/** @var Application $app */
+$app = require_once $laravelRoot.'/bootstrap/app.php';
+
+$app->handleRequest(Request::capture());
+```
+
+Copiare anche `public/.htaccess` → `public_html/.htaccess`.
+
+### 2.4 Cosa **non** fare (rischi)
+
+| Errore | Rischio |
+|--------|---------|
+| Clonare tutto il repo **dentro** `public_html` | `.env` e `vendor/` scaricabili se il server non blocca |
+| Symlink `public_html` → intera cartella progetto | Esposizione totale del codice |
+| `APP_DEBUG=true` in produzione | Stack trace con path e query |
+| `storage:link` che punta fuori da `public_html` senza symlink in docroot | Upload 404 o path errati |
+
+### 2.5 Variante VPS / docroot modificabile
+
+Se il pannello permette di impostare la document root su `public/`:
+
+| Layout | Document root |
+|--------|----------------|
+| Monorepo in `~/wenando` | `~/wenando/backend/public` |
+| Solo backend in `~/wenando-api` | `~/wenando-api/public` |
+
+In quel caso **non** serve il `index.php` personalizzato: usare quello del repo così com’è.
 
 Forza HTTPS dal pannello Hostinger.
 
 ---
 
 ## 3. Deploy iniziale (SSH)
+
+### 3.1 Hostinger Cloud (`public_html` fisso)
+
+```bash
+ssh USER@HOSTINGER_HOST
+
+export DOMAIN_DIR="$HOME/domains/api.wenando.com"   # verificare con: ls ~/domains/
+export WEBROOT="$DOMAIN_DIR/public_html"
+export API_DIR="$DOMAIN_DIR/api"
+
+cd "$DOMAIN_DIR"
+git clone https://github.com/BackSoftwareJR/backend-mr-top.git api
+cd "$API_DIR"
+
+composer install --no-dev --optimize-autoloader --no-interaction
+cp .env.production.example .env
+# Compila DB_*, MAIL_*, segreti — vedi §7
+php artisan key:generate --force
+php artisan migrate --force
+# db:seed — SOLO staging / DB vuoto (§4)
+
+# Web: solo file pubblici in public_html
+cp public/.htaccess "$WEBROOT/.htaccess"
+test -f public/robots.txt && cp public/robots.txt "$WEBROOT/robots.txt"
+# Creare public_html/index.php come in §2.3 (cat o editor)
+
+rm -f "$WEBROOT/storage"
+ln -sfn "$API_DIR/storage/app/public" "$WEBROOT/storage"
+
+# Bloccare accesso web diretto alla cartella app (Apache)
+printf '%s\n' 'Require all denied' > "$API_DIR/.htaccess"
+
+chmod -R 775 storage bootstrap/cache
+
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+Verifica: `curl -sS https://api.wenando.com/up` e `curl -sS https://api.wenando.com/api/v1/health`.
+
+**Nota:** non usare `php artisan storage:link` qui: creerebbe il link in `api/public/`, non in `public_html`. Il symlink manuale sopra è l’equivalente corretto.
+
+### 3.2 VPS / docroot = `backend/public`
 
 ```bash
 ssh USER@HOSTINGER_HOST
@@ -43,10 +159,8 @@ cd wenando/backend
 
 composer install --no-dev --optimize-autoloader
 cp .env.production.example .env
-# Compila DB_*, MAIL_*, segreti pagamenti — vedi §7
 php artisan key:generate
 php artisan migrate --force
-# db:seed — SOLO staging / DB vuoto (§4)
 php artisan storage:link
 php artisan config:cache
 php artisan route:cache
@@ -138,6 +252,14 @@ Laravel registra i task in [`backend/routes/console.php`](../backend/routes/cons
 ### 6.1 Cron obbligatorio (Hostinger hPanel → Cron)
 
 ```cron
+# Cloud: sostituire il path con .../domains/api.wenando.com/api
+* * * * * cd /home/USER/domains/api.wenando.com/api && /usr/bin/php artisan schedule:run >> /dev/null 2>&1
+* * * * * cd /home/USER/domains/api.wenando.com/api && /usr/bin/php artisan queue:work database --stop-when-empty --max-time=55 >> /dev/null 2>&1
+```
+
+VPS / monorepo:
+
+```cron
 * * * * * cd /home/USER/wenando/backend && /usr/bin/php artisan schedule:run >> /dev/null 2>&1
 ```
 
@@ -198,6 +320,7 @@ Minimo da compilare prima del go-live:
 |--------------|------------|
 | Base API | `https://api.wenando.com/api/v1` |
 | Build Vite | `VITE_API_URL=https://api.wenando.com/api/v1` |
+| SPA routing | `public/.htaccess` → copiato in `dist/` — rewrite verso `index.html` (fix refresh su `/accedi`, ecc.) |
 
 ### 8.2 Sanctum (cookie SPA)
 
@@ -253,7 +376,8 @@ Checklist completa: [PRODUCTION_READINESS.md § Pre-deploy checklist](./PRODUCTI
 ## 10. Aggiornamento release (senza seed)
 
 ```bash
-cd /home/USER/wenando/backend
+# Cloud
+cd /home/USER/domains/api.wenando.com/api
 git pull origin main
 composer install --no-dev --optimize-autoloader
 php artisan migrate --force
