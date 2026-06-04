@@ -332,6 +332,30 @@ Minimo da compilare prima del go-live:
 | Build Vite | `VITE_API_URL=https://api.wenando.com/api/v1` |
 | SPA routing | `public/.htaccess` → copiato in `dist/` — rewrite verso `index.html` (fix refresh su `/accedi`, ecc.) |
 
+#### Build frontend su Hostinger (Node.js)
+
+Vite 8 usa **rolldown** come bundler. `vite`, `rolldown` e i plugin React/Tailwind sono in **`devDependencies`**: servono solo in fase di build, non a runtime.
+
+**Comando consigliato** (installare **tutte** le devDependencies):
+
+```bash
+cd /path/to/frontend-mr-top   # root repo SPA
+unset NODE_ENV                # NODE_ENV=production fa saltare le devDependencies
+npm ci                        # NON usare npm ci --omit=dev
+npm run lint
+VITE_API_URL=https://api.wenando.com/api/v1 npm run build
+# deploy contenuto di dist/ sullo static host (wenando.com)
+```
+
+| Comando | Esito |
+|---------|--------|
+| `npm ci` | ✅ Corretto — installa vite + rolldown + plugin |
+| `npm ci --omit=dev` | ❌ Manca vite → build fallisce (`vite: command not found`) |
+| `NODE_ENV=production npm ci` | ❌ Stesso effetto di `--omit=dev` |
+| `npm ci && npm prune --production` **prima** del build | ❌ Rimuove vite/rolldown |
+
+Se compare `Cannot find package 'rolldown'`, di solito `node_modules` è incompleto (install production-only o lockfile generato su OS diverso). Fix: `rm -rf node_modules && npm ci` sul server Linux, senza `--omit=dev`. Il repo dichiara `rolldown` come devDependency diretta e `@rolldown/binding-linux-x64-gnu` in `optionalDependencies` per mitigare il bug npm sulle optional deps cross-platform.
+
 ### 8.2 Sanctum (cookie SPA)
 
 In `.env`:
