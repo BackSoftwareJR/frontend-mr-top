@@ -23,6 +23,7 @@ const DashboardHome = lazy(() => import('./pages/b2b/DashboardHome'))
 const LeadMarketplace = lazy(() => import('./pages/b2b/LeadMarketplace'))
 const SmartCRM = lazy(() => import('./pages/b2b/SmartCRM'))
 const Calendario = lazy(() => import('./pages/b2b/Calendario'))
+const ExportCenter = lazy(() => import('./pages/b2b/ExportCenter'))
 const Fatturazione = lazy(() => import('./pages/b2b/Fatturazione'))
 const CompanyProfile = lazy(() => import('./pages/b2b/CompanyProfile'))
 const ProAccedi = lazy(() => import('./pages/b2b/ProAccedi'))
@@ -120,6 +121,7 @@ function AppRoutes() {
             <Route path="marketplace" element={<LeadMarketplace />} />
             <Route path="crm" element={<SmartCRM />} />
             <Route path="calendario" element={<Calendario />} />
+            <Route path="exports" element={<ExportCenter />} />
             <Route path="fatturazione" element={<Fatturazione />} />
             <Route path="profilo" element={<CompanyProfile />} />
           </Route>

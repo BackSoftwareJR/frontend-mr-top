@@ -4,6 +4,7 @@ import {
   Bell,
   Calendar,
   CreditCard,
+  Download,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -16,7 +17,6 @@ import {
   X,
 } from 'lucide-react'
 import { WenandoMark } from '../ui/WenandoLogo'
-import { PARTNER_NAME } from '../../data/mockB2B'
 import { useAuth } from '../../context/AuthContext'
 import { useB2B } from '../../context/B2BContext'
 import {
@@ -41,6 +41,7 @@ const NAV_ITEMS = [
   { icon: Table2, label: 'Il Mio CRM', to: '/pro/crm' },
   { icon: Calendar, label: 'Calendario', to: '/pro/calendario' },
   { icon: CreditCard, label: 'Fatturazione', to: '/pro/fatturazione' },
+  { icon: Download, label: 'Export Center', to: '/pro/exports' },
 ]
 
 const ROUTE_LABELS = {
@@ -49,6 +50,7 @@ const ROUTE_LABELS = {
   '/pro/crm': 'Il Mio CRM',
   '/pro/calendario': 'Calendario',
   '/pro/fatturazione': 'Fatturazione',
+  '/pro/exports': 'Export Center',
   '/pro/profilo': 'Profilo Azienda',
 }
 
@@ -150,8 +152,9 @@ function UserMenuDropdown({ open, onToggle, onClose }) {
     navigate('/pro/profilo')
   }
   const { logout, userName } = useAuth()
+  const { companyName } = useB2B()
   const ref = useRef(null)
-  const displayName = userName || PARTNER_NAME
+  const displayName = userName || companyName || 'Partner'
 
   useEffect(() => {
     if (!open) return

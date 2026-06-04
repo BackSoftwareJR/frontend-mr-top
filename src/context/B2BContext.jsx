@@ -10,8 +10,10 @@ import {
   mockInvoices,
   mockMarketplaceLeads,
   mockNotifications,
+  PARTNER_NAME,
 } from '../data/mockB2B'
 import { ApiError, getBearerToken, isApiConfigured } from '../services/apiClient'
+import { getSession } from '../services/authService'
 import { createAppointment, fetchAppointments } from '../services/b2bAppointmentsService'
 import { fetchCrmClientsWithOfflineMock, updateCrmClientStatus } from '../services/b2bCrmService'
 import {
@@ -43,6 +45,10 @@ function shouldUseApi() {
   return isApiConfigured() && Boolean(getBearerToken())
 }
 
+function readCompanyNameFromSession() {
+  return getSession()?.name ?? null
+}
+
 export function B2BProvider({ children }) {
   const [useApi, setUseApi] = useState(() => shouldUseApi())
   const [walletBalance, setWalletBalance] = useState(INITIAL_WALLET_BALANCE)
@@ -54,7 +60,12 @@ export function B2BProvider({ children }) {
     })),
   )
   const [crmClients, setCrmClients] = useState(mockCRMClients)
-  const [appointments, setAppointments] = useState(mockAppointments)
+  const [appointments, setAppointments] = useState(() =>
+    shouldUseApi() ? [] : mockAppointments,
+  )
+  const [companyName, setCompanyName] = useState(() =>
+    shouldUseApi() ? (readCompanyNameFromSession() ?? '') : PARTNER_NAME,
+  )
   const [invoices, setInvoices] = useState(() =>
     isApiConfigured() && getBearerToken() ? [] : mockInvoices,
   )
@@ -116,8 +127,10 @@ export function B2BProvider({ children }) {
         setCrmClients(clients)
         setWalletBalance(wallet.balanceCredits)
         setTotalSpent(wallet.totalSpent)
-        if (appointmentsList?.length) {
-          setAppointments(appointmentsList)
+        setAppointments(appointmentsList ?? [])
+        const sessionCompanyName = readCompanyNameFromSession()
+        if (sessionCompanyName) {
+          setCompanyName(sessionCompanyName)
         }
         setDashboardStats(dashboard.stats)
         if (dashboard.activityFeed?.length) {
@@ -568,6 +581,8 @@ export function B2BProvider({ children }) {
       marketplaceLeads,
       crmClients,
       appointments,
+      setAppointments,
+      companyName,
       invoices,
       initError,
       activityFeed,
@@ -599,6 +614,7 @@ export function B2BProvider({ children }) {
       marketplaceLeads,
       crmClients,
       appointments,
+      companyName,
       invoices,
       initError,
       activityFeed,

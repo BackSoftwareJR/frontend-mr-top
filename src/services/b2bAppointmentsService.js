@@ -9,6 +9,8 @@ function mapAppointment(row) {
     date: row.date ?? '',
     time: row.time ?? '',
     note: row.note ?? '',
+    checklist: Array.isArray(row.checklist) ? row.checklist : [],
+    googleSynced: Boolean(row.google_synced ?? row.googleSynced),
   }
 }
 
@@ -53,4 +55,16 @@ export async function createAppointment({ clientId, date, time, note, idempotenc
     appointment: data.appointment ? mapAppointment(data.appointment) : null,
     client: data.client ?? null,
   }
+}
+
+/**
+ * PATCH /b2b/appointments/{id}
+ * @param {number|string} id
+ * @param {{ note?: string, date?: string, time?: string, checklist?: Array<{ id: string, label: string, done: boolean }> }} payload
+ */
+export async function updateAppointment(id, payload) {
+  const response = await apiClient.patch(`/b2b/appointments/${id}`, payload)
+  const data = unwrapApiData(response)
+
+  return data.appointment ? mapAppointment(data.appointment) : null
 }

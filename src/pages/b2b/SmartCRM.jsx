@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Calendar, Mail, MapPin, Phone, Search, User } from 'lucide-react'
 import InfoDrawer from '../../components/ui/InfoDrawer'
 import B2BModal from '../../components/b2b/B2BModal'
+import ScheduleVisitModal from '../../components/b2b/ScheduleVisitModal'
 import {
   b2bCard,
   b2bEmptyState,
@@ -14,8 +15,6 @@ import {
 } from '../../components/b2b/b2bStyles'
 import { CRM_STATUSES, statusPillStyles } from '../../data/mockB2B'
 import { useB2B } from '../../context/B2BContext'
-
-const inputClass = `w-full rounded-xl border border-black/5 bg-white/90 px-3 py-2.5 text-sm ${b2bInputFocus}`
 
 function StatusSelect({ value, onChange }) {
   const style = statusPillStyles[value] || statusPillStyles.Nuovo
@@ -33,80 +32,6 @@ function StatusSelect({ value, onChange }) {
         </option>
       ))}
     </select>
-  )
-}
-
-function ScheduleModal({ client, open, onClose, onSchedule }) {
-  const [date, setDate] = useState('')
-  const [time, setTime] = useState('10:00')
-  const [note, setNote] = useState('')
-
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    if (!date || !time) return
-    onSchedule(client.id, date, time, note)
-    onClose()
-    setDate('')
-    setTime('10:00')
-    setNote('')
-  }
-
-  if (!client) return null
-
-  return (
-    <B2BModal open={open} onClose={onClose} title={`Pianifica visita · ${client.cliente}`}>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label htmlFor="visit-date" className="mb-1 block text-xs font-medium text-charcoal-muted">
-              Data
-            </label>
-            <input
-              id="visit-date"
-              type="date"
-              required
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label htmlFor="visit-time" className="mb-1 block text-xs font-medium text-charcoal-muted">
-              Ora
-            </label>
-            <input
-              id="visit-time"
-              type="time"
-              required
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              className={inputClass}
-            />
-          </div>
-        </div>
-        <div>
-          <label htmlFor="visit-note" className="mb-1 block text-xs font-medium text-charcoal-muted">
-            Note
-          </label>
-          <textarea
-            id="visit-note"
-            rows={3}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Es. Prima visita in struttura"
-            className={inputClass}
-          />
-        </div>
-        <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className={b2bSecondaryBtn}>
-            Annulla
-          </button>
-          <button type="submit" className={b2bPrimaryBtn}>
-            Conferma visita
-          </button>
-        </div>
-      </form>
-    </B2BModal>
   )
 }
 
@@ -335,7 +260,8 @@ export default function SmartCRM() {
       </div>
 
       <CallModal client={callClient} open={!!callClient} onClose={() => setCallClient(null)} />
-      <ScheduleModal
+      <ScheduleVisitModal
+        key={scheduleClient?.id ?? 'schedule'}
         client={scheduleClient}
         open={!!scheduleClient}
         onClose={() => setScheduleClient(null)}

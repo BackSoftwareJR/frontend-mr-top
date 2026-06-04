@@ -102,16 +102,71 @@ export function unwrapApiData(response) {
   throw parseApiError(body, response.status)
 }
 
+/** API origin for Sanctum CSRF (route is /sanctum/csrf-cookie, not under /api/v1). */
+function getApiOrigin() {
+  if (!isApiConfigured()) {
+    return typeof window !== 'undefined' ? window.location.origin : ''
+  }
+  try {
+    return new URL(baseURL, typeof window !== 'undefined' ? window.location.href : undefined)
+      .origin
+  } catch {
+    return ''
+  }
+}
+
+let csrfCookieReady = false
+let csrfCookiePromise = null
+
+/** Stateful SPA (wenando.com → api.wenando.com) needs CSRF cookie before POST/PATCH/PUT/DELETE. */
+export async function ensureCsrfCookie() {
+  if (!isApiConfigured() || typeof window === 'undefined') {
+    return
+  }
+
+  const origin = getApiOrigin()
+  if (!origin) {
+    return
+  }
+
+  if (csrfCookieReady) {
+    return
+  }
+
+  if (!csrfCookiePromise) {
+    csrfCookiePromise = axios
+      .get(`${origin}/sanctum/csrf-cookie`, {
+        withCredentials: true,
+        headers: { Accept: 'application/json' },
+      })
+      .then(() => {
+        csrfCookieReady = true
+      })
+      .finally(() => {
+        csrfCookiePromise = null
+      })
+  }
+
+  await csrfCookiePromise
+}
+
 const apiClient = axios.create({
   baseURL,
   withCredentials: true,
+  xsrfCookieName: 'XSRF-TOKEN',
+  xsrfHeaderName: 'X-XSRF-TOKEN',
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json',
   },
 })
 
-apiClient.interceptors.request.use((config) => {
+apiClient.interceptors.request.use(async (config) => {
+  const method = (config.method ?? 'get').toLowerCase()
+  if (['post', 'put', 'patch', 'delete'].includes(method)) {
+    await ensureCsrfCookie()
+  }
+
   const token = getBearerToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
