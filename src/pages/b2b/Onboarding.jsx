@@ -269,8 +269,10 @@ export default function Onboarding() {
       if (err instanceof ApiError && err.code === 'RATE_LIMITED' && err.retryAfterSeconds) {
         setRetrySeconds(err.retryAfterSeconds)
         setSubmitError(`Troppe richieste. Riprova tra ${err.retryAfterSeconds} secondi.`)
+      } else if (err instanceof ApiError) {
+        setSubmitError(err.message)
       } else {
-        setSubmitError(err?.message ?? 'Invio non riuscito. Riprova.')
+        setSubmitError('Invio non riuscito. Riprova.')
       }
     } finally {
       setSubmitting(false)

@@ -91,6 +91,23 @@ function parseApiError(data, status, headers = {}) {
   return new ApiError(data?.message ?? `HTTP ${status}`, { status })
 }
 
+/** User-facing message when axios has no response (CORS, offline, DNS, timeout). */
+export function resolveNetworkErrorMessage(error) {
+  if (import.meta.env.DEV) {
+    const hint =
+      error.code === 'ECONNABORTED'
+        ? 'Timeout.'
+        : 'Nessuna risposta HTTP (spesso CORS, certificato o API irraggiungibile).'
+    return `${hint} Controlla Network in DevTools e VITE_API_URL.`
+  }
+
+  if (error.code === 'ECONNABORTED') {
+    return 'La richiesta ha impiegato troppo tempo. Riprova.'
+  }
+
+  return 'Impossibile contattare il server. Verifica la connessione e riprova tra poco.'
+}
+
 /**
  * Unwrap Laravel ApiEnvelope `{ success, data, meta }`.
  * @template T
@@ -237,7 +254,7 @@ apiClient.interceptors.response.use(
       return Promise.reject(apiError)
     }
 
-    const networkError = new ApiError(error.message ?? 'Errore di rete.', {
+    const networkError = new ApiError(resolveNetworkErrorMessage(error), {
       code: 'NETWORK_ERROR',
       status: status ?? 0,
     })
