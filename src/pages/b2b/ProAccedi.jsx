@@ -6,14 +6,15 @@ import CodeInput from '../../components/auth/CodeInput'
 import HumanVerification from '../../components/auth/HumanVerification'
 import { b2bInputFocus, b2bLink, b2bPrimaryBtn } from '../../components/b2b/b2bStyles'
 import { useAuth } from '../../context/AuthContext'
+import { shouldShowOtpDevHint } from '../../services/authApiUtils'
 import {
   buildCaptchaPayload,
   getResendCooldown,
   validateEmailForPortal,
 } from '../../services/authService'
 import { loginB2B } from '../../services/b2bAuthService'
-import { getB2BRedirectPath, getOnboardingStatus } from '../../services/b2bOnboardingService'
-import { isApiConfigured } from '../../services/apiClient'
+import { getB2BRedirectPathAsync } from '../../services/b2bOnboardingService'
+import { ApiError, isApiConfigured } from '../../services/apiClient'
 
 const STEPS = { EMAIL: 'email', CAPTCHA: 'captcha', CODE: 'code' }
 const MODES = { OTP: 'otp', PASSWORD: 'password' }
@@ -28,7 +29,7 @@ function maskEmail(email) {
 export default function ProAccedi() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { isAuthenticated, userType, userEmail, requestCode, login, establishSession } = useAuth()
+  const { isAuthenticated, userType, requestCode, login, establishSession } = useAuth()
 
   const [authMode, setAuthMode] = useState(MODES.OTP)
   const [step, setStep] = useState(STEPS.EMAIL)
@@ -44,15 +45,18 @@ export default function ProAccedi() {
   const redirectTarget = location.state?.from
 
   useEffect(() => {
-    if (isAuthenticated && userType === 'b2b') {
-      const status = getOnboardingStatus(userEmail)
-      const target =
-        status === 'approved' && redirectTarget?.startsWith('/pro/')
-          ? redirectTarget
-          : getB2BRedirectPath()
-      navigate(target, { replace: true })
+    if (!isAuthenticated || userType !== 'b2b') return
+
+    let cancelled = false
+
+    getB2BRedirectPathAsync({ deepLink: redirectTarget }).then((target) => {
+      if (!cancelled) navigate(target, { replace: true })
+    })
+
+    return () => {
+      cancelled = true
     }
-  }, [isAuthenticated, navigate, redirectTarget, userEmail, userType])
+  }, [isAuthenticated, navigate, redirectTarget, userType])
 
   useEffect(() => {
     if (resendCooldown <= 0) return
@@ -62,11 +66,11 @@ export default function ProAccedi() {
     return () => clearInterval(timer)
   }, [resendCooldown])
 
-  const navigateAfterLogin = (session) => {
-    const target =
-      getOnboardingStatus(session?.email) === 'approved' && redirectTarget
-        ? redirectTarget
-        : getB2BRedirectPath(session)
+  const navigateAfterLogin = async (session, apiRedirectTo) => {
+    const target = await getB2BRedirectPathAsync({
+      session,
+      deepLink: apiRedirectTo ?? redirectTarget,
+    })
     navigate(target, { replace: true })
   }
 
@@ -83,7 +87,7 @@ export default function ProAccedi() {
     try {
       const result = await loginB2B({ email: normalized, password })
       establishSession(result.session)
-      navigateAfterLogin(result.session)
+      await navigateAfterLogin(result.session, result.redirectTo)
     } catch (err) {
       if (import.meta.env.DEV) {
         console.warn('[Wenando Pro] Password login failed:', err)
@@ -119,19 +123,28 @@ export default function ProAccedi() {
     setLoading(true)
     setError('')
 
-    const formData = new FormData(document.getElementById('pro-auth-form'))
-    const result = await requestCode(email, buildCaptchaPayload(formData, payload), 'partner')
+    try {
+      const formData = new FormData(document.getElementById('pro-auth-form'))
+      const result = await requestCode(email, buildCaptchaPayload(formData, payload), 'partner')
 
-    setLoading(false)
+      if (!result.ok) {
+        setError(result.error)
+        return
+      }
 
-    if (!result.ok) {
-      setError(result.error)
-      return
+      setDevCode(result.devCode ?? null)
+      const cooldownMs = await getResendCooldown(result.email)
+      setResendCooldown(Math.ceil(cooldownMs / 1000) || 60)
+      setStep(STEPS.CODE)
+    } catch (err) {
+      if (isApiConfigured()) {
+        setError(err instanceof ApiError ? err.message : 'Errore di connessione. Riprova.')
+      } else {
+        throw err
+      }
+    } finally {
+      setLoading(false)
     }
-
-    setDevCode(result.devCode ?? null)
-    setResendCooldown(Math.ceil(getResendCooldown(result.email) / 1000) || 60)
-    setStep(STEPS.CODE)
   }
 
   const handleVerifyCode = async (e) => {
@@ -143,38 +156,59 @@ export default function ProAccedi() {
 
     setLoading(true)
     setError('')
-    const result = await login(email, code)
-    setLoading(false)
 
-    if (!result.ok) {
-      setError(result.error)
-      return
+    try {
+      const result = await login(email, code)
+
+      if (!result.ok) {
+        setError(result.error)
+        return
+      }
+
+      if (result.session?.type !== 'b2b') {
+        setError('Questa email non è associata a un account partner.')
+        return
+      }
+
+      await navigateAfterLogin(result.session, result.redirectTo)
+    } catch (err) {
+      if (isApiConfigured()) {
+        setError(err instanceof ApiError ? err.message : 'Errore di connessione. Riprova.')
+      } else {
+        throw err
+      }
+    } finally {
+      setLoading(false)
     }
-
-    if (result.session?.type !== 'b2b') {
-      setError('Questa email non è associata a un account partner.')
-      return
-    }
-
-    navigateAfterLogin(result.session)
   }
 
   const handleResend = async () => {
     if (resendCooldown > 0 || !captchaPayload) return
     setLoading(true)
     setError('')
-    const formData = new FormData(document.getElementById('pro-auth-form'))
-    const result = await requestCode(email, buildCaptchaPayload(formData, captchaPayload), 'partner')
-    setLoading(false)
 
-    if (!result.ok) {
-      setError(result.error)
-      return
+    try {
+      const formData = new FormData(document.getElementById('pro-auth-form'))
+      const result = await requestCode(email, buildCaptchaPayload(formData, captchaPayload), 'partner')
+
+      if (!result.ok) {
+        setError(result.error)
+        return
+      }
+
+      setDevCode(result.devCode ?? null)
+      setCode('')
+      const cooldownMs = await getResendCooldown(result.email)
+      setResendCooldown(Math.ceil(cooldownMs / 1000) || 60)
+    } catch (err) {
+      if (isApiConfigured()) {
+        setError(err instanceof ApiError ? err.message : 'Errore di connessione. Riprova.')
+      } else {
+        throw err
+      }
+    } finally {
+      setLoading(false)
     }
-
-    setDevCode(result.devCode ?? null)
-    setCode('')
-    setResendCooldown(60)
   }
 
   const handleChallengeReady = useCallback((payload) => {
@@ -329,7 +363,7 @@ export default function ProAccedi() {
               <div className="space-y-6">
                 <CodeInput value={code} onChange={setCode} disabled={loading} error={error} />
 
-                {import.meta.env.DEV && devCode && (
+                {shouldShowOtpDevHint(devCode) && (
                   <div className="rounded-2xl border border-accent-coral/20 bg-accent-coral/5 px-4 py-3 text-center">
                     <p className="text-xs font-medium text-accent-coral-dark">
                       Sviluppo — codice:{' '}

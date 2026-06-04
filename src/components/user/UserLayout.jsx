@@ -10,17 +10,17 @@ const GLASS =
   'border border-white/50 bg-white/60 shadow-[0_20px_50px_rgba(0,0,0,0.03)] backdrop-blur-xl'
 
 const NAV_ITEMS = [
-  { icon: Home, label: 'Home', to: '/user/home' },
-  { icon: Search, label: 'Ricerche', to: '/user/ricerche' },
-  { icon: HeartHandshake, label: 'Aiuto', to: '/user/aiuto' },
-  { icon: User, label: 'Profilo', to: '/user/profilo' },
+  { icon: Home, label: 'Home', to: '/area-personale/home' },
+  { icon: Search, label: 'Ricerche', to: '/area-personale/ricerche' },
+  { icon: HeartHandshake, label: 'Aiuto', to: '/area-personale/aiuto' },
+  { icon: User, label: 'Profilo', to: '/area-personale/profilo' },
 ]
 
 const DESKTOP_LINKS = [
-  { label: 'Home', to: '/user/home' },
-  { label: 'Ricerche', to: '/user/ricerche' },
-  { label: 'Aiuto', to: '/user/aiuto' },
-  { label: 'Profilo', to: '/user/profilo' },
+  { label: 'Home', to: '/area-personale/home' },
+  { label: 'Ricerche', to: '/area-personale/ricerche' },
+  { label: 'Aiuto', to: '/area-personale/aiuto' },
+  { label: 'Profilo', to: '/area-personale/profilo' },
 ]
 
 const hoverTap = {
@@ -101,7 +101,7 @@ function DesktopFloatingNavbar() {
         className={`pointer-events-auto flex w-full max-w-2xl items-center justify-between gap-4 rounded-[2.5rem] px-4 py-2.5 sm:px-5 sm:py-3 ${GLASS}`}
       >
         <NavLink
-          to="/user/home"
+          to="/area-personale/home"
           aria-label="Area personale Wenando"
           className="shrink-0"
         >

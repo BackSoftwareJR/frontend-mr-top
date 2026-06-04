@@ -2,23 +2,34 @@ import { useCallback, useState } from 'react'
 import { FileText, Upload, X } from 'lucide-react'
 import { obDropZone, obDropZoneActive } from '../onboardingStyles'
 
-export default function FileDropZone({ label, hint, accept, fileName, onFile }) {
+export default function FileDropZone({
+  label,
+  hint,
+  accept,
+  fileName,
+  onFile,
+  uploading = false,
+  uploadProgress = 0,
+  uploadError = null,
+}) {
   const [file, setFile] = useState(null)
   const [dragOver, setDragOver] = useState(false)
 
   const displayName = file?.name ?? fileName ?? null
+  const busy = uploading
 
   const handleFile = useCallback(
     (selected) => {
+      if (busy) return
       if (!selected) {
         setFile(null)
         onFile?.(null)
         return
       }
       setFile(selected)
-      onFile?.(selected.name ?? selected)
+      onFile?.(selected)
     },
-    [onFile]
+    [busy, onFile]
   )
 
   const onDrop = (e) => {
@@ -31,24 +42,44 @@ export default function FileDropZone({ label, hint, accept, fileName, onFile }) 
   return (
     <div>
       <p className="mb-2 text-sm font-medium text-charcoal">{label}</p>
+      {uploadError && (
+        <p className="mb-2 text-xs font-medium text-red-700" role="alert">
+          {uploadError}
+        </p>
+      )}
       {displayName ? (
-        <div className="flex items-center justify-between rounded-2xl border border-emerald-200/70 bg-emerald-50/80 px-4 py-3 backdrop-blur-sm">
-          <div className="flex min-w-0 items-center gap-2">
-            <FileText className="h-4 w-4 shrink-0 text-accent-teal-dark" />
-            <span className="truncate text-sm font-medium text-charcoal">{displayName}</span>
+        <div className="rounded-2xl border border-emerald-200/70 bg-emerald-50/80 px-4 py-3 backdrop-blur-sm">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <FileText className="h-4 w-4 shrink-0 text-accent-teal-dark" />
+              <span className="truncate text-sm font-medium text-charcoal">{displayName}</span>
+            </div>
+            {!busy && (
+              <button
+                type="button"
+                onClick={() => handleFile(null)}
+                className="rounded-full p-1.5 text-charcoal-muted transition-colors hover:bg-white hover:text-charcoal"
+                aria-label="Rimuovi file"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
-          <button
-            type="button"
-            onClick={() => handleFile(null)}
-            className="rounded-full p-1.5 text-charcoal-muted transition-colors hover:bg-white hover:text-charcoal"
-            aria-label="Rimuovi file"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          {busy && (
+            <div className="mt-2">
+              <div className="h-1.5 overflow-hidden rounded-full bg-emerald-100">
+                <div
+                  className="h-full rounded-full bg-accent-teal-dark transition-[width] duration-150"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+              <p className="mt-1 text-xs text-charcoal-muted">Caricamento… {uploadProgress}%</p>
+            </div>
+          )}
         </div>
       ) : (
         <label
-          className={`${obDropZone} cursor-pointer ${dragOver ? obDropZoneActive : ''}`}
+          className={`${obDropZone} ${busy ? 'pointer-events-none opacity-60' : 'cursor-pointer'} ${dragOver && !busy ? obDropZoneActive : ''}`}
           onDragOver={(e) => {
             e.preventDefault()
             setDragOver(true)

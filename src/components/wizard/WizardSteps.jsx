@@ -5,13 +5,9 @@ import BudgetRangeSlider from './BudgetRangeSlider'
 import InfoDrawer, { InfoHelpButton } from '../ui/InfoDrawer'
 import { autonomyInfo } from '../../data/autonomyInfo'
 import { WIZARD_CONSENT_LABELS, WIZARD_CONSENT_UI } from '../../constants/wizardConsent'
+import { searchLocations } from '../../services/locationService'
 
-const MOCK_LOCATIONS = [
-  { label: 'Milano (MI)', value: 'milano-mi' },
-  { label: 'Milazzo (ME)', value: 'milazzo-me' },
-  { label: 'Roma (RM)', value: 'roma-rm' },
-  { label: 'Torino (TO)', value: 'torino-to' },
-]
+const LOCATION_DEBOUNCE_MS = 300
 
 const stepEase = [0.25, 0.46, 0.45, 0.94]
 
@@ -95,14 +91,10 @@ export default function AutonomyStep({ step, onSelect }) {
 export function LocationStep({ step, value, onSelect }) {
   const [query, setQuery] = useState(value?.label || '')
   const [open, setOpen] = useState(false)
+  const [suggestions, setSuggestions] = useState([])
+  const [loading, setLoading] = useState(false)
   const containerRef = useRef(null)
-
-  const suggestions =
-    query.length >= 2
-      ? MOCK_LOCATIONS.filter((loc) =>
-          loc.label.toLowerCase().includes(query.toLowerCase()),
-        )
-      : []
+  const requestIdRef = useRef(0)
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -114,6 +106,45 @@ export function LocationStep({ step, value, onSelect }) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  useEffect(() => {
+    const trimmed = query.trim()
+
+    if (trimmed.length < 2) {
+      return undefined
+    }
+
+    const requestId = requestIdRef.current + 1
+    requestIdRef.current = requestId
+
+    const timer = window.setTimeout(async () => {
+      setLoading(true)
+
+      try {
+        const results = await searchLocations(trimmed)
+
+        if (requestIdRef.current !== requestId) {
+          return
+        }
+
+        setSuggestions(results)
+      } catch (error) {
+        console.error('[Wenando] Location autocomplete failed:', error)
+
+        if (requestIdRef.current === requestId) {
+          setSuggestions([])
+        }
+      } finally {
+        if (requestIdRef.current === requestId) {
+          setLoading(false)
+        }
+      }
+    }, LOCATION_DEBOUNCE_MS)
+
+    return () => window.clearTimeout(timer)
+  }, [query])
+
+  const visibleSuggestions = query.trim().length >= 2 ? suggestions : []
+
   return (
     <div ref={containerRef} className="relative">
       <p className="mb-3 text-sm text-slate-500">Inizia a digitare il comune o la città</p>
@@ -122,8 +153,13 @@ export function LocationStep({ step, value, onSelect }) {
         type="text"
         value={query}
         onChange={(e) => {
-          setQuery(e.target.value)
+          const nextQuery = e.target.value
+          setQuery(nextQuery)
           setOpen(true)
+          if (nextQuery.trim().length < 2) {
+            setSuggestions([])
+            setLoading(false)
+          }
         }}
         onFocus={() => setOpen(true)}
         placeholder={step.placeholder}
@@ -133,7 +169,11 @@ export function LocationStep({ step, value, onSelect }) {
         transition={{ duration: 0.2, ease: stepEase }}
       />
 
-      {open && suggestions.length > 0 && (
+      {open && loading && visibleSuggestions.length === 0 ? (
+        <p className="mt-2 px-1 text-sm text-slate-500">Ricerca in corso…</p>
+      ) : null}
+
+      {open && visibleSuggestions.length > 0 && (
         <motion.ul
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
@@ -141,7 +181,7 @@ export function LocationStep({ step, value, onSelect }) {
           className="absolute left-0 right-0 top-full z-10 mt-2 overflow-hidden rounded-2xl border border-slate-200/50 bg-white/70 shadow-lg backdrop-blur-xl"
           style={{ willChange: 'transform, opacity' }}
         >
-          {suggestions.map((loc, index) => (
+          {visibleSuggestions.map((loc, index) => (
             <li key={loc.value}>
               <motion.button
                 type="button"
@@ -329,6 +369,13 @@ export function ContactStep({
           onChange={(v) => onConsentsChange({ ...consents, partnerContact: v })}
         >
           {WIZARD_CONSENT_LABELS.lead_sharing}
+        </ConsentCheckbox>
+        <ConsentCheckbox
+          id="consent-marketing"
+          checked={consents.marketing}
+          onChange={(v) => onConsentsChange({ ...consents, marketing: v })}
+        >
+          {WIZARD_CONSENT_LABELS.marketing}
         </ConsentCheckbox>
       </fieldset>
 

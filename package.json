@@ -7,9 +7,16 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "playwright test",
+    "test:e2e:api": "playwright test e2e/api-smoke.spec.js",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
+    "@hcaptcha/react-hcaptcha": "^2.0.2",
+    "@sentry/react": "^10.56.0",
+    "@stripe/react-stripe-js": "^6.6.0",
+    "@stripe/stripe-js": "^9.7.0",
     "axios": "^1.17.0",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.17.0",
@@ -22,6 +29,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/vite": "^4.3.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

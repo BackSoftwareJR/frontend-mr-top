@@ -1,17 +1,20 @@
-import apiClient, { isApiConfigured, unwrapApiData, withDevMockFallback } from './apiClient'
+import apiClient, { unwrapApiData } from './apiClient'
+import { userWithOfflineMock } from './userApiUtils'
+import { mapLeadMatch } from './leadService'
 import {
   getLatestSearch as getMockLatestSearch,
   getUserDisplayName as getMockDisplayName,
   getUserSearches as getMockUserSearches,
 } from '../data/mockUserSearches'
-import { getSavedMatchIds } from '../utils/savedMatches'
+import { getSavedMatchIds, toggleSavedMatch } from '../utils/savedMatches'
 
 /** @param {Record<string, unknown>} apiSearch */
 function mapSearch(apiSearch) {
   return {
     id: apiSearch.id,
     leadUuid: apiSearch.lead_uuid ?? apiSearch.leadUuid ?? null,
-    title: apiSearch.title ?? 'Ricerca',
+    publicRef: apiSearch.public_ref ?? apiSearch.publicRef ?? null,
+    title: apiSearch.title ?? apiSearch.need_summary ?? 'Ricerca assistenza',
     location: apiSearch.location ?? '',
     date: apiSearch.date ?? '',
     status: apiSearch.status ?? 'processing',
@@ -32,18 +35,7 @@ function mapUser(user) {
 
 /** @param {Record<string, unknown>} apiMatch */
 export function mapApiMatch(apiMatch) {
-  return {
-    id: String(apiMatch.id ?? apiMatch.company_id ?? ''),
-    name: apiMatch.name ?? '',
-    type: apiMatch.type ?? '',
-    location: apiMatch.location ?? '',
-    compatibility: apiMatch.compatibility ?? 0,
-    image: apiMatch.image_url ?? apiMatch.image ?? '',
-    description: apiMatch.description ?? '',
-    pros: Array.isArray(apiMatch.pros) ? apiMatch.pros : [],
-    contactHint: apiMatch.contact_hint ?? apiMatch.contactHint ?? '',
-    companyId: apiMatch.company_id ?? null,
-  }
+  return mapLeadMatch(apiMatch)
 }
 
 export async function fetchUserHome() {
@@ -57,9 +49,19 @@ export async function fetchUserHome() {
 
 export async function fetchUserSearches(page = 1) {
   const response = await apiClient.get('/user/searches', { params: { page } })
+  const body = response.data
   const data = unwrapApiData(response)
   const searches = Array.isArray(data.searches) ? data.searches : []
-  return searches.map(mapSearch)
+  const meta = body?.meta ?? {}
+  return {
+    searches: searches.map(mapSearch),
+    meta: {
+      page: meta.page ?? page,
+      perPage: meta.per_page ?? meta.perPage ?? 20,
+      total: meta.total ?? searches.length,
+      lastPage: meta.last_page ?? meta.lastPage ?? 1,
+    },
+  }
 }
 
 export async function fetchUserSearch(id) {
@@ -71,10 +73,35 @@ export async function fetchUserSearch(id) {
   }
 }
 
+export async function fetchUserProfile() {
+  const response = await apiClient.get('/user/profile')
+  const data = unwrapApiData(response)
+  return mapUser(data.user ?? data)
+}
+
+/** @param {string|number} leadRef — lead uuid or public_ref */
+export async function updateUserSearchTitle(leadRef, title) {
+  const response = await apiClient.patch(`/user/searches/${leadRef}`, { title })
+  const data = unwrapApiData(response)
+  return data.search ? mapSearch(data.search) : null
+}
+
 export async function updateUserProfile({ name, phone }) {
   const response = await apiClient.patch('/user/profile', { name, phone })
   const data = unwrapApiData(response)
   return mapUser(data.user ?? data)
+}
+
+/**
+ * POST /user/privacy/erase-request — GDPR Art. 17 erasure request.
+ * @param {{ reason?: string }} [params]
+ */
+export async function requestDataErasure({ reason } = {}) {
+  const response = await apiClient.post('/user/privacy/erase-request', {
+    confirmed: true,
+    reason: reason ?? undefined,
+  })
+  return unwrapApiData(response)
 }
 
 export async function fetchSavedMatchIds() {
@@ -93,33 +120,57 @@ export async function toggleSavedMatchApi({ companyId, leadMatchId }) {
   return Boolean(data.saved)
 }
 
-export function fetchUserHomeWithFallback() {
-  if (!isApiConfigured()) {
-    return Promise.resolve({
-      displayName: getMockDisplayName(),
-      latestSearch: getMockLatestSearch(),
-    })
-  }
-  return withDevMockFallback(
-    fetchUserHome,
-    () => ({
-      displayName: getMockDisplayName(),
-      latestSearch: getMockLatestSearch(),
-    }),
-    'User home',
+/** @param {{ companyId?: string|number, leadMatchId?: string|number, matchId: string|number }} params */
+export function toggleSavedMatchWithFallback({ companyId, leadMatchId, matchId }) {
+  return userWithOfflineMock(
+    () => toggleSavedMatchApi({ companyId, leadMatchId }),
+    () => toggleSavedMatch(String(matchId)),
   )
 }
 
-export function fetchUserSearchesWithFallback() {
-  if (!isApiConfigured()) {
-    return Promise.resolve(getMockUserSearches())
-  }
-  return withDevMockFallback(fetchUserSearches, () => getMockUserSearches(), 'User searches')
+export function fetchUserHomeWithFallback() {
+  return userWithOfflineMock(fetchUserHome, () => ({
+    displayName: getMockDisplayName(),
+    latestSearch: getMockLatestSearch(),
+  }))
+}
+
+export function fetchUserSearchesWithFallback(page = 1) {
+  return userWithOfflineMock(
+    () => fetchUserSearches(page),
+    () => {
+      const searches = getMockUserSearches()
+      return {
+        searches,
+        meta: { page: 1, perPage: 20, total: searches.length, lastPage: 1 },
+      }
+    },
+  )
+}
+
+function findMockSearch(ref) {
+  const searches = getMockUserSearches()
+  return searches.find(
+    (search) =>
+      String(search.id) === String(ref) ||
+      String(search.publicRef ?? '') === String(ref) ||
+      String(search.leadUuid ?? '') === String(ref),
+  )
+}
+
+export function fetchUserSearchWithFallback(ref) {
+  return userWithOfflineMock(
+    () => fetchUserSearch(ref),
+    () => {
+      const search = findMockSearch(ref)
+      if (!search) {
+        return Promise.reject(new Error('Ricerca non trovata.'))
+      }
+      return { search, matches: [] }
+    },
+  )
 }
 
 export function fetchSavedMatchIdsWithFallback() {
-  if (!isApiConfigured()) {
-    return Promise.resolve(getSavedMatchIds())
-  }
-  return withDevMockFallback(fetchSavedMatchIds, () => getSavedMatchIds(), 'Saved matches')
+  return userWithOfflineMock(fetchSavedMatchIds, () => getSavedMatchIds())
 }

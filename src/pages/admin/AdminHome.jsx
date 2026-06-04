@@ -1,23 +1,35 @@
 import { useEffect, useState } from 'react'
-import { TrendingUp } from 'lucide-react'
+import { Loader2, TrendingUp } from 'lucide-react'
 import {
-  adminMetrics,
-  leadFlowChartData,
-  portfolioAllocation,
-  revenueTimelineData,
-  transactions,
-} from '../../data/mockAdmin'
-import {
+  fetchAdminTransactionsWithFallback,
   fetchDashboardStatsWithFallback,
   fetchLeadFlowWithFallback,
   fetchPortfolioAllocationWithFallback,
   fetchRevenueTimelineWithFallback,
 } from '../../services/adminService'
+import { ApiError, isApiConfigured } from '../../services/apiClient'
+import AdminLoadError from '../../components/admin/AdminLoadError'
 import AdminMetricCard from '../../components/admin/AdminMetricCard'
 import AdminDonutChart from '../../components/admin/AdminDonutChart'
 import AdminRecentTransactions from '../../components/admin/AdminRecentTransactions'
+import TransactionDetailDrawer from '../../components/admin/TransactionDetailDrawer'
 import AdminRevenueTimeline from '../../components/admin/AdminRevenueTimeline'
 import { adminGlassCard, adminPageSubtitle, adminPageTitle } from '../../components/admin/adminStyles'
+
+const EMPTY_METRIC = { value: '—', change: '', positive: true }
+
+const EMPTY_DASHBOARD_METRICS = {
+  mrr: { ...EMPTY_METRIC },
+  activeLeadsToday: { ...EMPTY_METRIC },
+  activePartners: { ...EMPTY_METRIC },
+  pendingApprovals: { ...EMPTY_METRIC, positive: false },
+  pendingBankTransfers: { ...EMPTY_METRIC, positive: false },
+  churn: { ...EMPTY_METRIC },
+  conversionRate: { ...EMPTY_METRIC },
+  avgDealSize: { ...EMPTY_METRIC },
+}
+
+const EMPTY_ALLOCATION = { bySector: [], byRegion: [], byTier: [] }
 
 function smoothPath(points) {
   if (points.length < 2) return ''
@@ -36,6 +48,20 @@ function LeadFlowChart({ data }) {
   const width = 640
   const height = 240
   const padding = { top: 20, right: 20, bottom: 32, left: 44 }
+
+  if (!data || data.length < 2) {
+    return (
+      <div className={`${adminGlassCard} p-4 sm:p-6`}>
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-white sm:text-lg">Lead Flow vs Revenue</h2>
+            <p className="mt-0.5 text-xs text-zinc-500">Ultimi 14 giorni — flusso lead e fatturato</p>
+          </div>
+        </div>
+        <p className="py-12 text-center text-sm text-zinc-500">Nessun dato disponibile</p>
+      </div>
+    )
+  }
 
   const chartWidth = width - padding.left - padding.right
   const chartHeight = height - padding.top - padding.bottom
@@ -198,46 +224,63 @@ function LeadFlowChart({ data }) {
 }
 
 export default function AdminHome() {
-  const [metrics, setMetrics] = useState(adminMetrics)
-  const [leadFlow, setLeadFlow] = useState(leadFlowChartData)
-  const [revenueTimeline, setRevenueTimeline] = useState(revenueTimelineData)
-  const [allocation, setAllocation] = useState(portfolioAllocation)
+  const [metrics, setMetrics] = useState(EMPTY_DASHBOARD_METRICS)
+  const [leadFlow, setLeadFlow] = useState([])
+  const [revenueTimeline, setRevenueTimeline] = useState([])
+  const [allocation, setAllocation] = useState(EMPTY_ALLOCATION)
+  const [recentTransactions, setRecentTransactions] = useState([])
+  const [selectedTx, setSelectedTx] = useState(null)
+  const [loading, setLoading] = useState(() => isApiConfigured())
+  const [loadError, setLoadError] = useState(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     let cancelled = false
 
-    fetchDashboardStatsWithFallback().then((apiMetrics) => {
-      if (cancelled) return
-      setMetrics((prev) => ({
-        ...prev,
-        ...apiMetrics,
-        activePartners: apiMetrics.activePartners ?? prev.activePartners,
-        churn: apiMetrics.churn ?? prev.churn,
-        conversionRate: apiMetrics.conversionRate ?? prev.conversionRate,
-        avgDealSize: apiMetrics.avgDealSize ?? prev.avgDealSize,
-      }))
-    })
+    async function load() {
+      if (isApiConfigured()) {
+        setLoading(true)
+        setLoadError(null)
+      }
+      try {
+        const [apiMetrics, leadFlowData, revenueData, allocationData, txData] = await Promise.all([
+          fetchDashboardStatsWithFallback(),
+          fetchLeadFlowWithFallback(),
+          fetchRevenueTimelineWithFallback(),
+          fetchPortfolioAllocationWithFallback(),
+          fetchAdminTransactionsWithFallback(),
+        ])
+        if (cancelled) return
+        setMetrics(apiMetrics)
+        setLeadFlow(leadFlowData)
+        setRevenueTimeline(revenueData)
+        setAllocation(allocationData)
+        setRecentTransactions(txData.transactions)
+      } catch (err) {
+        if (!cancelled && isApiConfigured()) {
+          setLoadError(
+            err instanceof ApiError
+              ? err.message
+              : 'Impossibile caricare la dashboard. Verifica la connessione e riprova.',
+          )
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
 
-    fetchLeadFlowWithFallback().then((data) => {
-      if (!cancelled) setLeadFlow(data)
-    })
-    fetchRevenueTimelineWithFallback().then((data) => {
-      if (!cancelled) setRevenueTimeline(data)
-    })
-    fetchPortfolioAllocationWithFallback().then((data) => {
-      if (!cancelled) setAllocation(data)
-    })
-
+    load()
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [retryCount])
 
   const {
     mrr,
     activeLeadsToday,
     activePartners,
     pendingApprovals,
+    pendingBankTransfers,
     churn,
     conversionRate,
     avgDealSize,
@@ -252,50 +295,72 @@ export default function AdminHome() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <AdminMetricCard label="MRR (Fatturato)" {...mrr} />
-        <AdminMetricCard label="Lead Attivi (Oggi)" {...activeLeadsToday} />
-        <AdminMetricCard label="Partner Attivi" {...activePartners} />
-        <AdminMetricCard label="Da Approvare" {...pendingApprovals} />
-      </div>
+      {loadError && !loading ? (
+        <AdminLoadError message={loadError} onRetry={() => setRetryCount((n) => n + 1)} />
+      ) : null}
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
-        <AdminMetricCard label="Churn Rate" {...churn} />
-        <AdminMetricCard label="Tasso Conversione" {...conversionRate} />
-        <AdminMetricCard label="Deal Medio" {...avgDealSize} />
-      </div>
-
-      <section aria-labelledby="portafoglio-heading">
-        <h2 id="portafoglio-heading" className="mb-3 text-sm font-semibold text-white">
-          Portafoglio
-        </h2>
-        <div className="grid gap-4 lg:grid-cols-3">
-          <AdminDonutChart
-            title="Per settore"
-            subtitle="Allocazione revenue B2B"
-            segments={allocation.bySector}
-          />
-          <AdminDonutChart
-            title="Per regione"
-            subtitle="Distribuzione geografica"
-            segments={allocation.byRegion}
-          />
-          <AdminDonutChart
-            title="Per tier partner"
-            subtitle="Enterprise · Growth · Starter"
-            segments={allocation.byTier}
-          />
+      {loading ? (
+        <div className={`${adminGlassCard} flex items-center justify-center py-24`}>
+          <Loader2 className="h-6 w-6 animate-spin text-cyan-400" aria-label="Caricamento dashboard" />
         </div>
-      </section>
+      ) : loadError ? null : (
+        <>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+            <AdminMetricCard label="MRR (Fatturato)" {...mrr} />
+            <AdminMetricCard label="Lead Attivi (Oggi)" {...activeLeadsToday} />
+            <AdminMetricCard label="Partner Attivi" {...activePartners} />
+            <AdminMetricCard label="Da Approvare" {...pendingApprovals} />
+          </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <LeadFlowChart data={leadFlow} />
-        </div>
-        <AdminRevenueTimeline data={revenueTimeline} />
-      </div>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+            <AdminMetricCard
+              label="Bonifici in attesa"
+              {...pendingBankTransfers}
+              to="/admin/wallet/pending"
+            />
+            <AdminMetricCard label="Churn Rate" {...churn} />
+            <AdminMetricCard label="Tasso Conversione" {...conversionRate} />
+            <AdminMetricCard label="Deal Medio" {...avgDealSize} />
+          </div>
 
-      <AdminRecentTransactions transactions={transactions} />
+          <section aria-labelledby="portafoglio-heading">
+            <h2 id="portafoglio-heading" className="mb-3 text-sm font-semibold text-white">
+              Portafoglio
+            </h2>
+            <div className="grid gap-4 lg:grid-cols-3">
+              <AdminDonutChart
+                title="Per settore"
+                subtitle="Allocazione revenue B2B"
+                segments={allocation.bySector}
+              />
+              <AdminDonutChart
+                title="Per regione"
+                subtitle="Distribuzione geografica"
+                segments={allocation.byRegion}
+              />
+              <AdminDonutChart
+                title="Per tier partner"
+                subtitle="Enterprise · Growth · Starter"
+                segments={allocation.byTier}
+              />
+            </div>
+          </section>
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <LeadFlowChart data={leadFlow} />
+            </div>
+            <AdminRevenueTimeline data={revenueTimeline} />
+          </div>
+
+          <AdminRecentTransactions
+            transactions={recentTransactions}
+            onSelectTransaction={setSelectedTx}
+          />
+        </>
+      )}
+
+      <TransactionDetailDrawer transaction={selectedTx} onClose={() => setSelectedTx(null)} />
     </div>
   )
 }

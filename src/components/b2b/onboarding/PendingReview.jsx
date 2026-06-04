@@ -1,9 +1,11 @@
 import { motion } from 'framer-motion'
 import { Lock, Mail } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { usePendingReviewPoll } from '../../../hooks/usePendingReviewPoll'
 import { obLink, obSecondaryBtn } from '../onboardingStyles'
 
 export default function PendingReview({ email }) {
+  usePendingReviewPoll(true)
   return (
     <div className="flex min-h-[50vh] flex-col items-center justify-center px-2 text-center">
       <motion.div

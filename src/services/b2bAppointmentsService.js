@@ -29,14 +29,24 @@ export async function fetchAppointments(params = {}) {
 
 /**
  * POST /b2b/appointments
+ * @param {{ clientId: string, date: string, time: string, note?: string, idempotencyKey?: string }} params
  */
-export async function createAppointment({ clientId, date, time, note }) {
-  const response = await apiClient.post('/b2b/appointments', {
-    client_id: clientId,
-    date,
-    time,
-    note: note ?? undefined,
-  })
+export async function createAppointment({ clientId, date, time, note, idempotencyKey }) {
+  const headers = {}
+  if (idempotencyKey) {
+    headers['Idempotency-Key'] = idempotencyKey
+  }
+
+  const response = await apiClient.post(
+    '/b2b/appointments',
+    {
+      client_id: clientId,
+      date,
+      time,
+      note: note ?? undefined,
+    },
+    { headers },
+  )
   const data = unwrapApiData(response)
 
   return {

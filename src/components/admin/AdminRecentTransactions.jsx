@@ -3,7 +3,7 @@ import { ArrowRight } from 'lucide-react'
 import TransactionStatusBadge from './TransactionStatusBadge'
 import { adminGlassCard } from './adminStyles'
 
-export default function AdminRecentTransactions({ transactions, limit = 6 }) {
+export default function AdminRecentTransactions({ transactions, limit = 6, onSelectTransaction }) {
   const rows = transactions.slice(0, limit)
 
   return (
@@ -37,7 +37,8 @@ export default function AdminRecentTransactions({ transactions, limit = 6 }) {
             {rows.map((tx) => (
               <tr
                 key={tx.id}
-                className="border-b border-white/5 transition-colors last:border-0 hover:bg-white/[0.03]"
+                className={`border-b border-white/5 transition-colors last:border-0 hover:bg-white/[0.03]${onSelectTransaction ? ' cursor-pointer hover:bg-cyan-500/5' : ''}`}
+                onClick={onSelectTransaction ? () => onSelectTransaction(tx) : undefined}
               >
                 <td className="px-4 py-3 font-mono text-xs text-zinc-400 sm:px-5">{tx.id}</td>
                 <td className="px-4 py-3 text-white">{tx.partner}</td>

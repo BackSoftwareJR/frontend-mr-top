@@ -5,6 +5,8 @@ import {
   ArrowRight,
   Calendar,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   Loader2,
   MapPin,
@@ -13,7 +15,11 @@ import {
   Ticket,
 } from 'lucide-react'
 import GlassCard from '../../components/ui/GlassCard'
+import SearchTitleInlineEdit from '../../components/user/SearchTitleInlineEdit'
+import UserLoadError from '../../components/user/UserLoadError'
+import { ApiError, isApiConfigured } from '../../services/apiClient'
 import { fetchUserSearchesWithFallback } from '../../services/userService'
+import { searchDetailPath } from '../../utils/userSearchPaths'
 
 const spring = { type: 'spring', stiffness: 400, damping: 28 }
 
@@ -75,7 +81,8 @@ function StatusBadge({ status }) {
   )
 }
 
-function TicketCard({ search, onOpen, index, isLast }) {
+
+function TicketCard({ search, onOpen, onRename, index, isLast, pageOffset = 0 }) {
   const prefersReducedMotion = useReducedMotion()
   const config = getStatusConfig(search.status)
   const isReady = search.status === 'completed'
@@ -153,13 +160,17 @@ function TicketCard({ search, onOpen, index, isLast }) {
                     <Search className="h-4 w-4 text-amber-600/90" strokeWidth={2} />
                   )}
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                    Ricerca #{index + 1}
+                    Ricerca #{pageOffset + index + 1}
                   </p>
-                  <h2 className="truncate text-lg font-semibold tracking-tight text-slate-800 sm:text-xl">
-                    {search.title}
-                  </h2>
+                  <div className="mt-1">
+                    <SearchTitleInlineEdit
+                      search={search}
+                      fallbackLabel={`Ricerca #${pageOffset + index + 1}`}
+                      onRenamed={(updated) => onRename(search.id, updated)}
+                    />
+                  </div>
                 </div>
               </div>
               <Ticket
@@ -264,22 +275,43 @@ function EmptyState() {
 export default function UserSearches() {
   const navigate = useNavigate()
   const [searches, setSearches] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [pagination, setPagination] = useState({ page: 1, perPage: 20, total: 0, lastPage: 1 })
+  const [loading, setLoading] = useState(() => isApiConfigured())
+  const [loadError, setLoadError] = useState(null)
+  const [retryCount, setRetryCount] = useState(0)
   const prefersReducedMotion = useReducedMotion()
 
   useEffect(() => {
     let cancelled = false
-    fetchUserSearchesWithFallback()
-      .then((data) => {
-        if (!cancelled) setSearches(data)
-      })
-      .finally(() => {
+
+    async function load() {
+      if (isApiConfigured()) {
+        setLoading(true)
+        setLoadError(null)
+      }
+      try {
+        const { searches: data, meta } = await fetchUserSearchesWithFallback(pagination.page)
+        if (cancelled) return
+        setSearches(data)
+        setPagination(meta)
+      } catch (err) {
+        if (!cancelled && isApiConfigured()) {
+          setLoadError(
+            err instanceof ApiError
+              ? err.message
+              : 'Impossibile caricare le ricerche. Verifica la connessione e riprova.',
+          )
+        }
+      } finally {
         if (!cancelled) setLoading(false)
-      })
+      }
+    }
+
+    load()
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [pagination.page, retryCount])
 
   const motionVariants = prefersReducedMotion
     ? { hidden: { opacity: 1 }, visible: { opacity: 1 } }
@@ -290,17 +322,22 @@ export default function UserSearches() {
     : itemVariants
 
   const handleOpen = (search) => {
-    if (search.status === 'completed' && search.answers) {
-      navigate('/results', {
-        state: {
-          answers: search.answers,
-          leadUuid: search.leadUuid,
-        },
-      })
-      return
-    }
-    navigate('/user/home')
+    navigate(searchDetailPath(search))
   }
+
+  const handleRename = (searchId, updatedSearch) => {
+    setSearches((current) =>
+      current.map((item) => (item.id === searchId ? { ...item, ...updatedSearch } : item)),
+    )
+  }
+
+  const goToPage = (nextPage) => {
+    if (nextPage < 1 || nextPage > pagination.lastPage || nextPage === pagination.page) return
+    setPagination((current) => ({ ...current, page: nextPage }))
+  }
+
+  const pageOffset = (pagination.page - 1) * pagination.perPage
+  const showPagination = pagination.lastPage > 1
 
   return (
     <motion.div
@@ -325,7 +362,9 @@ export default function UserSearches() {
         </div>
       </motion.header>
 
-      {loading ? (
+      {loadError && !loading ? (
+        <UserLoadError message={loadError} onRetry={() => setRetryCount((n) => n + 1)} />
+      ) : loading ? (
         <p className="text-center text-sm text-slate-500">Caricamento ricerche…</p>
       ) : searches.length === 0 ? (
         <EmptyState />
@@ -340,20 +379,57 @@ export default function UserSearches() {
               key={search.id}
               search={search}
               onOpen={handleOpen}
+              onRename={handleRename}
               index={index}
+              pageOffset={pageOffset}
               isLast={index === searches.length - 1}
             />
           ))}
         </motion.ol>
       )}
 
-      {searches.length > 0 && (
+      {showPagination && (
+        <motion.nav
+          variants={childVariants}
+          className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between"
+          aria-label="Paginazione ricerche"
+        >
+          <p className="text-sm text-slate-500">
+            Pagina {pagination.page} di {pagination.lastPage}
+            {' · '}
+            {pagination.total}{' '}
+            {pagination.total === 1 ? 'ricerca' : 'ricerche'}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => goToPage(pagination.page - 1)}
+              disabled={pagination.page <= 1 || loading}
+              className="inline-flex min-h-[2.75rem] items-center gap-1.5 rounded-[2rem] border border-black/[0.08] bg-white/70 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-stone-50/80 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <ChevronLeft className="h-4 w-4" strokeWidth={2} aria-hidden />
+              Precedente
+            </button>
+            <button
+              type="button"
+              onClick={() => goToPage(pagination.page + 1)}
+              disabled={pagination.page >= pagination.lastPage || loading}
+              className="inline-flex min-h-[2.75rem] items-center gap-1.5 rounded-[2rem] border border-black/[0.08] bg-white/70 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-stone-50/80 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Successiva
+              <ChevronRight className="h-4 w-4" strokeWidth={2} aria-hidden />
+            </button>
+          </div>
+        </motion.nav>
+      )}
+
+      {searches.length > 0 && !showPagination && (
         <motion.p
           variants={childVariants}
           className="px-1 text-center text-sm text-slate-500"
         >
-          {searches.length}{' '}
-          {searches.length === 1 ? 'ricerca nel tuo archivio' : 'ricerche nel tuo archivio'}
+          {pagination.total}{' '}
+          {pagination.total === 1 ? 'ricerca nel tuo archivio' : 'ricerche nel tuo archivio'}
         </motion.p>
       )}
     </motion.div>

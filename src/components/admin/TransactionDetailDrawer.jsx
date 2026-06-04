@@ -1,13 +1,38 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { CreditCard, FileText, X } from 'lucide-react'
+import { CreditCard, FileText, Loader2, X } from 'lucide-react'
+import { fetchAdminTransactionDetailWithFallback } from '../../services/adminService'
+import { isApiConfigured } from '../../services/apiClient'
 import TransactionStatusBadge from './TransactionStatusBadge'
 import { adminGlassCard } from './adminStyles'
 
 export default function TransactionDetailDrawer({ transaction, onClose }) {
   const prefersReducedMotion = useReducedMotion()
   const panelRef = useRef(null)
+  const [detail, setDetail] = useState(null)
+  const [loading, setLoading] = useState(false)
   const transition = prefersReducedMotion ? { duration: 0 } : { type: 'spring', damping: 34, stiffness: 400 }
+
+  useEffect(() => {
+    if (!transaction) return
+
+    let cancelled = false
+
+    async function load() {
+      if (isApiConfigured()) setLoading(true)
+      try {
+        const data = await fetchAdminTransactionDetailWithFallback(transaction.id, transaction)
+        if (!cancelled) setDetail(data ?? transaction)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [transaction])
 
   useEffect(() => {
     if (!transaction) return
@@ -17,6 +42,8 @@ export default function TransactionDetailDrawer({ transaction, onClose }) {
     document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
   }, [transaction, onClose])
+
+  const tx = detail ?? transaction
 
   return (
     <AnimatePresence>
@@ -37,6 +64,7 @@ export default function TransactionDetailDrawer({ transaction, onClose }) {
               role="dialog"
               aria-modal="true"
               aria-labelledby="tx-drawer-title"
+              aria-busy={loading}
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
@@ -48,7 +76,7 @@ export default function TransactionDetailDrawer({ transaction, onClose }) {
                   <h2 id="tx-drawer-title" className="font-mono text-base font-semibold text-white">
                     {transaction.id}
                   </h2>
-                  <p className="text-xs text-zinc-500">{transaction.partner}</p>
+                  <p className="text-xs text-zinc-500">{tx?.partner ?? transaction.partner}</p>
                 </div>
                 <button
                   type="button"
@@ -60,62 +88,73 @@ export default function TransactionDetailDrawer({ transaction, onClose }) {
                 </button>
               </div>
 
-              <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
-                <div className={`${adminGlassCard} p-4 text-center`}>
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-                    Importo
-                  </p>
-                  <p className="mt-1 text-3xl font-semibold text-white">
-                    € {transaction.importo.toLocaleString('it-IT')}
-                  </p>
-                  <div className="mt-3 flex justify-center">
-                    <TransactionStatusBadge stato={transaction.stato} />
+              <div className="relative flex-1 overflow-y-auto px-5 py-5">
+                {loading ? (
+                  <div className="flex min-h-[280px] items-center justify-center">
+                    <Loader2
+                      className="h-6 w-6 animate-spin text-cyan-400"
+                      aria-label="Caricamento dettaglio transazione"
+                    />
                   </div>
-                </div>
+                ) : tx ? (
+                  <div className="space-y-5">
+                    <div className={`${adminGlassCard} p-4 text-center`}>
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+                        Importo
+                      </p>
+                      <p className="mt-1 text-3xl font-semibold text-white">
+                        € {tx.importo.toLocaleString('it-IT')}
+                      </p>
+                      <div className="mt-3 flex justify-center">
+                        <TransactionStatusBadge stato={tx.stato} />
+                      </div>
+                    </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-                      Tipo
-                    </p>
-                    <p className="mt-1 text-sm text-white">{transaction.tipo}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-                      Data
-                    </p>
-                    <p className="mt-1 text-sm text-white">{transaction.data}</p>
-                  </div>
-                </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+                          Tipo
+                        </p>
+                        <p className="mt-1 text-sm text-white">{tx.tipo}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+                          Data
+                        </p>
+                        <p className="mt-1 text-sm text-white">{tx.data}</p>
+                      </div>
+                    </div>
 
-                <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                  <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-cyan-400" />
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-                      Metodo di pagamento
-                    </p>
-                    <p className="mt-0.5 text-sm text-white">{transaction.metodo}</p>
-                  </div>
-                </div>
+                    <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                      <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-cyan-400" />
+                      <div>
+                        <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+                          Metodo di pagamento
+                        </p>
+                        <p className="mt-0.5 text-sm text-white">{tx.metodo || '—'}</p>
+                      </div>
+                    </div>
 
-                <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-3">
-                  <FileText className="mt-0.5 h-4 w-4 shrink-0 text-purple-400" />
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-                      Riferimento fattura
-                    </p>
-                    <p className="mt-0.5 font-mono text-sm text-white">{transaction.riferimento}</p>
-                  </div>
-                </div>
+                    <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                      <FileText className="mt-0.5 h-4 w-4 shrink-0 text-purple-400" />
+                      <div>
+                        <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+                          Riferimento fattura
+                        </p>
+                        <p className="mt-0.5 font-mono text-sm text-white">{tx.riferimento || '—'}</p>
+                      </div>
+                    </div>
 
-                {transaction.note && (
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-                      Note
-                    </p>
-                    <p className="mt-1 text-sm text-zinc-400">{transaction.note}</p>
+                    {tx.note && (
+                      <div>
+                        <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+                          Note
+                        </p>
+                        <p className="mt-1 text-sm text-zinc-400">{tx.note}</p>
+                      </div>
+                    )}
                   </div>
-                )}
+                ) : null}
               </div>
             </motion.aside>
           </div>

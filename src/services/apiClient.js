@@ -1,4 +1,6 @@
 import axios from 'axios'
+import { clearImpersonation, getImpersonationToken, isImpersonating } from './impersonationService'
+import { captureApiError } from './sentryService'
 
 /** Align with authService session storage — Bearer PAT when present. */
 export const AUTH_SESSION_KEY = 'wenando-auth-session'
@@ -27,6 +29,11 @@ export class ApiError extends Error {
 
 export function getBearerToken() {
   try {
+    if (isImpersonating()) {
+      const impersonationToken = getImpersonationToken()
+      if (impersonationToken) return impersonationToken
+    }
+
     const direct = localStorage.getItem(AUTH_TOKEN_KEY)
     if (direct) return direct
 
@@ -72,7 +79,7 @@ function parseApiError(data, status) {
       code: data.error.code,
       status,
       details: data.error.details,
-      traceId: data.trace_id,
+      traceId: data.trace_id ?? data.request_id,
     })
   }
 
@@ -119,6 +126,12 @@ apiClient.interceptors.response.use(
     const data = error.response?.data
 
     if (status === 401 && typeof window !== 'undefined') {
+      if (isImpersonating()) {
+        clearImpersonation()
+        window.location.assign('/pro/accedi')
+        return Promise.reject(parseApiError(data, status ?? 0))
+      }
+
       const loginPath = resolveLoginPath()
       if (!window.location.pathname.startsWith(loginPath)) {
         window.location.assign(loginPath)
@@ -126,35 +139,18 @@ apiClient.interceptors.response.use(
     }
 
     if (data) {
-      return Promise.reject(parseApiError(data, status ?? 0))
+      const apiError = parseApiError(data, status ?? 0)
+      captureApiError(apiError, error.config)
+      return Promise.reject(apiError)
     }
 
-    return Promise.reject(
-      new ApiError(error.message ?? 'Errore di rete.', {
-        code: 'NETWORK_ERROR',
-        status: status ?? 0,
-      }),
-    )
+    const networkError = new ApiError(error.message ?? 'Errore di rete.', {
+      code: 'NETWORK_ERROR',
+      status: status ?? 0,
+    })
+    captureApiError(networkError, error.config)
+    return Promise.reject(networkError)
   },
 )
-
-/**
- * Run API call; in dev when API is configured but unreachable, use mock fallback.
- * @template T
- * @param {() => Promise<T>} apiFn
- * @param {() => T | Promise<T>} mockFn
- * @param {string} [label]
- */
-export async function withDevMockFallback(apiFn, mockFn, label = 'API') {
-  try {
-    return await apiFn()
-  } catch (error) {
-    if (import.meta.env.DEV) {
-      console.warn(`[Wenando] ${label} unavailable — using mock fallback:`, error)
-      return mockFn()
-    }
-    throw error
-  }
-}
 
 export default apiClient

@@ -5,12 +5,13 @@ import { WenandoMark } from '../../components/ui/WenandoLogo'
 import CodeInput from '../../components/auth/CodeInput'
 import HumanVerification from '../../components/auth/HumanVerification'
 import { useAuth } from '../../context/AuthContext'
+import { shouldShowOtpDevHint } from '../../services/authApiUtils'
+import { ApiError, getBearerToken, isApiConfigured } from '../../services/apiClient'
 import {
   buildCaptchaPayload,
   getResendCooldown,
   validateEmailForPortal,
 } from '../../services/authService'
-import { getBearerToken } from '../../services/apiClient'
 
 const STEPS = { EMAIL: 'email', CAPTCHA: 'captcha', CODE: 'code' }
 
@@ -73,19 +74,28 @@ export default function AdminLogin() {
     setLoading(true)
     setError('')
 
-    const formData = new FormData(document.getElementById('admin-auth-form'))
-    const result = await requestCode(email, buildCaptchaPayload(formData, payload), 'admin')
+    try {
+      const formData = new FormData(document.getElementById('admin-auth-form'))
+      const result = await requestCode(email, buildCaptchaPayload(formData, payload), 'admin')
 
-    setLoading(false)
+      if (!result.ok) {
+        setError(result.error)
+        return
+      }
 
-    if (!result.ok) {
-      setError(result.error)
-      return
+      setDevCode(result.devCode ?? null)
+      const cooldownMs = await getResendCooldown(result.email)
+      setResendCooldown(Math.ceil(cooldownMs / 1000) || 60)
+      setStep(STEPS.CODE)
+    } catch (err) {
+      if (isApiConfigured()) {
+        setError(err instanceof ApiError ? err.message : 'Errore di connessione. Riprova.')
+      } else {
+        throw err
+      }
+    } finally {
+      setLoading(false)
     }
-
-    setDevCode(result.devCode ?? null)
-    setResendCooldown(Math.ceil((await getResendCooldown(result.email)) / 1000) || 60)
-    setStep(STEPS.CODE)
   }
 
   const handleVerifyCode = async (e) => {
@@ -97,38 +107,59 @@ export default function AdminLogin() {
 
     setLoading(true)
     setError('')
-    const result = await login(email, code)
-    setLoading(false)
 
-    if (!result.ok) {
-      setError(result.error)
-      return
+    try {
+      const result = await login(email, code)
+
+      if (!result.ok) {
+        setError(result.error)
+        return
+      }
+
+      if (result.session?.type !== 'superadmin') {
+        setError('Accesso riservato agli amministratori.')
+        return
+      }
+
+      navigate(redirectTarget, { replace: true })
+    } catch (err) {
+      if (isApiConfigured()) {
+        setError(err instanceof ApiError ? err.message : 'Errore di connessione. Riprova.')
+      } else {
+        throw err
+      }
+    } finally {
+      setLoading(false)
     }
-
-    if (result.session?.type !== 'superadmin') {
-      setError('Accesso riservato agli amministratori.')
-      return
-    }
-
-    navigate(redirectTarget, { replace: true })
   }
 
   const handleResend = async () => {
     if (resendCooldown > 0 || !captchaPayload) return
     setLoading(true)
     setError('')
-    const formData = new FormData(document.getElementById('admin-auth-form'))
-    const result = await requestCode(email, buildCaptchaPayload(formData, captchaPayload), 'admin')
-    setLoading(false)
 
-    if (!result.ok) {
-      setError(result.error)
-      return
+    try {
+      const formData = new FormData(document.getElementById('admin-auth-form'))
+      const result = await requestCode(email, buildCaptchaPayload(formData, captchaPayload), 'admin')
+
+      if (!result.ok) {
+        setError(result.error)
+        return
+      }
+
+      setDevCode(result.devCode ?? null)
+      setCode('')
+      const cooldownMs = await getResendCooldown(result.email)
+      setResendCooldown(Math.ceil(cooldownMs / 1000) || 60)
+    } catch (err) {
+      if (isApiConfigured()) {
+        setError(err instanceof ApiError ? err.message : 'Errore di connessione. Riprova.')
+      } else {
+        throw err
+      }
+    } finally {
+      setLoading(false)
     }
-
-    setDevCode(result.devCode ?? null)
-    setCode('')
-    setResendCooldown(60)
   }
 
   const handleChallengeReady = useCallback((payload) => {
@@ -221,7 +252,7 @@ export default function AdminLogin() {
               <div className="space-y-6">
                 <CodeInput value={code} onChange={setCode} disabled={loading} error={error} />
 
-                {import.meta.env.DEV && devCode && (
+                {shouldShowOtpDevHint(devCode) && (
                   <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 text-center">
                     <p className="text-xs font-medium text-cyan-400">
                       Sviluppo — codice:{' '}

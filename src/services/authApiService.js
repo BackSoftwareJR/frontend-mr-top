@@ -3,8 +3,8 @@ import apiClient, {
   AUTH_TOKEN_KEY,
   isApiConfigured,
   unwrapApiData,
-  withDevMockFallback,
 } from './apiClient'
+import { authWithOfflineMock } from './authApiUtils'
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000
 
@@ -23,11 +23,17 @@ export function mapCaptchaToApi(captchaPayload) {
  * @param {'consumer' | 'partner' | 'admin'} portal
  */
 export async function requestOtp(email, portal, captchaPayload) {
-  const response = await apiClient.post('/auth/otp/request', {
+  const body = {
     email: email.trim().toLowerCase(),
     portal,
     captcha: mapCaptchaToApi(captchaPayload),
-  })
+  }
+
+  if (captchaPayload?.captchaToken) {
+    body.captcha_token = captchaPayload.captchaToken
+  }
+
+  const response = await apiClient.post('/auth/otp/request', body)
   const data = unwrapApiData(response)
   return {
     ok: true,
@@ -58,6 +64,7 @@ export async function verifyOtp(email, code) {
     email: user.email ?? email.trim().toLowerCase(),
     type: sessionType,
     name: user.name ?? email.split('@')[0],
+    phone: user.phone ?? null,
     userId: user.id ?? null,
     onboardingStatus: user.onboarding_status ?? null,
     token,
@@ -103,27 +110,16 @@ export function clearAuthStorage() {
 }
 
 /**
- * OTP via API when configured; caller supplies mock fallback in dev.
+ * OTP via API when configured; offline mock when VITE_API_URL is unset.
  * @param {'consumer' | 'partner' | 'admin'} portal
  */
 export async function requestOtpWithFallback(email, portal, captchaPayload, mockFn) {
-  if (!isApiConfigured()) {
-    return mockFn()
-  }
-  return withDevMockFallback(
+  return authWithOfflineMock(
     () => requestOtp(email, portal, captchaPayload),
     mockFn,
-    `Auth OTP (${portal})`,
   )
 }
 
 export async function verifyOtpWithFallback(email, code, mockFn) {
-  if (!isApiConfigured()) {
-    return mockFn()
-  }
-  return withDevMockFallback(
-    () => verifyOtp(email, code),
-    mockFn,
-    'Auth verify',
-  )
+  return authWithOfflineMock(() => verifyOtp(email, code), mockFn)
 }

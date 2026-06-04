@@ -1,4 +1,6 @@
+import { mockCRMClients } from '../data/mockB2B'
 import apiClient, { unwrapApiData } from './apiClient'
+import { b2bWithOfflineMock } from './b2bApiUtils'
 
 /** @param {Record<string, unknown>} apiClient */
 export function mapCrmClient(apiClientRow) {
@@ -41,4 +43,8 @@ export async function updateCrmClientStatus(clientId, stato) {
   const data = unwrapApiData(response)
 
   return mapCrmClient(data.client)
+}
+
+export function fetchCrmClientsWithOfflineMock(params = {}) {
+  return b2bWithOfflineMock(() => fetchCrmClients(params), mockCRMClients)
 }

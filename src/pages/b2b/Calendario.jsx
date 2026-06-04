@@ -63,21 +63,13 @@ export default function Calendario() {
   const selectedDateKey = toDateKey(year, month, selectedDay)
   const selectedAppointments = appointmentsByDate[selectedDateKey] || []
 
-  const weekStart = useMemo(() => {
-    const d = new Date(year, month, selectedDay)
-    const day = d.getDay()
-    const diff = day === 0 ? -6 : 1 - day
-    d.setDate(d.getDate() + diff)
-    return d
-  }, [year, month, selectedDay])
-
-  const weekDays = useMemo(() => {
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(weekStart)
-      d.setDate(d.getDate() + i)
-      return d
-    })
-  }, [weekStart])
+  const weekDayIndex = new Date(year, month, selectedDay).getDay()
+  const weekStartDiff = weekDayIndex === 0 ? -6 : 1 - weekDayIndex
+  const weekStartMs = new Date(year, month, selectedDay + weekStartDiff).getTime()
+  const weekStartDate = new Date(weekStartMs)
+  const weekDays = Array.from({ length: 7 }, (_, i) =>
+    new Date(weekStartDate.getFullYear(), weekStartDate.getMonth(), weekStartDate.getDate() + i),
+  )
 
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1))
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1))

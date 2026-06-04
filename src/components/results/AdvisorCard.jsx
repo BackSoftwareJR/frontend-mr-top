@@ -22,8 +22,16 @@ export default function AdvisorCard({ advisor, onBookCall }) {
             className="flex items-center justify-center bg-gradient-to-br from-teal-800/[0.03] to-teal-800/[0.08] px-8 py-9 sm:w-40 sm:shrink-0 sm:py-10"
             aria-hidden
           >
-            <div className="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full border border-teal-800/10 bg-white/80 shadow-sm backdrop-blur-sm">
-              <User className="h-8 w-8 text-teal-800/60" strokeWidth={1.5} />
+            <div className="flex h-[4.5rem] w-[4.5rem] items-center justify-center overflow-hidden rounded-full border border-teal-800/10 bg-white/80 shadow-sm backdrop-blur-sm">
+              {advisor.avatarUrl ? (
+                <img
+                  src={advisor.avatarUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <User className="h-8 w-8 text-teal-800/60" strokeWidth={1.5} />
+              )}
             </div>
           </div>
 

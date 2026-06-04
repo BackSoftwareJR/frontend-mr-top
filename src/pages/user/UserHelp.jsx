@@ -1,15 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Calendar, ChevronDown, MessageCircle, User } from 'lucide-react'
+import { Calendar, ChevronDown, Clock, MessageCircle, User } from 'lucide-react'
 import BookingSheet from '../../components/results/BookingSheet'
+import UserLoadError from '../../components/user/UserLoadError'
+import { fetchAdvisorBookingsWithFallback, fetchAdvisorWithFallback, cancelAdvisorBooking } from '../../services/advisorService'
+import { ApiError, isApiConfigured } from '../../services/apiClient'
+import { mockAdvisor } from '../../data/mockMatches'
 
 const spring = { type: 'spring', stiffness: 380, damping: 30 }
 const softSpring = { type: 'spring', stiffness: 320, damping: 32 }
-
-const MARCO = {
-  name: 'Marco',
-  role: 'Consulente pari',
-}
 
 const QUICK_QUESTIONS = [
   {
@@ -146,10 +145,166 @@ function QuestionAccordion({ item, index, isOpen, onToggle }) {
   )
 }
 
+function formatBookingDate(dateValue) {
+  if (!dateValue) return ''
+  const date = new Date(`${dateValue}T12:00:00`)
+  if (Number.isNaN(date.getTime())) return dateValue
+  return new Intl.DateTimeFormat('it-IT', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  }).format(date)
+}
+
+function BookingList({ title, emptyMessage, bookings, showActions = false, onReschedule, onCancel, actionBusyId }) {
+  return (
+    <div className="space-y-3">
+      <h3 className="px-1 text-sm font-semibold text-slate-700">{title}</h3>
+      {bookings.length === 0 ? (
+        <p className="rounded-[1.5rem] border border-black/[0.04] bg-white/50 px-5 py-4 text-sm text-slate-500">
+          {emptyMessage}
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {bookings.map((booking) => (
+            <li
+              key={booking.id}
+              className="flex items-start gap-3 rounded-[1.5rem] border border-black/[0.05] bg-white/70 px-5 py-4 shadow-[0_4px_20px_rgba(15,23,42,0.03)]"
+            >
+              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-teal-800/[0.08] text-teal-800">
+                <Calendar className="h-4 w-4" strokeWidth={2} aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-slate-800">
+                  {formatBookingDate(booking.scheduledDate)} alle {booking.scheduledTime}
+                </p>
+                <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-600">
+                  <Clock className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
+                  Chiamata con consulente — {booking.name}
+                </p>
+                {booking.leadTitle ? (
+                  <p className="mt-1 text-xs text-slate-500">Ricerca: {booking.leadTitle}</p>
+                ) : null}
+                {showActions ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onReschedule?.(booking)}
+                      disabled={actionBusyId === booking.id}
+                      className="rounded-full border border-teal-800/15 bg-teal-800/[0.06] px-3 py-1.5 text-xs font-medium text-teal-800 transition-colors hover:bg-teal-800/[0.1] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Sposta
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onCancel?.(booking)}
+                      disabled={actionBusyId === booking.id}
+                      className="rounded-full border border-rose-200/80 bg-rose-50/80 px-3 py-1.5 text-xs font-medium text-rose-700 transition-colors hover:bg-rose-100/80 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {actionBusyId === booking.id ? 'Annullamento…' : 'Annulla'}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 export default function UserHelp() {
   const [openIndex, setOpenIndex] = useState(null)
   const [bookingOpen, setBookingOpen] = useState(false)
+  const [advisor, setAdvisor] = useState(mockAdvisor)
+  const [bookings, setBookings] = useState({ upcoming: [], past: [] })
+  const [bookingsLoading, setBookingsLoading] = useState(() => isApiConfigured())
+  const [bookingsLoadError, setBookingsLoadError] = useState(null)
+  const [bookingsRetryCount, setBookingsRetryCount] = useState(0)
+  const [advisorLoadError, setAdvisorLoadError] = useState(null)
+  const [advisorRetryCount, setAdvisorRetryCount] = useState(0)
+  const [bookingActionBusyId, setBookingActionBusyId] = useState(null)
+  const [rescheduleBooking, setRescheduleBooking] = useState(null)
   const prefersReducedMotion = useReducedMotion()
+
+  const refreshBookings = () => setBookingsRetryCount((n) => n + 1)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadAdvisor() {
+      if (isApiConfigured()) setAdvisorLoadError(null)
+      try {
+        const profile = await fetchAdvisorWithFallback()
+        if (!cancelled) setAdvisor(profile)
+      } catch (err) {
+        if (!cancelled && isApiConfigured()) {
+          setAdvisorLoadError(
+            err instanceof ApiError
+              ? err.message
+              : 'Impossibile caricare il consulente. Verifica la connessione e riprova.',
+          )
+        }
+      }
+    }
+
+    loadAdvisor()
+    return () => {
+      cancelled = true
+    }
+  }, [advisorRetryCount])
+
+  useEffect(() => {
+    if (!isApiConfigured()) return undefined
+
+    let cancelled = false
+
+    async function load() {
+      setBookingsLoading(true)
+      setBookingsLoadError(null)
+      try {
+        const data = await fetchAdvisorBookingsWithFallback()
+        if (!cancelled) setBookings(data)
+      } catch (err) {
+        if (!cancelled) {
+          setBookingsLoadError(
+            err instanceof ApiError
+              ? err.message
+              : 'Impossibile caricare le consulenze. Verifica la connessione e riprova.',
+          )
+        }
+      } finally {
+        if (!cancelled) setBookingsLoading(false)
+      }
+    }
+
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [bookingsRetryCount])
+
+  const handleCancelBooking = async (booking) => {
+    const confirmed = window.confirm(
+      `Annullare la consulenza del ${formatBookingDate(booking.scheduledDate)} alle ${booking.scheduledTime}?`,
+    )
+    if (!confirmed) return
+
+    setBookingActionBusyId(booking.id)
+    try {
+      await cancelAdvisorBooking(booking.id)
+      refreshBookings()
+    } catch {
+      window.alert('Non siamo riusciti ad annullare la consulenza. Riprova tra poco.')
+    } finally {
+      setBookingActionBusyId(null)
+    }
+  }
+
+  const handleRescheduleBooking = (booking) => {
+    setRescheduleBooking(booking)
+  }
 
   const motionVariants = prefersReducedMotion
     ? { hidden: { opacity: 1, y: 0 }, visible: { opacity: 1, y: 0 } }
@@ -181,19 +336,26 @@ export default function UserHelp() {
         </p>
       </motion.header>
 
+      {advisorLoadError ? (
+        <UserLoadError
+          message={advisorLoadError}
+          onRetry={() => setAdvisorRetryCount((n) => n + 1)}
+        />
+      ) : null}
+
       <motion.section variants={childVariants} className="space-y-6">
         <div className="overflow-hidden rounded-[2rem] border border-black/[0.06] bg-white/70 p-6 shadow-[0_16px_48px_rgba(15,23,42,0.07)] backdrop-blur-2xl sm:p-8">
           <ConciergeAvatar />
 
           <div className="mt-8 text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-800/75">
-              {MARCO.role}
+              {advisor.role}
             </p>
             <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-800 sm:text-[1.65rem]">
               Il tuo Consulente Personale
             </h2>
             <p className="mx-auto mt-4 max-w-md text-base leading-relaxed text-slate-600">
-              Non sei solo in questa scelta. Marco ha affrontato la stessa situazione l&apos;anno
+              Non sei solo in questa scelta. {advisor.name} ha affrontato la stessa situazione l&apos;anno
               scorso. Prenota una chiamata gratuita per farti consigliare.
             </p>
           </div>
@@ -216,11 +378,52 @@ export default function UserHelp() {
         </div>
       </motion.section>
 
+      {isApiConfigured() ? (
+        <motion.section variants={childVariants} className="space-y-5">
+          <div className="px-1">
+            <h2 className="text-lg font-semibold text-slate-800">Le tue consulenze</h2>
+            <p className="mt-1.5 text-sm leading-relaxed text-slate-500">
+              Chiamate prenotate con il consulente personale.
+            </p>
+          </div>
+
+          {bookingsLoadError && !bookingsLoading ? (
+            <UserLoadError
+              message={bookingsLoadError}
+              onRetry={() => setBookingsRetryCount((n) => n + 1)}
+            />
+          ) : bookingsLoading ? (
+            <p className="rounded-[1.5rem] border border-black/[0.04] bg-white/50 px-5 py-4 text-sm text-slate-500">
+              Caricamento appuntamenti…
+            </p>
+          ) : (
+            <div className="space-y-6">
+              <BookingList
+                title="Prossime"
+                emptyMessage="Nessuna consulenza in programma."
+                bookings={bookings.upcoming}
+                showActions
+                actionBusyId={bookingActionBusyId}
+                onReschedule={handleRescheduleBooking}
+                onCancel={handleCancelBooking}
+              />
+              {bookings.past.length > 0 ? (
+                <BookingList
+                  title="Passate"
+                  emptyMessage="Nessuna consulenza passata."
+                  bookings={bookings.past}
+                />
+              ) : null}
+            </div>
+          )}
+        </motion.section>
+      ) : null}
+
       <motion.section variants={listVariants} initial="hidden" animate="visible" className="space-y-4">
         <motion.div variants={childVariants} className="px-1">
           <h2 className="text-lg font-semibold text-slate-800">Domande veloci</h2>
           <p className="mt-1.5 text-sm leading-relaxed text-slate-500">
-            Risposte brevi, senza formalismi. Per tutto il resto, parla con Marco.
+            Risposte brevi, senza formalismi. Per tutto il resto, parla con {advisor.name}.
           </p>
         </motion.div>
 
@@ -240,7 +443,22 @@ export default function UserHelp() {
       <BookingSheet
         open={bookingOpen}
         onClose={() => setBookingOpen(false)}
-        advisorName={MARCO.name}
+        advisorName={advisor.name}
+        onSuccess={refreshBookings}
+      />
+
+      <BookingSheet
+        open={Boolean(rescheduleBooking)}
+        onClose={() => setRescheduleBooking(null)}
+        advisorName={advisor.name}
+        mode="reschedule"
+        bookingId={rescheduleBooking?.id}
+        defaultDate={rescheduleBooking?.scheduledDate ?? ''}
+        defaultTime={rescheduleBooking?.scheduledTime ?? ''}
+        onSuccess={() => {
+          setRescheduleBooking(null)
+          refreshBookings()
+        }}
       />
     </motion.div>
   )

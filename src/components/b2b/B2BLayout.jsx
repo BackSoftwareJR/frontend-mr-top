@@ -31,6 +31,7 @@ import {
 import { proSidebar } from './proDesignTokens'
 import B2BRechargeModal from './B2BRechargeModal'
 import B2BToast from './B2BToast'
+import ImpersonationBanner from './ImpersonationBanner'
 
 const LOW_BALANCE_THRESHOLD = 30
 
@@ -48,6 +49,7 @@ const ROUTE_LABELS = {
   '/pro/crm': 'Il Mio CRM',
   '/pro/calendario': 'Calendario',
   '/pro/fatturazione': 'Fatturazione',
+  '/pro/profilo': 'Profilo Azienda',
 }
 
 function NavItem({ item, collapsed, onNavigate }) {
@@ -143,6 +145,10 @@ function NotificationDropdown({ open, onToggle, onClose }) {
 
 function UserMenuDropdown({ open, onToggle, onClose }) {
   const navigate = useNavigate()
+  const goToProfile = () => {
+    onClose()
+    navigate('/pro/profilo')
+  }
   const { logout, userName } = useAuth()
   const ref = useRef(null)
   const displayName = userName || PARTNER_NAME
@@ -187,10 +193,10 @@ function UserMenuDropdown({ open, onToggle, onClose }) {
           <button
             type="button"
             className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-charcoal-muted transition-colors hover:bg-black/[0.03]"
-            onClick={onClose}
+            onClick={goToProfile}
           >
             <Settings className="h-3.5 w-3.5" />
-            Impostazioni
+            Profilo Azienda
           </button>
           <button
             type="button"
@@ -367,6 +373,7 @@ export default function B2BLayout() {
         </header>
 
         <main className="flex-1 overflow-auto p-4 sm:p-6">
+          <ImpersonationBanner />
           {lowBalance && (
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-200/60 bg-amber-50/80 px-4 py-3 text-sm text-amber-900 backdrop-blur-md">
               <span>Credito basso — ricarica per sbloccare nuovi lead.</span>

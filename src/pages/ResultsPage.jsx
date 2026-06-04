@@ -17,8 +17,12 @@ import {
 } from '../data/autonomyInfo'
 import { getMatchesForLocation, mockAdvisor } from '../data/mockMatches'
 import { fetchLeadResultsWithFallback } from '../services/leadService'
-import { fetchSavedMatchIdsWithFallback, toggleSavedMatchApi } from '../services/userService'
-import { getBearerToken, isApiConfigured } from '../services/apiClient'
+import {
+  fetchSavedMatchIdsWithFallback,
+  toggleSavedMatchWithFallback,
+} from '../services/userService'
+import { ApiError, getBearerToken, isApiConfigured } from '../services/apiClient'
+import UserLoadError from '../components/user/UserLoadError'
 import { getSavedMatchIds, isMatchSaved, toggleSavedMatch } from '../utils/savedMatches'
 
 const spring = { type: 'spring', stiffness: 400, damping: 28 }
@@ -145,6 +149,10 @@ export default function ResultsPage() {
   const [matches, setMatches] = useState([])
   const [advisor, setAdvisor] = useState(mockAdvisor)
   const [savedIds, setSavedIds] = useState(() => getSavedMatchIds())
+  const [bookingNotice, setBookingNotice] = useState(null)
+  const [saveError, setSaveError] = useState(null)
+  const [loadError, setLoadError] = useState(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     if (!answers?.autonomy) return
@@ -153,16 +161,34 @@ export default function ResultsPage() {
 
     async function loadResults() {
       setLoading(true)
+      setLoadError(null)
       try {
         const result = await fetchLeadResultsWithFallback(leadUuid, answers)
         if (cancelled) return
         setDiagnosis(result.diagnosis ?? getDiagnosis(answers.autonomy))
+        const useMockMatches = !isApiConfigured() || result._mock
         setMatches(
           result.matches?.length
             ? result.matches
-            : getMatchesForLocation(answers.location?.label || 'la tua zona'),
+            : useMockMatches
+              ? getMatchesForLocation(answers.location?.label || 'la tua zona')
+              : [],
         )
         setAdvisor(result.advisor ?? mockAdvisor)
+      } catch (error) {
+        if (cancelled) return
+        console.error('[Wenando] Results load failed:', error)
+        if (isApiConfigured()) {
+          const message =
+            error instanceof ApiError
+              ? error.message
+              : (error?.message ?? 'Impossibile caricare i risultati.')
+          setLoadError(message)
+          return
+        }
+        setDiagnosis(getDiagnosis(answers.autonomy))
+        setMatches(getMatchesForLocation(answers.location?.label || 'la tua zona'))
+        setAdvisor(mockAdvisor)
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -172,7 +198,7 @@ export default function ResultsPage() {
     return () => {
       cancelled = true
     }
-  }, [answers, leadUuid])
+  }, [answers, leadUuid, retryCount])
 
   useEffect(() => {
     if (!isApiConfigured() || !getBearerToken()) return
@@ -190,24 +216,29 @@ export default function ResultsPage() {
     resolvedDiagnosis.primary === 'RSA' ? 'rsa' : 'domiciliare'
   const userName = answers.contact?.nome || ''
 
-  const handleSaveMatch = async (match, isSaved) => {
+  const handleSaveMatch = async (match) => {
+    const matchId = String(match.id)
     if (isApiConfigured() && getBearerToken()) {
       try {
-        const saved = await toggleSavedMatchApi({
+        const saved = await toggleSavedMatchWithFallback({
           companyId: match.companyId ?? match.id,
           leadMatchId: match.id,
+          matchId,
         })
         setSavedIds((prev) =>
           saved
-            ? [...new Set([...prev, String(match.id)])]
-            : prev.filter((id) => id !== String(match.id)),
+            ? [...new Set([...prev, matchId])]
+            : prev.filter((id) => id !== matchId),
         )
+        setSaveError(null)
         return
       } catch (error) {
-        if (!import.meta.env.DEV) {
-          console.error('[Wenando] Save match failed:', error)
-          return
-        }
+        const message =
+          error instanceof ApiError
+            ? error.message
+            : 'Impossibile salvare la struttura. Riprova.'
+        setSaveError(message)
+        return
       }
     }
     toggleSavedMatch(match.id)
@@ -240,13 +271,13 @@ export default function ResultsPage() {
       <header className="sticky top-0 z-50 border-b border-black/[0.06] bg-[#FDFBF7]/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-5 py-3.5 sm:px-8">
           <Link
-            to="/user/ricerche"
+            to="/area-personale/ricerche"
             className="inline-flex min-h-[3rem] items-center gap-1.5 text-sm font-medium text-slate-600 transition-colors hover:text-teal-800"
           >
             <ArrowLeft className="h-4 w-4" strokeWidth={2} aria-hidden />
             <span className="hidden sm:inline">Le tue ricerche</span>
           </Link>
-          <Link to="/user/home" aria-label="Area personale Wenando" className="shrink-0">
+          <Link to="/area-personale/home" aria-label="Area personale Wenando" className="shrink-0">
             <WenandoMark className="h-8 w-8" />
           </Link>
           <Link
@@ -284,6 +315,11 @@ export default function ResultsPage() {
             <Loader2 className="h-8 w-8 animate-spin text-teal-800" />
             <p className="text-sm">Caricamento risultati…</p>
           </div>
+        ) : loadError && isApiConfigured() ? (
+          <UserLoadError
+            message={loadError}
+            onRetry={() => setRetryCount((n) => n + 1)}
+          />
         ) : (
           <motion.div
             variants={motionContainerVariants}
@@ -321,6 +357,15 @@ export default function ResultsPage() {
             </motion.section>
 
             <motion.section variants={motionSectionVariants}>
+              {saveError ? (
+                <p
+                  className="mb-4 rounded-xl border border-red-200/70 bg-red-50/90 px-4 py-3 text-sm leading-relaxed text-red-950"
+                  role="alert"
+                >
+                  {saveError}
+                </p>
+              ) : null}
+
               <div className="mb-7 flex items-end justify-between gap-4">
                 <div>
                   <h2 className="text-lg font-semibold text-slate-800 sm:text-xl">
@@ -363,6 +408,15 @@ export default function ResultsPage() {
                 </p>
               </div>
 
+              {bookingNotice ? (
+                <p
+                  className="mb-4 rounded-xl border border-emerald-200/70 bg-emerald-50/90 px-4 py-3 text-sm leading-relaxed text-emerald-950"
+                  role="status"
+                >
+                  {bookingNotice}
+                </p>
+              ) : null}
+
               <AdvisorCard
                 advisor={advisor}
                 onBookCall={() => setBookingOpen(true)}
@@ -384,6 +438,9 @@ export default function ResultsPage() {
         defaultName={userName}
         advisorName={advisor.name}
         leadUuid={leadUuid}
+        onSuccess={() => {
+          setBookingNotice('Prenotazione confermata. Riceverai un riepilogo via email.')
+        }}
       />
     </div>
   )

@@ -16,9 +16,15 @@ import {
   obSubheading,
 } from '../../components/b2b/onboardingStyles'
 import {
+  B2B_PRIVACY_CONSENT_UI,
+  buildB2bRegisterPayload,
+} from '../../constants/b2bConsent'
+import { ApiError } from '../../services/apiClient'
+import {
   clearAutoDemo,
   DEMO_ONBOARDING_DATA,
   DEMO_REGISTRATION,
+  getB2BRedirectPathAsync,
   registerB2BPartnerAsync,
   restartAutoDemoTour,
   saveOnboardingData,
@@ -30,6 +36,7 @@ export default function Register() {
   const [email, setEmail] = useState(DEMO_REGISTRATION.email)
   const [organizationName, setOrganizationName] = useState(DEMO_REGISTRATION.organizationName)
   const [legalName, setLegalName] = useState(DEMO_REGISTRATION.legalName)
+  const [privacyAccepted, setPrivacyAccepted] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -46,6 +53,10 @@ export default function Register() {
       setError('Compila tutti i campi.')
       return
     }
+    if (!privacyAccepted) {
+      setError('Devi accettare l\'Informativa sulla Privacy per registrarti.')
+      return
+    }
 
     setLoading(true)
     clearAutoDemo()
@@ -56,12 +67,18 @@ export default function Register() {
         email: normalized,
         organizationName,
         legalName,
+        ...buildB2bRegisterPayload(),
       })
       saveOnboardingData(normalized, DEMO_ONBOARDING_DATA)
       establishSession(session)
-      navigate('/pro/onboarding', { replace: true })
+      const target = await getB2BRedirectPathAsync({ session })
+      navigate(target, { replace: true })
     } catch (err) {
-      setError(err.message ?? 'Registrazione non riuscita.')
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : (err?.message ?? 'Registrazione non riuscita.'),
+      )
     } finally {
       setLoading(false)
     }
@@ -148,6 +165,27 @@ export default function Register() {
               />
             </div>
 
+            <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200/60 bg-white/70 p-4">
+              <input
+                type="checkbox"
+                checked={privacyAccepted}
+                onChange={(e) => setPrivacyAccepted(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-teal-800 focus:ring-teal-800/20"
+              />
+              <span className="text-sm text-charcoal">
+                {B2B_PRIVACY_CONSENT_UI.prefix}
+                <Link
+                  to={B2B_PRIVACY_CONSENT_UI.link.to}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-teal-800 underline-offset-2 hover:underline"
+                >
+                  {B2B_PRIVACY_CONSENT_UI.link.text}
+                </Link>
+                {B2B_PRIVACY_CONSENT_UI.suffix}
+              </span>
+            </label>
+
             {error && (
               <p
                 className="rounded-2xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700"
@@ -157,7 +195,7 @@ export default function Register() {
               </p>
             )}
 
-            <button type="submit" disabled={loading} className={obPrimaryBtn}>
+            <button type="submit" disabled={loading || !privacyAccepted} className={obPrimaryBtn}>
               {loading ? (
                 'Apertura onboarding…'
               ) : (

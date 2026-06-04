@@ -4,12 +4,14 @@ import {
   ArrowDownRight,
   ArrowRight,
   ArrowUpRight,
+  Loader2,
   ShoppingBag,
   Table2,
   TrendingUp,
   Unlock,
   Users,
 } from 'lucide-react'
+import B2BLoadError from '../../components/b2b/B2BLoadError'
 import {
   b2bCard,
   b2bGhostBtn,
@@ -21,8 +23,8 @@ import {
   b2bPageTitle,
   b2bPrimaryBtn,
 } from '../../components/b2b/b2bStyles'
-import { leadsTrendData } from '../../data/mockB2B'
 import { useB2B } from '../../context/B2BContext'
+import { isApiConfigured } from '../../services/apiClient'
 
 const CORAL = '#e07a5f'
 const VIOLET = '#9b8ec4'
@@ -80,7 +82,7 @@ function ActivityFeed({ items }) {
   )
 }
 
-function LeadsTrendChart({ data }) {
+function LeadsTrendChart({ data, periodLabel = '7 giorni' }) {
   const [hovered, setHovered] = useState(null)
   const width = 560
   const height = 200
@@ -108,7 +110,7 @@ function LeadsTrendChart({ data }) {
     <div className={`${b2bCard} p-5`}>
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-charcoal">Andamento Lead · 30 giorni</h2>
+          <h2 className="text-sm font-semibold text-charcoal">Andamento Lead · {periodLabel}</h2>
           <p className="text-xs text-charcoal-muted">Lead sbloccati per giorno</p>
         </div>
         <TrendingUp className={`h-4 w-4 ${b2bIconAccent}`} />
@@ -119,7 +121,7 @@ function LeadsTrendChart({ data }) {
           viewBox={`0 0 ${width} ${height}`}
           className="w-full"
           role="img"
-          aria-label="Grafico andamento lead ultimi 30 giorni"
+          aria-label={`Grafico andamento lead ultimi ${periodLabel}`}
         >
           <defs>
             <linearGradient id="areaGradientCoral" x1="0" y1="0" x2="0" y2="1">
@@ -204,9 +206,39 @@ function LeadsTrendChart({ data }) {
 }
 
 export default function DashboardHome() {
-  const { activityFeed, marketplaceLeads, crmClients, totalSpent, formatCurrency } = useB2B()
+  const {
+    activityFeed,
+    dashboardStats,
+    leadsTrend,
+    marketplaceLeads,
+    crmClients,
+    totalSpent,
+    formatCurrency,
+    useApi,
+    loading,
+    initError,
+    retryInit,
+  } = useB2B()
+
+  const chartData = useMemo(() => {
+    if (useApi && leadsTrend.length > 0) {
+      return leadsTrend
+    }
+
+    return []
+  }, [useApi, leadsTrend])
+
+  const chartPeriodLabel = useApi && leadsTrend.length > 0 ? '7 giorni' : '30 giorni'
 
   const stats = useMemo(() => {
+    if (useApi && dashboardStats) {
+      return {
+        leadsSbloccati: dashboardStats.leadsUnlocked,
+        tassoConversione: dashboardStats.conversionRate,
+        spesaMensile: formatCurrency(dashboardStats.monthlySpend),
+      }
+    }
+
     const unlockedCount = marketplaceLeads.filter((l) => l.unlocked).length
     const closedCount = crmClients.filter((c) => c.stato === 'Chiuso').length
     const conversionRate =
@@ -217,7 +249,16 @@ export default function DashboardHome() {
       tassoConversione: conversionRate,
       spesaMensile: formatCurrency(totalSpent),
     }
-  }, [marketplaceLeads, crmClients, totalSpent, formatCurrency])
+  }, [useApi, dashboardStats, marketplaceLeads, crmClients, totalSpent, formatCurrency])
+
+  if (isApiConfigured() && loading && !useApi && !initError) {
+    return (
+      <div className="flex min-h-[320px] items-center justify-center text-charcoal-muted">
+        <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
+        <span className="sr-only">Caricamento dashboard…</span>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -242,6 +283,10 @@ export default function DashboardHome() {
         </div>
       </div>
 
+      {isApiConfigured() && initError ? (
+        <B2BLoadError message={initError} onRetry={retryInit} />
+      ) : (
+        <>
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <SummaryCard
           label="Leads Sbloccati"
@@ -268,7 +313,17 @@ export default function DashboardHome() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <LeadsTrendChart data={leadsTrendData} />
+          {chartData.length > 0 ? (
+            <LeadsTrendChart data={chartData} periodLabel={chartPeriodLabel} />
+          ) : (
+            <div className={`${b2bCard} flex min-h-[200px] items-center justify-center p-5`}>
+              <p className="text-sm text-charcoal-muted">
+                {useApi
+                  ? 'Nessun lead sbloccato negli ultimi 7 giorni.'
+                  : 'Grafico disponibile con dati API.'}
+              </p>
+            </div>
+          )}
         </div>
         <ActivityFeed items={activityFeed} />
       </div>
@@ -284,6 +339,8 @@ export default function DashboardHome() {
         </Link>
         .
       </p>
+        </>
+      )}
     </div>
   )
 }

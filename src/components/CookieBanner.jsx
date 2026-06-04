@@ -1,11 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  COOKIE_CONSENT_VERSION,
-  hasCookieConsentChoice,
-  writeCookieConsent,
-} from '../constants/cookieConsent'
+import { COOKIE_CONSENT_VERSION, hasCookieConsentChoice } from '../constants/cookieConsent'
+import { syncAnalyticsCookiePreference } from '../utils/analyticsCookieSync'
 
 const bannerBtnClass =
   'flex-1 min-w-0 rounded-xl border border-slate-200/60 bg-white/90 px-3 py-2.5 text-center text-sm font-semibold text-charcoal shadow-sm backdrop-blur-xl transition-colors hover:border-teal-800/25 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-800/20'
@@ -16,7 +13,7 @@ export default function CookieBanner() {
   const [analyticsDraft, setAnalyticsDraft] = useState(false)
 
   const persist = (analytics) => {
-    writeCookieConsent(analytics)
+    void syncAnalyticsCookiePreference(analytics, { source: 'banner' })
     setVisible(false)
     setCustomizeOpen(false)
   }

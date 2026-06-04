@@ -1,9 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { Mail, Phone, X } from 'lucide-react'
-import { adminPartnersList, mockAdminLeads } from '../../data/mockAdmin'
-import { assignAdminLead, fetchAdminLeadsWithFallback } from '../../services/adminService'
-import { isApiConfigured } from '../../services/apiClient'
+import { Loader2, Mail, Phone, X } from 'lucide-react'
+import {
+  assignAdminLead,
+  fetchAdminLeadsWithFallback,
+  fetchAdminPartnersWithFallback,
+} from '../../services/adminService'
+import { ApiError, isApiConfigured } from '../../services/apiClient'
+import AdminLoadError from '../../components/admin/AdminLoadError'
 import {
   adminGlassCard,
   adminPageSubtitle,
@@ -23,10 +28,14 @@ function StatusBadge({ stato }) {
   )
 }
 
-function LeadDetailDrawerContent({ lead, onClose, onAssignPartner }) {
+function LeadDetailDrawerContent({ lead, partners, onClose, onAssignPartner }) {
   const prefersReducedMotion = useReducedMotion()
   const panelRef = useRef(null)
-  const [selectedPartner, setSelectedPartner] = useState(lead.partnerAssegnato || '')
+  const [selectedPartner, setSelectedPartner] = useState(() => {
+    if (!lead.partnerAssegnato) return ''
+    const match = partners.find((p) => p.nomeStruttura === lead.partnerAssegnato)
+    return match?.id ?? ''
+  })
 
   const transition = prefersReducedMotion ? { duration: 0 } : { type: 'spring', damping: 34, stiffness: 400 }
 
@@ -106,9 +115,9 @@ function LeadDetailDrawerContent({ lead, onClose, onAssignPartner }) {
                   className="mt-2 w-full rounded-xl border border-white/10 bg-zinc-900/80 px-3 py-2.5 text-sm text-white backdrop-blur-xl focus:border-cyan-500/40 focus:outline-none focus:ring-1 focus:ring-cyan-500/20"
                 >
                   <option value="">— Nessun partner —</option>
-                  {adminPartnersList.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
+                  {partners.map((partner) => (
+                    <option key={partner.id} value={partner.id}>
+                      {partner.nomeStruttura}
                     </option>
                   ))}
                 </select>
@@ -130,7 +139,7 @@ function LeadDetailDrawerContent({ lead, onClose, onAssignPartner }) {
   )
 }
 
-function LeadDetailDrawer({ lead, open, onClose, onAssignPartner }) {
+function LeadDetailDrawer({ lead, partners, open, onClose, onAssignPartner }) {
   useEffect(() => {
     if (!open) return
     const prev = document.body.style.overflow
@@ -168,6 +177,7 @@ function LeadDetailDrawer({ lead, open, onClose, onAssignPartner }) {
           <LeadDetailDrawerContent
             key={lead.id}
             lead={lead}
+            partners={partners}
             onClose={onClose}
             onAssignPartner={onAssignPartner}
           />
@@ -178,35 +188,95 @@ function LeadDetailDrawer({ lead, open, onClose, onAssignPartner }) {
 }
 
 export default function LeadRouter() {
-  const [leads, setLeads] = useState(mockAdminLeads)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const openLeadId = searchParams.get('open')
+  const [leads, setLeads] = useState([])
+  const [partners, setPartners] = useState([])
+  const [loading, setLoading] = useState(() => isApiConfigured())
+  const [loadError, setLoadError] = useState(null)
+  const [retryCount, setRetryCount] = useState(0)
   const [selectedLead, setSelectedLead] = useState(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [toast, setToast] = useState(null)
+  const [toastVariant, setToastVariant] = useState('error')
 
   useEffect(() => {
     let cancelled = false
-    fetchAdminLeadsWithFallback().then((data) => {
-      if (!cancelled && data.length) setLeads(data)
-    })
+
+    async function load() {
+      if (isApiConfigured()) {
+        setLoading(true)
+        setLoadError(null)
+      }
+      try {
+        const [leadsData, partnersData] = await Promise.all([
+          fetchAdminLeadsWithFallback(),
+          fetchAdminPartnersWithFallback({ stato: 'Active' }),
+        ])
+        if (!cancelled) {
+          setLeads(leadsData)
+          setPartners(partnersData)
+        }
+      } catch (err) {
+        if (!cancelled && isApiConfigured()) {
+          setLoadError(
+            err instanceof ApiError
+              ? err.message
+              : 'Impossibile caricare i lead. Verifica la connessione e riprova.',
+          )
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    load()
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [retryCount])
+
+  const urlLead = useMemo(() => {
+    if (!openLeadId || leads.length === 0) return null
+    return leads.find((l) => String(l.id) === openLeadId) ?? null
+  }, [openLeadId, leads])
+
+  if (urlLead && selectedLead?.id !== urlLead.id) {
+    setSelectedLead(urlLead)
+    setDrawerOpen(true)
+  }
+
+  useEffect(() => {
+    if (!urlLead) return
+    setSearchParams({}, { replace: true })
+  }, [urlLead, setSearchParams])
 
   const openLead = (lead) => {
     setSelectedLead(lead)
     setDrawerOpen(true)
   }
 
-  const handleAssignPartner = async (leadId, partner) => {
-    if (isApiConfigured() && partner) {
+  const showToast = (message, variant = 'error') => {
+    setToastVariant(variant)
+    setToast(message)
+    window.setTimeout(() => setToast(null), 2500)
+  }
+
+  const handleAssignPartner = async (leadId, partnerId) => {
+    const partner = partners.find((p) => p.id === partnerId)
+    const partnerName = partner?.nomeStruttura ?? ''
+
+    if (isApiConfigured() && partnerId) {
       try {
-        await assignAdminLead(leadId, partner)
+        await assignAdminLead(leadId, partnerId)
+        showToast('Lead assegnato al partner.', 'success')
       } catch (error) {
-        if (!import.meta.env.DEV) {
-          console.error('[Wenando Admin] Assign lead failed:', error)
-          return
-        }
-        console.warn('[Wenando Admin] Assign API — mock fallback:', error)
+        const message =
+          error instanceof ApiError
+            ? error.message
+            : 'Assegnazione non riuscita. Riprova.'
+        showToast(message, 'error')
+        return
       }
     }
 
@@ -215,9 +285,9 @@ export default function LeadRouter() {
         l.id === leadId
           ? {
               ...l,
-              partnerAssegnato: partner,
-              stato: partner ? 'Assegnato' : l.stato,
-              aiMatch: partner ? `${partner} (override)` : l.aiMatch,
+              partnerAssegnato: partnerId ? partnerName : null,
+              stato: partnerId ? 'Assegnato' : l.stato,
+              aiMatch: partnerId ? `${partnerName} (override)` : l.aiMatch,
             }
           : l,
       ),
@@ -233,7 +303,16 @@ export default function LeadRouter() {
         </p>
       </div>
 
+      {loadError && !loading ? (
+        <AdminLoadError message={loadError} onRetry={() => setRetryCount((n) => n + 1)} />
+      ) : null}
+
       <div className={`${adminGlassCard} overflow-hidden`}>
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-6 w-6 animate-spin text-cyan-400" aria-label="Caricamento lead" />
+          </div>
+        ) : loadError ? null : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-left text-sm">
             <thead>
@@ -246,7 +325,14 @@ export default function LeadRouter() {
               </tr>
             </thead>
             <tbody>
-              {leads.map((lead) => (
+              {leads.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-12 text-center text-sm text-zinc-500 sm:px-5">
+                    Nessun lead in coda.
+                  </td>
+                </tr>
+              ) : (
+              leads.map((lead) => (
                 <tr
                   key={lead.id}
                   onClick={() => openLead(lead)}
@@ -262,18 +348,34 @@ export default function LeadRouter() {
                     <StatusBadge stato={lead.stato} />
                   </td>
                 </tr>
-              ))}
+              ))
+              )}
             </tbody>
           </table>
         </div>
+        )}
       </div>
 
       <LeadDetailDrawer
         lead={selectedLead}
+        partners={partners}
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         onAssignPartner={handleAssignPartner}
       />
+
+      {toast ? (
+        <div
+          data-testid={toastVariant === 'success' ? 'lead-assign-success-toast' : undefined}
+          className={`fixed bottom-24 left-1/2 z-[60] -translate-x-1/2 rounded-xl border bg-zinc-900/95 px-4 py-2.5 text-sm shadow-2xl backdrop-blur-xl lg:bottom-8 ${
+            toastVariant === 'success'
+              ? 'border-emerald-500/30 text-emerald-300'
+              : 'border-red-500/30 text-red-300'
+          }`}
+        >
+          {toast}
+        </div>
+      ) : null}
     </div>
   )
 }

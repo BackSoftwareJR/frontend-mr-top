@@ -1,13 +1,9 @@
 /**
- * B2B partner registration & onboarding — API when configured, localStorage mock fallback in dev.
+ * B2B partner registration & onboarding — API when configured, localStorage mock when offline.
  */
 
-import apiClient, {
-  AUTH_TOKEN_KEY,
-  isApiConfigured,
-  unwrapApiData,
-  withDevMockFallback,
-} from './apiClient'
+import apiClient, { AUTH_TOKEN_KEY, unwrapApiData } from './apiClient'
+import { b2bWithOfflineMock } from './b2bApiUtils'
 import { saveSession, getSession } from './authService'
 
 function normalizeEmail(email) {
@@ -18,6 +14,12 @@ const REGISTRATION_KEY = 'wenando-b2b-registration'
 const ONBOARDING_KEY = 'wenando-b2b-onboarding'
 
 export const ONBOARDING_STEP_IDS = ['legal', 'operations', 'trust', 'review']
+
+/** Frontend field → API multipart `type` */
+export const ONBOARDING_DOCUMENT_API_TYPES = {
+  visura: 'visura',
+  identityDoc: 'identity',
+}
 
 export const ONBOARDING_STEP_LABELS = [
   { id: 'legal', label: 'Identità', description: 'Dati legali e documenti' },
@@ -178,7 +180,13 @@ export function getB2BRedirectPath(session = getSession()) {
 
   const status = getOnboardingStatus(session.email)
   if (status === 'approved') return '/pro/dashboard'
-  if (status === 'pending_review') return '/pro/onboarding'
+  if (
+    status === 'pending_review' ||
+    status === 'rejected' ||
+    status === 'suspended'
+  ) {
+    return '/pro/onboarding'
+  }
   return '/pro/onboarding'
 }
 
@@ -217,11 +225,17 @@ export function saveOnboardingData(email, patch) {
   return store[normalized]
 }
 
-export function setOnboardingStatus(email, status) {
+export function setOnboardingStatus(email, status, rejectionReason = undefined) {
   const normalized = normalizeEmail(email)
   const store = readJson(ONBOARDING_KEY, {})
   const existing = store[normalized] ?? { data: {} }
-  store[normalized] = { ...existing, status, updatedAt: Date.now() }
+  const entry = { ...existing, status, updatedAt: Date.now() }
+  if (rejectionReason !== undefined) {
+    entry.rejection_reason = rejectionReason || null
+  } else if (status !== 'rejected') {
+    entry.rejection_reason = null
+  }
+  store[normalized] = entry
   writeJson(ONBOARDING_KEY, store)
 }
 
@@ -301,22 +315,114 @@ async function patchOnboardingToApi(patch) {
   }
 }
 
-async function submitOnboardingToApi() {
-  const response = await apiClient.post('/b2b/onboarding/submit')
+async function submitOnboardingToApi(consentPayload) {
+  const response = await apiClient.post('/b2b/onboarding/submit', consentPayload)
+  return unwrapApiData(response)
+}
+
+/**
+ * @param {'visura' | 'identity'} type
+ * @param {File} file
+ * @param {(percent: number) => void} [onProgress]
+ */
+async function uploadOnboardingDocumentToApi(type, file, onProgress) {
+  const formData = new FormData()
+  formData.append('type', type)
+  formData.append('file', file)
+
+  const response = await apiClient.post('/b2b/onboarding/documents', formData, {
+    headers: { 'Content-Type': undefined },
+    onUploadProgress: (event) => {
+      if (!onProgress || !event.total) return
+      onProgress(Math.round((event.loaded * 100) / event.total))
+    },
+  })
   return unwrapApiData(response)
 }
 
 async function fetchOnboardingStatusFromApi() {
   const response = await apiClient.get('/b2b/onboarding/status')
   const data = unwrapApiData(response)
-  return data.status ?? null
+  const payload = {
+    status: data.status ?? data.vetting_status ?? null,
+    redirectTo: data.redirect_to ?? null,
+    onboardingComplete: Boolean(
+      data.onboarding_complete ??
+        (data.status === 'approved' || data.vetting_status === 'approved'),
+    ),
+    rejectionReason: data.rejection_reason ?? null,
+  }
+  syncOnboardingStatusPayload(payload)
+  return payload
 }
 
-async function registerB2BPartnerApi({ email, organizationName, legalName }) {
+function syncOnboardingStatusPayload(payload) {
+  if (!payload?.status) return
+
+  const session = getSession()
+  if (session?.type === 'b2b' && session.email) {
+    setOnboardingStatus(session.email, payload.status, payload.rejectionReason)
+    if (session.onboardingStatus !== payload.status) {
+      saveSession({ ...session, onboardingStatus: payload.status })
+    }
+  }
+}
+
+function mapLocalOnboardingStatusPayload(email) {
+  const normalized = normalizeEmail(email || getSession()?.email || '')
+  const status = getOnboardingStatus(normalized)
+  const store = readJson(ONBOARDING_KEY, {})
+  const entry = store[normalized]
+  return {
+    status,
+    redirectTo: getB2BRedirectPath(getSession()),
+    onboardingComplete: status === 'approved',
+    rejectionReason:
+      status === 'rejected' ? (entry?.rejection_reason ?? null) : null,
+  }
+}
+
+/**
+ * Full onboarding status from API when configured (status, redirectTo, onboardingComplete).
+ */
+export async function fetchOnboardingStatusAsync(email) {
+  const normalized = normalizeEmail(email || getSession()?.email || '')
+  return b2bWithOfflineMock(
+    () => fetchOnboardingStatusFromApi(),
+    () => mapLocalOnboardingStatusPayload(normalized),
+  )
+}
+
+/**
+ * Resolve post-auth redirect using API `redirect_to` when available.
+ * @param {{ deepLink?: string, session?: ReturnType<typeof getSession> }} [options]
+ */
+export async function getB2BRedirectPathAsync(options = {}) {
+  const session = options.session ?? getSession()
+  const payload = await fetchOnboardingStatusAsync(session?.email)
+
+  if (payload.onboardingComplete && options.deepLink?.startsWith('/pro/')) {
+    return options.deepLink
+  }
+
+  return payload.redirectTo ?? getB2BRedirectPath(session)
+}
+
+async function registerB2BPartnerApi({
+  email,
+  organizationName,
+  legalName,
+  privacy_policy_accepted,
+  consent_text_hash,
+  policy_version,
+}) {
   const response = await apiClient.post('/b2b/register', {
     email: email.trim().toLowerCase(),
     organization_name: organizationName.trim(),
     legal_name: legalName.trim(),
+    privacy_policy_accepted,
+    consent_text_hash,
+    policy_version,
   })
   const data = unwrapApiData(response)
   const token = data.token ?? data.session?.token
@@ -337,80 +443,78 @@ async function registerB2BPartnerApi({ email, organizationName, legalName }) {
 }
 
 export async function registerB2BPartnerAsync(params) {
-  if (!isApiConfigured()) {
-    return registerB2BPartner(params)
-  }
-  return withDevMockFallback(
+  return b2bWithOfflineMock(
     () => registerB2BPartnerApi(params),
     () => registerB2BPartner(params),
-    'B2B register',
   )
 }
 
 export async function getOnboardingStatusAsync(email) {
-  const session = getSession()
-  const normalized = normalizeEmail(email || session?.email || '')
-
-  if (isApiConfigured() && getSession()?.token) {
-    try {
-      const status = await fetchOnboardingStatusFromApi()
-      if (status) return status
-    } catch (error) {
-      if (!import.meta.env.DEV) throw error
-      console.warn('[Wenando B2B] Onboarding status API — mock fallback:', error)
-    }
-  }
-
-  return getOnboardingStatus(normalized)
+  const payload = await fetchOnboardingStatusAsync(email)
+  return payload.status ?? getOnboardingStatus(normalizeEmail(email || getSession()?.email || ''))
 }
 
 export async function loadOnboardingDataAsync(email) {
   const normalized = normalizeEmail(email || getSession()?.email || '')
-
-  if (isApiConfigured() && getSession()?.token) {
-    try {
+  return b2bWithOfflineMock(
+    async () => {
       const result = await fetchOnboardingFromApi()
       if (result.data && Object.keys(result.data).length > 0) {
         saveOnboardingData(normalized, result.data)
         if (result.status) setOnboardingStatus(normalized, result.status)
         return result.data
       }
-    } catch (error) {
-      if (!import.meta.env.DEV) throw error
-      console.warn('[Wenando B2B] Onboarding load API — mock fallback:', error)
-    }
-  }
-
-  return getOnboardingData(normalized)
+      return getOnboardingData(normalized)
+    },
+    () => getOnboardingData(normalized),
+  )
 }
 
 export async function saveOnboardingDataAsync(email, patch) {
   const normalized = normalizeEmail(email || getSession()?.email || '')
   saveOnboardingData(normalized, patch)
 
-  if (isApiConfigured() && getSession()?.token) {
-    try {
-      await patchOnboardingToApi(patch)
-    } catch (error) {
-      if (!import.meta.env.DEV) throw error
-      console.warn('[Wenando B2B] Onboarding save API — mock fallback:', error)
-    }
-  }
+  await b2bWithOfflineMock(
+    () => patchOnboardingToApi(patch),
+    () => undefined,
+  )
 
   return getOnboardingData(normalized)
 }
 
-export async function submitOnboardingForReviewAsync(email) {
+export async function submitOnboardingForReviewAsync(email, consentPayload) {
   const normalized = normalizeEmail(email || getSession()?.email || '')
 
-  if (isApiConfigured() && getSession()?.token) {
-    try {
-      await submitOnboardingToApi()
-    } catch (error) {
-      if (!import.meta.env.DEV) throw error
-      console.warn('[Wenando B2B] Onboarding submit API — mock fallback:', error)
-    }
-  }
+  await b2bWithOfflineMock(
+    () => submitOnboardingToApi(consentPayload),
+    () => undefined,
+  )
 
   submitOnboardingForReview(normalized)
+}
+
+/**
+ * Upload visura or identity document (multipart). Refreshes local onboarding cache on success.
+ * @param {string} email
+ * @param {'visura' | 'identityDoc'} field
+ * @param {File} file
+ * @param {{ onProgress?: (percent: number) => void }} [options]
+ */
+export async function uploadOnboardingDocumentAsync(email, field, file, options = {}) {
+  const normalized = normalizeEmail(email || getSession()?.email || '')
+  const apiType = ONBOARDING_DOCUMENT_API_TYPES[field]
+  if (!apiType) {
+    throw new Error(`Unknown onboarding document field: ${field}`)
+  }
+
+  const applyLocalFilename = (fileName) => {
+    saveOnboardingData(normalized, { [field]: fileName })
+  }
+
+  const result = await b2bWithOfflineMock(
+    () => uploadOnboardingDocumentToApi(apiType, file, options.onProgress),
+    () => ({ type: apiType, file_name: file.name }),
+  )
+  applyLocalFilename(result.file_name ?? file.name)
+  return result
 }

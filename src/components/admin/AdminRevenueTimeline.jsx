@@ -14,13 +14,26 @@ function smoothPath(points) {
   return d
 }
 
-export default function AdminRevenueTimeline({ data, compact = false }) {
+export default function AdminRevenueTimeline({ data = [], compact = false }) {
   const [hovered, setHovered] = useState(null)
   const width = compact ? 320 : 480
   const height = compact ? 120 : 160
   const padding = { top: 12, right: 12, bottom: 24, left: 12 }
   const chartWidth = width - padding.left - padding.right
   const chartHeight = height - padding.top - padding.bottom
+
+  if (data.length < 2) {
+    return (
+      <div className={`${adminGlassCard} p-4 sm:p-5`}>
+        <div className="mb-3">
+          <h3 className="text-sm font-semibold text-white">Cashflow</h3>
+          <p className="text-xs text-zinc-500">Incassi giornalieri — ultimi 7 giorni</p>
+        </div>
+        <p className="py-8 text-center text-sm text-zinc-500">Nessun dato disponibile</p>
+      </div>
+    )
+  }
+
   const maxAmount = Math.max(...data.map((d) => d.amount), 1)
 
   const points = data.map((d, i) => {

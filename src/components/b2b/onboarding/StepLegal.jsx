@@ -21,8 +21,9 @@ const LEGAL_FIELDS = [
   },
 ]
 
-export default function StepLegal({ data, onChange, onFilesChange }) {
+export default function StepLegal({ data, onChange, onDocumentUpload, documentUpload }) {
   const handleField = (id, value) => onChange({ [id]: value })
+  const upload = documentUpload ?? {}
 
   return (
     <div className="space-y-6">
@@ -61,14 +62,20 @@ export default function StepLegal({ data, onChange, onFilesChange }) {
             hint="PDF, max 10 MB"
             accept=".pdf,application/pdf"
             fileName={data.visura}
-            onFile={(name) => onFilesChange?.({ visura: name })}
+            uploading={upload.visura?.loading}
+            uploadProgress={upload.visura?.progress ?? 0}
+            uploadError={upload.visura?.error}
+            onFile={(file) => onDocumentUpload?.('visura', file)}
           />
           <FileDropZone
             label="Documento Identità"
             hint="PDF o immagine"
             accept=".pdf,image/*"
             fileName={data.identityDoc}
-            onFile={(name) => onFilesChange?.({ identityDoc: name })}
+            uploading={upload.identityDoc?.loading}
+            uploadProgress={upload.identityDoc?.progress ?? 0}
+            uploadError={upload.identityDoc?.error}
+            onFile={(file) => onDocumentUpload?.('identityDoc', file)}
           />
         </div>
       </div>

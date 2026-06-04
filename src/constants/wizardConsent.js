@@ -1,4 +1,5 @@
 import { LEGAL_VERSION } from './legalVersions'
+import { MARKETING_CONSENT_HASH, MARKETING_CONSENT_LABEL } from './privacyPreferences'
 
 /**
  * Canonical checkbox labels — SHA-256 source for consent_text_hash.
@@ -11,6 +12,7 @@ export const WIZARD_CONSENT_LABELS = {
     'Ho letto e accetto le Condizioni Generali di Utilizzo per Utenti Consumatori (B2C).',
   lead_sharing:
     'Acconsento che Wenando condivida i miei dati con strutture partner selezionate per essere ricontattato/a in merito alla mia richiesta.',
+  marketing: MARKETING_CONSENT_LABEL,
 }
 
 /** Structured UI fragments — concatenated link text must equal WIZARD_CONSENT_LABELS. */
@@ -36,11 +38,12 @@ export const CONSENT_TEXT_HASH = {
   privacy_policy: '2215df58adb1f22c6ebabdd592c36ca5f58ab26c8c199d48fe617b0af61dcf00',
   terms_b2c: 'e4b21b8bb3965045dd22f39980a48d814a8da11b37c2b4c230808de9ea09a134',
   lead_sharing: 'dc48a91ab1050762047e42d985f3545596aa1c4d2f72cb8a2c003f6172d90905',
+  marketing: MARKETING_CONSENT_HASH,
 }
 
 /**
  * Builds payload for POST /api/v1/consents.
- * @param {{ privacy: boolean, terms: boolean, partnerContact: boolean }} consents
+ * @param {{ privacy: boolean, terms: boolean, partnerContact: boolean, marketing?: boolean }} consents
  * @param {string} sessionId
  */
 export function buildApiConsents(consents, sessionId) {
@@ -77,12 +80,22 @@ export function buildApiConsents(consents, sessionId) {
     })
   }
 
+  if (consents.marketing) {
+    entries.push({
+      consent_type: 'marketing',
+      policy_version: LEGAL_VERSION,
+      consent_given: true,
+      consent_text_hash: CONSENT_TEXT_HASH.marketing,
+      session_id: sessionId,
+    })
+  }
+
   return entries
 }
 
 /**
  * Local audit payload retained in wizard state (mock lead pipeline / debugging).
- * @param {{ privacy: boolean, terms: boolean, partnerContact: boolean }} consents
+ * @param {{ privacy: boolean, terms: boolean, partnerContact: boolean, marketing?: boolean }} consents
  * @param {Record<string, unknown>} answers
  */
 export function buildWizardConsentPayload(consents, answers) {
@@ -112,6 +125,13 @@ export function buildWizardConsentPayload(consents, answers) {
         version: LEGAL_VERSION,
         consent_text_hash: CONSENT_TEXT_HASH.lead_sharing,
         label: WIZARD_CONSENT_LABELS.lead_sharing,
+        timestamp: now,
+      },
+      marketing: {
+        accepted: consents.marketing === true,
+        version: LEGAL_VERSION,
+        consent_text_hash: CONSENT_TEXT_HASH.marketing,
+        label: WIZARD_CONSENT_LABELS.marketing,
         timestamp: now,
       },
     },

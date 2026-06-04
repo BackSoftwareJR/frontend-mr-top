@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import { ArrowRight, Plus, ShieldCheck, Sparkles } from 'lucide-react'
 import { getLatestSearch } from '../../data/mockUserSearches'
+import SearchTitleInlineEdit from '../../components/user/SearchTitleInlineEdit'
+import UserLoadError from '../../components/user/UserLoadError'
+import { ApiError, isApiConfigured } from '../../services/apiClient'
 import { fetchUserHomeWithFallback } from '../../services/userService'
 
 const spring = { type: 'spring', stiffness: 400, damping: 28 }
@@ -86,7 +89,7 @@ function GlowingStatusPill({ label, tone = 'amber' }) {
   )
 }
 
-function StatusWidget({ reducedMotion, latest }) {
+function StatusWidget({ reducedMotion, latest, onLatestRenamed }) {
   const hoverTap = reducedMotion
     ? {}
     : { whileHover: { scale: 1.02 }, whileTap: { scale: 0.98 } }
@@ -102,8 +105,16 @@ function StatusWidget({ reducedMotion, latest }) {
         role="status"
         aria-live="polite"
       >
-        <div className="mb-6">
+        <div className="mb-6 space-y-3">
           <GlowingStatusPill label="Ricerca in corso" tone="amber" />
+          {latest?.title ? (
+            <SearchTitleInlineEdit
+              search={latest}
+              fallbackLabel="La tua ricerca"
+              titleClassName="text-lg font-semibold tracking-tight text-slate-800 sm:text-xl"
+              onRenamed={onLatestRenamed}
+            />
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:gap-8">
@@ -134,8 +145,16 @@ function StatusWidget({ reducedMotion, latest }) {
         transition={spring}
         className={`${glassCard} overflow-hidden p-7 sm:p-9`}
       >
-        <div className="mb-6">
+        <div className="mb-6 space-y-3">
           <GlowingStatusPill label="Risultati pronti" tone="emerald" />
+          {latest?.title ? (
+            <SearchTitleInlineEdit
+              search={latest}
+              fallbackLabel="La tua ricerca"
+              titleClassName="text-lg font-semibold tracking-tight text-slate-800 sm:text-xl"
+              onRenamed={onLatestRenamed}
+            />
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
@@ -154,7 +173,7 @@ function StatusWidget({ reducedMotion, latest }) {
             </p>
             <motion.div whileHover={reducedMotion ? undefined : { scale: 1.02 }} whileTap={reducedMotion ? undefined : { scale: 0.98 }}>
               <Link
-                to="/user/ricerche"
+                to="/area-personale/ricerche"
                 className="inline-flex min-h-[3rem] items-center gap-2 text-lg font-medium text-teal-800 transition-colors hover:text-teal-900"
               >
                 Vedi le ricerche
@@ -193,20 +212,47 @@ function StatusWidget({ reducedMotion, latest }) {
 export default function UserHome() {
   const [displayName, setDisplayName] = useState('amico')
   const [latestSearch, setLatestSearch] = useState(() => getLatestSearch())
+  const [loading, setLoading] = useState(() => isApiConfigured())
+  const [loadError, setLoadError] = useState(null)
+  const [retryCount, setRetryCount] = useState(0)
   const greetingEmoji = getTimeGreetingEmoji()
   const prefersReducedMotion = useReducedMotion()
 
   useEffect(() => {
     let cancelled = false
-    fetchUserHomeWithFallback().then((data) => {
-      if (cancelled) return
-      if (data.displayName) setDisplayName(data.displayName.split(' ')[0])
-      if (data.latestSearch) setLatestSearch(data.latestSearch)
-    })
+
+    async function load() {
+      if (isApiConfigured()) {
+        setLoading(true)
+        setLoadError(null)
+      }
+      try {
+        const data = await fetchUserHomeWithFallback()
+        if (cancelled) return
+        if (data.displayName) setDisplayName(data.displayName.split(' ')[0])
+        if (data.latestSearch) setLatestSearch(data.latestSearch)
+      } catch (err) {
+        if (!cancelled && isApiConfigured()) {
+          setLoadError(
+            err instanceof ApiError
+              ? err.message
+              : 'Impossibile caricare la home. Verifica la connessione e riprova.',
+          )
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    load()
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [retryCount])
+
+  const handleLatestRenamed = (updated) => {
+    setLatestSearch((current) => (current ? { ...current, ...updated } : updated))
+  }
 
   const pageInitial = prefersReducedMotion ? false : { opacity: 0, y: 20 }
   const itemInitial = prefersReducedMotion ? false : { opacity: 0, y: 20 }
@@ -239,13 +285,27 @@ export default function UserHome() {
           </p>
         </motion.header>
 
-        <motion.div
-          initial={itemInitial}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ ...spring, delay: prefersReducedMotion ? 0 : 0.12 }}
-        >
-          <StatusWidget reducedMotion={prefersReducedMotion} latest={latestSearch} />
-        </motion.div>
+        {loadError && !loading ? (
+          <UserLoadError message={loadError} onRetry={() => setRetryCount((n) => n + 1)} />
+        ) : null}
+
+        {!loadError ? (
+          <motion.div
+            initial={itemInitial}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...spring, delay: prefersReducedMotion ? 0 : 0.12 }}
+          >
+            {loading ? (
+              <p className="text-center text-sm text-slate-500">Caricamento…</p>
+            ) : (
+              <StatusWidget
+                reducedMotion={prefersReducedMotion}
+                latest={latestSearch}
+                onLatestRenamed={handleLatestRenamed}
+              />
+            )}
+          </motion.div>
+        ) : null}
 
         <motion.div
           initial={itemInitial}

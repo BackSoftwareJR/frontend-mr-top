@@ -545,7 +545,6 @@ function ReadingPathLayer({
   ctaRects,
   isMobile,
   isConstrained,
-  isLowCore,
   simplifiedPath,
 }) {
   const measurePathRef = useRef(null)
@@ -653,7 +652,7 @@ function ReadingPathLayer({
   const anchorsVisibleRef = useReadingAnchorsVisible(isMobile && showCursor)
 
   useMobileReadingScrollFrame({
-    enabled: isMobile && showCursor && pathLength > 0 && frameTableRef.current.length > 0,
+    enabled: isMobile && showCursor && pathLength > 0 && pathRevision > 0,
     anchorsVisibleRef,
     scrollGroupRef,
     visiblePathRef,
@@ -868,13 +867,7 @@ function DesktopReadingLineLayer({ reducedMotion, isConstrained }) {
   const simplifiedPath = reducedMotion
   const viewport = useViewportSize()
   const ctaRects = useCtaAnchorRects()
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted || typeof document === 'undefined') return null
+  if (typeof document === 'undefined') return null
 
   const layer = (
     <div className={LAYER_CLASS} aria-hidden="true">
@@ -901,13 +894,7 @@ function MobileReadingLineLayer({ reducedMotion, isConstrained, isLowCore }) {
   const simplifiedPath = reducedMotion
   const viewport = useViewportSize()
   const ctaRects = useCtaAnchorRects()
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted || typeof document === 'undefined') return null
+  if (typeof document === 'undefined') return null
 
   const layer = (
     <div className={MOBILE_LAYER_CLASS} aria-hidden="true">

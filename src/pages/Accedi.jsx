@@ -7,6 +7,8 @@ import CodeInput from '../components/auth/CodeInput'
 import HumanVerification from '../components/auth/HumanVerification'
 import { b2bInputFocus, b2bLink, b2bPrimaryBtn } from '../components/b2b/b2bStyles'
 import { useAuth } from '../context/AuthContext'
+import { shouldShowOtpDevHint } from '../services/authApiUtils'
+import { ApiError, isApiConfigured } from '../services/apiClient'
 import {
   buildCaptchaPayload,
   getResendCooldown,
@@ -36,11 +38,11 @@ export default function Accedi() {
   const [error, setError] = useState('')
   const [resendCooldown, setResendCooldown] = useState(0)
 
-  const redirectTarget = location.state?.from || '/user'
+  const redirectTarget = location.state?.from || '/area-personale'
 
   useEffect(() => {
     if (isAuthenticated && userType === 'consumer') {
-      navigate('/user', { replace: true })
+      navigate('/area-personale', { replace: true })
     }
   }, [isAuthenticated, navigate, userType])
 
@@ -74,19 +76,28 @@ export default function Accedi() {
     setLoading(true)
     setError('')
 
-    const formData = new FormData(document.getElementById('auth-form'))
-    const result = await requestCode(email, buildCaptchaPayload(formData, payload))
+    try {
+      const formData = new FormData(document.getElementById('auth-form'))
+      const result = await requestCode(email, buildCaptchaPayload(formData, payload))
 
-    setLoading(false)
+      if (!result.ok) {
+        setError(result.error)
+        return
+      }
 
-    if (!result.ok) {
-      setError(result.error)
-      return
+      setDevCode(result.devCode ?? null)
+      const cooldownMs = await getResendCooldown(result.email)
+      setResendCooldown(Math.ceil(cooldownMs / 1000) || 60)
+      setStep(STEPS.CODE)
+    } catch (err) {
+      if (isApiConfigured()) {
+        setError(err instanceof ApiError ? err.message : 'Errore di connessione. Riprova.')
+      } else {
+        throw err
+      }
+    } finally {
+      setLoading(false)
     }
-
-    setDevCode(result.devCode ?? null)
-    setResendCooldown(Math.ceil(getResendCooldown(result.email) / 1000) || 60)
-    setStep(STEPS.CODE)
   }
 
   const handleVerifyCode = async (e) => {
@@ -98,33 +109,54 @@ export default function Accedi() {
 
     setLoading(true)
     setError('')
-    const result = await login(email, code)
-    setLoading(false)
 
-    if (!result.ok) {
-      setError(result.error)
-      return
+    try {
+      const result = await login(email, code)
+
+      if (!result.ok) {
+        setError(result.error)
+        return
+      }
+
+      navigate(result.redirectTo || redirectTarget, { replace: true })
+    } catch (err) {
+      if (isApiConfigured()) {
+        setError(err instanceof ApiError ? err.message : 'Errore di connessione. Riprova.')
+      } else {
+        throw err
+      }
+    } finally {
+      setLoading(false)
     }
-
-    navigate(result.redirectTo || redirectTarget, { replace: true })
   }
 
   const handleResend = async () => {
     if (resendCooldown > 0 || !captchaPayload) return
     setLoading(true)
     setError('')
-    const formData = new FormData(document.getElementById('auth-form'))
-    const result = await requestCode(email, buildCaptchaPayload(formData, captchaPayload))
-    setLoading(false)
 
-    if (!result.ok) {
-      setError(result.error)
-      return
+    try {
+      const formData = new FormData(document.getElementById('auth-form'))
+      const result = await requestCode(email, buildCaptchaPayload(formData, captchaPayload))
+
+      if (!result.ok) {
+        setError(result.error)
+        return
+      }
+
+      setDevCode(result.devCode ?? null)
+      setCode('')
+      const cooldownMs = await getResendCooldown(result.email)
+      setResendCooldown(Math.ceil(cooldownMs / 1000) || 60)
+    } catch (err) {
+      if (isApiConfigured()) {
+        setError(err instanceof ApiError ? err.message : 'Errore di connessione. Riprova.')
+      } else {
+        throw err
+      }
+    } finally {
+      setLoading(false)
     }
-
-    setDevCode(result.devCode ?? null)
-    setCode('')
-    setResendCooldown(60)
   }
 
   const handleChallengeReady = useCallback((payload) => {
@@ -208,7 +240,7 @@ export default function Accedi() {
               <div className="space-y-6">
                 <CodeInput value={code} onChange={setCode} disabled={loading} error={error} />
 
-                {import.meta.env.DEV && devCode && (
+                {shouldShowOtpDevHint(devCode) && (
                   <div className="rounded-2xl bg-accent-coral/10 px-4 py-3 text-center ring-1 ring-accent-coral/20">
                     <p className="text-xs font-medium text-accent-coral-dark">
                       Modalità sviluppo — codice:{' '}

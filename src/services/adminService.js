@@ -1,11 +1,16 @@
-import apiClient, { isApiConfigured, unwrapApiData, withDevMockFallback } from './apiClient'
+import apiClient, { isApiConfigured, unwrapApiData } from './apiClient'
 import {
   adminMetrics,
   adminNotifications,
   adminPartnersList,
   leadFlowChartData,
+  mockAdminAdvisorBookings,
   mockAdminLeads,
+  mockAdminSectors,
   mockPartnerRegistrations,
+  mockPendingBankTransfers,
+  mockPlatformSettings,
+  mockWebhookEvents,
   portfolioAllocation,
   portfolioPartners,
   portfolioSummary,
@@ -31,6 +36,22 @@ function formatEuro(amount) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount ?? 0)
+}
+
+/**
+ * Admin *WithFallback: mock only when VITE_API_URL is unset (offline dev).
+ * When API is configured, call apiFn only — 4xx/5xx/network errors propagate (no mock).
+ * @template T
+ * @param {() => Promise<T>} apiFn
+ * @param {T | (() => T)} mockData
+ * @returns {Promise<T>}
+ */
+function adminWithOfflineMock(apiFn, mockData) {
+  if (!isApiConfigured()) {
+    const data = typeof mockData === 'function' ? mockData() : mockData
+    return Promise.resolve(data)
+  }
+  return apiFn()
 }
 
 /** @param {Record<string, unknown>} stats */
@@ -66,6 +87,16 @@ function mapDashboardStatsToMetrics(stats) {
           ? 'in coda'
           : 'nessuna',
       positive: (stats.pending_approvals ?? stats.companies_pending_approval ?? 0) === 0,
+    },
+    pendingBankTransfers: {
+      value: String(
+        stats.pending_bank_transfers_count ?? adminMetrics.pendingBankTransfers.value,
+      ),
+      change:
+        (stats.pending_bank_transfers_count ?? 0) > 0
+          ? 'da verificare'
+          : 'nessuno',
+      positive: (stats.pending_bank_transfers_count ?? 0) === 0,
     },
     churn: {
       value: stats.churn ?? adminMetrics.churn.value,
@@ -175,7 +206,7 @@ export async function fetchRiskIndicators() {
     label: i.label,
     value: i.value,
     detail: i.detail ?? '',
-    status: i.status ?? 'ok',
+    status: i.status === 'warning' ? 'warn' : (i.status ?? 'ok'),
   }))
 }
 
@@ -219,9 +250,35 @@ export async function fetchAdminTransactions(params = {}) {
   }
 }
 
+/** @param {Record<string, unknown>} tx */
+function mapAdminTransactionDetail(tx) {
+  return {
+    id: tx.id,
+    partner: tx.partner ?? '',
+    importo: tx.importo ?? tx.amount ?? 0,
+    stato: tx.stato ?? tx.status ?? 'Completata',
+    data: tx.data ?? tx.date ?? '',
+    tipo: tx.tipo ?? tx.type ?? '',
+    metodo: tx.metodo ?? tx.method ?? '',
+    riferimento: tx.riferimento ?? tx.reference ?? '',
+    note: tx.note ?? tx.description ?? '',
+  }
+}
+
 export async function fetchAdminTransactionDetail(id) {
   const response = await apiClient.get(`/admin/transactions/${id}`)
-  return unwrapApiData(response)
+  const data = unwrapApiData(response)
+  return mapAdminTransactionDetail(data)
+}
+
+export function fetchAdminTransactionDetailWithFallback(id, rowFallback = null) {
+  return adminWithOfflineMock(
+    () => fetchAdminTransactionDetail(id),
+    () => {
+      const mock = transactions.find((t) => t.id === id) ?? rowFallback
+      return mock ? mapAdminTransactionDetail(mock) : null
+    },
+  )
 }
 
 /** @param {Record<string, unknown>} p */
@@ -263,6 +320,105 @@ export async function suspendPartner(companyId, reason) {
     reason: reason ?? null,
   })
   return unwrapApiData(response)
+}
+
+export async function impersonatePartner(companyId) {
+  const response = await apiClient.post(`/admin/partners/${companyId}/impersonate`)
+  const data = unwrapApiData(response)
+  return {
+    token: data.impersonation_token,
+    expiresAt: data.expires_at,
+    partner: {
+      id: data.partner?.id,
+      email: data.partner?.email,
+      organizationName: data.partner?.organization_name,
+    },
+  }
+}
+
+/** @param {Record<string, unknown>} item */
+function mapSearchResult(item) {
+  return {
+    type: item.type,
+    id: item.id,
+    label: item.label ?? '',
+    subtitle: item.subtitle ?? '',
+  }
+}
+
+function searchMockData(query) {
+  const q = query.trim().toLowerCase()
+  if (q.length < 2) {
+    return { partners: [], leads: [], transactions: [], advisor_bookings: [] }
+  }
+
+  const match = (value) => String(value ?? '').toLowerCase().includes(q)
+
+  return {
+    partners: mockPartnerRegistrations
+      .filter(
+        (p) =>
+          match(p.nomeStruttura) ||
+          match(p.partitaIva) ||
+          match(p.citta) ||
+          match(p.id),
+      )
+      .slice(0, 5)
+      .map((p) => ({
+        type: 'partner',
+        id: p.id,
+        label: p.nomeStruttura,
+        subtitle: [p.citta, p.partitaIva ? `P.IVA ${p.partitaIva}` : ''].filter(Boolean).join(' · '),
+      })),
+    leads: mockAdminLeads
+      .filter((l) => match(l.id) || match(l.utente) || match(l.esigenza))
+      .slice(0, 5)
+      .map((l) => ({
+        type: 'lead',
+        id: l.id,
+        label: l.utente,
+        subtitle: l.id,
+      })),
+    transactions: transactions
+      .filter((t) => match(t.id) || match(t.partner) || match(t.riferimento))
+      .slice(0, 5)
+      .map((t) => ({
+        type: 'transaction',
+        id: t.id,
+        label: t.id,
+        subtitle: t.partner,
+      })),
+    advisor_bookings: mockAdminAdvisorBookings.upcoming
+      .concat(mockAdminAdvisorBookings.past)
+      .filter(
+        (b) =>
+          match(b.consumerName) ||
+          match(b.consumerEmail) ||
+          match(b.leadTitle),
+      )
+      .slice(0, 5)
+      .map((b) => ({
+        type: 'advisor_booking',
+        id: String(b.id),
+        label: b.consumerName,
+        subtitle: b.leadTitle ?? '',
+      })),
+  }
+}
+
+export async function fetchAdminSearch(query) {
+  const response = await apiClient.get('/admin/search', { params: { q: query } })
+  const data = unwrapApiData(response)
+  return {
+    partners: (data.partners ?? []).map(mapSearchResult),
+    leads: (data.leads ?? []).map(mapSearchResult),
+    transactions: (data.transactions ?? []).map(mapSearchResult),
+    advisor_bookings: (data.advisor_bookings ?? []).map(mapSearchResult),
+  }
+}
+
+export function fetchAdminSearchWithFallback(query) {
+  return adminWithOfflineMock(() => fetchAdminSearch(query), () => searchMockData(query))
 }
 
 /** @param {Record<string, unknown>} lead */
@@ -308,79 +464,314 @@ export async function rerouteAdminLead(leadId) {
 export async function fetchAdminNotifications() {
   const response = await apiClient.get('/admin/notifications')
   const data = unwrapApiData(response)
-  return Array.isArray(data.notifications) ? data.notifications : []
+  const notifications = Array.isArray(data.notifications) ? data.notifications : []
+  return notifications.map(mapAdminNotification)
+}
+
+/** @param {Record<string, unknown>} n */
+function mapAdminNotification(n) {
+  const data = typeof n.data === 'object' && n.data !== null ? n.data : {}
+
+  return {
+    id: n.id,
+    title: data.title ?? n.title ?? 'Notifica',
+    message: data.message ?? data.body ?? n.message ?? '',
+    time: formatAdminNotificationTime(
+      data.time ?? data.created_at ?? n.created_at ?? n.time ?? '',
+    ),
+    read: Boolean(n.read_at ?? n.read),
+    href: data.href ?? n.href ?? null,
+  }
+}
+
+function formatAdminNotificationTime(value) {
+  if (!value) return ''
+  if (typeof value === 'string' && !/^\d{4}-\d{2}-\d{2}/.test(value)) {
+    return value
+  }
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+
+  const diffMin = Math.floor((Date.now() - date.getTime()) / 60000)
+  if (diffMin < 1) return 'Adesso'
+  if (diffMin < 60) return `${diffMin} min fa`
+
+  const diffHours = Math.floor(diffMin / 60)
+  if (diffHours < 24) return `${diffHours} ore fa`
+
+  return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short' }).format(date)
 }
 
 export function fetchDashboardStatsWithFallback() {
-  if (!isApiConfigured()) return Promise.resolve(mapDashboardStatsToMetrics({}))
-  return withDevMockFallback(
-    fetchDashboardStats,
-    () => mapDashboardStatsToMetrics({}),
-    'Admin metrics',
+  return adminWithOfflineMock(fetchDashboardStats, () =>
+    mapDashboardStatsToMetrics({
+      pending_bank_transfers_count: mockPendingBankTransfers.length,
+    }),
   )
 }
 
 export function fetchAdminPartnersWithFallback() {
-  if (!isApiConfigured()) return Promise.resolve(mockPartnerRegistrations)
-  return withDevMockFallback(fetchAdminPartners, () => mockPartnerRegistrations, 'Admin partners')
+  return adminWithOfflineMock(fetchAdminPartners, mockPartnerRegistrations)
 }
 
 export function fetchAdminLeadsWithFallback() {
-  if (!isApiConfigured()) return Promise.resolve(mockAdminLeads)
-  return withDevMockFallback(fetchAdminLeads, () => mockAdminLeads, 'Admin leads')
+  return adminWithOfflineMock(fetchAdminLeads, mockAdminLeads)
+}
+
+/** @param {Record<string, unknown>} booking */
+function mapAdminAdvisorBooking(booking) {
+  return {
+    id: booking.id,
+    consumerName: booking.consumer_name ?? booking.consumerName ?? '',
+    consumerEmail: booking.consumer_email ?? booking.consumerEmail ?? '',
+    leadTitle: booking.lead_title ?? booking.leadTitle ?? null,
+    scheduledAt: booking.scheduled_at ?? booking.scheduledAt ?? '',
+    scheduledDate: booking.scheduled_date ?? booking.scheduledDate ?? '',
+    scheduledTime: booking.scheduled_time ?? booking.scheduledTime ?? '',
+  }
+}
+
+export async function fetchAdminAdvisorBookings() {
+  const response = await apiClient.get('/admin/advisor-bookings')
+  const data = unwrapApiData(response)
+  return {
+    upcoming: (Array.isArray(data.upcoming) ? data.upcoming : []).map(mapAdminAdvisorBooking),
+    past: (Array.isArray(data.past) ? data.past : []).map(mapAdminAdvisorBooking),
+  }
+}
+
+export function fetchAdminAdvisorBookingsWithFallback() {
+  return adminWithOfflineMock(fetchAdminAdvisorBookings, mockAdminAdvisorBookings)
 }
 
 export function fetchAdminTransactionsWithFallback() {
-  if (!isApiConfigured()) {
-    return Promise.resolve({
-      summary: transactionVolumeSummary,
-      transactions,
-    })
-  }
-  return withDevMockFallback(
-    fetchAdminTransactions,
-    () => ({ summary: transactionVolumeSummary, transactions }),
-    'Admin transactions',
-  )
+  return adminWithOfflineMock(fetchAdminTransactions, {
+    summary: transactionVolumeSummary,
+    transactions,
+  })
 }
 
 export function fetchRevenueTimelineWithFallback() {
-  if (!isApiConfigured()) return Promise.resolve(revenueTimelineData)
-  return withDevMockFallback(fetchRevenueTimeline, () => revenueTimelineData, 'Revenue timeline')
+  return adminWithOfflineMock(fetchRevenueTimeline, revenueTimelineData)
 }
 
 export function fetchLeadFlowWithFallback() {
-  if (!isApiConfigured()) return Promise.resolve(leadFlowChartData)
-  return withDevMockFallback(fetchLeadFlow, () => leadFlowChartData, 'Lead flow')
+  return adminWithOfflineMock(fetchLeadFlow, leadFlowChartData)
 }
 
 export function fetchPortfolioAllocationWithFallback() {
-  if (!isApiConfigured()) return Promise.resolve(portfolioAllocation)
-  return withDevMockFallback(
-    fetchPortfolioAllocation,
-    () => portfolioAllocation,
-    'Portfolio allocation',
-  )
+  return adminWithOfflineMock(fetchPortfolioAllocation, portfolioAllocation)
 }
 
 export function fetchPortfolioPartnersWithFallback() {
-  if (!isApiConfigured()) return Promise.resolve(portfolioPartners)
-  return withDevMockFallback(fetchPortfolioPartners, () => portfolioPartners, 'Portfolio partners')
+  return adminWithOfflineMock(fetchPortfolioPartners, portfolioPartners)
 }
 
 export function fetchPortfolioSummaryWithFallback() {
-  if (!isApiConfigured()) return Promise.resolve(portfolioSummary)
-  return withDevMockFallback(fetchPortfolioSummary, () => portfolioSummary, 'Portfolio summary')
+  return adminWithOfflineMock(fetchPortfolioSummary, portfolioSummary)
 }
 
 export function fetchRiskIndicatorsWithFallback() {
-  if (!isApiConfigured()) return Promise.resolve(riskIndicators)
-  return withDevMockFallback(fetchRiskIndicators, () => riskIndicators, 'Risk indicators')
+  return adminWithOfflineMock(fetchRiskIndicators, riskIndicators)
 }
 
 export function fetchAdminNotificationsWithFallback() {
-  if (!isApiConfigured()) return Promise.resolve(adminNotifications)
-  return withDevMockFallback(fetchAdminNotifications, () => adminNotifications, 'Admin notifications')
+  return adminWithOfflineMock(fetchAdminNotifications, adminNotifications)
+}
+
+/** @param {Record<string, unknown>} data */
+function mapPlatformSettings(data) {
+  const security = typeof data.security === 'object' && data.security !== null ? data.security : {}
+  const automations = typeof data.automations === 'object' && data.automations !== null ? data.automations : {}
+  const notifications =
+    typeof data.notifications === 'object' && data.notifications !== null ? data.notifications : {}
+
+  return {
+    security: {
+      otpTtlMinutes: security.otp_ttl_minutes ?? mockPlatformSettings.security.otpTtlMinutes,
+    },
+    automations: {
+      autoMatchOnLead: automations.auto_match_on_lead ?? mockPlatformSettings.automations.autoMatchOnLead,
+    },
+    notifications: {
+      adminEmail: notifications.admin_email ?? mockPlatformSettings.notifications.adminEmail,
+    },
+  }
+}
+
+/** @param {ReturnType<typeof mapPlatformSettings>} settings */
+function toPlatformSettingsPayload(settings) {
+  return {
+    security: { otp_ttl_minutes: settings.security.otpTtlMinutes },
+    automations: { auto_match_on_lead: settings.automations.autoMatchOnLead },
+    notifications: { admin_email: settings.notifications.adminEmail },
+  }
+}
+
+export async function fetchAdminSettings() {
+  const response = await apiClient.get('/admin/settings')
+  return mapPlatformSettings(unwrapApiData(response))
+}
+
+export async function patchAdminSettings(settings) {
+  const response = await apiClient.patch('/admin/settings', toPlatformSettingsPayload(settings))
+  const data = unwrapApiData(response)
+  return mapPlatformSettings(data.settings ?? data)
+}
+
+/** @param {Record<string, unknown>} sector */
+function mapAdminSector(sector) {
+  return {
+    id: sector.id,
+    slug: sector.slug ?? '',
+    name: sector.name ?? '',
+    isActive: sector.is_active ?? true,
+  }
+}
+
+export async function fetchAdminSectors() {
+  const response = await apiClient.get('/admin/sectors')
+  const data = unwrapApiData(response)
+  const sectors = Array.isArray(data.sectors) ? data.sectors : []
+  return sectors.map(mapAdminSector)
+}
+
+export async function patchAdminSector(id, payload) {
+  const body = {}
+  if (payload.isActive !== undefined) body.is_active = payload.isActive
+  if (payload.wizardSchema !== undefined) body.wizard_schema = payload.wizardSchema
+  if (payload.matchingRules !== undefined) body.matching_rules = payload.matchingRules
+
+  const response = await apiClient.patch(`/admin/sectors/${id}`, body)
+  const data = unwrapApiData(response)
+  return mapAdminSector(data.sector ?? data)
+}
+
+export function fetchAdminSettingsWithFallback() {
+  return adminWithOfflineMock(fetchAdminSettings, mockPlatformSettings)
+}
+
+export function fetchAdminSectorsWithFallback() {
+  return adminWithOfflineMock(fetchAdminSectors, mockAdminSectors)
+}
+
+/** @param {Record<string, unknown>} item */
+function mapErasureRequest(item) {
+  const user = typeof item.user === 'object' && item.user !== null ? item.user : {}
+
+  return {
+    id: item.id,
+    status: item.status ?? 'pending',
+    reason: item.reason ?? '',
+    requestedAt: item.requested_at ?? item.requestedAt ?? '',
+    processedAt: item.processed_at ?? item.processedAt ?? null,
+    metadata: item.metadata ?? {},
+    user: {
+      id: user.id ?? '',
+      email: user.email ?? '',
+      name: user.name ?? '',
+    },
+  }
+}
+
+export async function fetchAdminErasureRequests(params = {}) {
+  const response = await apiClient.get('/admin/privacy/erasure-requests', {
+    params: { per_page: params.perPage },
+  })
+  const data = unwrapApiData(response)
+  const requests = Array.isArray(data.erasure_requests) ? data.erasure_requests : []
+
+  return {
+    pendingCount: data.pending_count ?? 0,
+    processingCount: data.processing_count ?? 0,
+    erasureRequests: requests.map(mapErasureRequest),
+  }
+}
+
+export async function patchAdminErasureRequest(id, payload) {
+  const response = await apiClient.patch(`/admin/privacy/erasure-requests/${id}`, {
+    action: payload.action,
+    notes: payload.notes ?? null,
+  })
+  const data = unwrapApiData(response)
+  const item = data.erasure_request ?? data
+
+  return mapErasureRequest(item)
+}
+
+export function fetchAdminErasureRequestsWithFallback() {
+  return adminWithOfflineMock(fetchAdminErasureRequests, {
+    pendingCount: 0,
+    processingCount: 0,
+    erasureRequests: [],
+  })
+}
+
+/** @param {Record<string, unknown>} item */
+function mapPendingBankTransfer(item) {
+  return {
+    id: item.id ?? '',
+    companyName: item.company_name ?? item.companyName ?? '',
+    credits: item.credits ?? 0,
+    amountCents: item.amount_cents ?? item.amountCents ?? 0,
+    reference: item.reference ?? '',
+    createdAt: item.created_at ?? item.createdAt ?? '',
+  }
+}
+
+export async function fetchAdminPendingBankTransfers() {
+  const response = await apiClient.get('/admin/wallet/pending-transfers')
+  const data = unwrapApiData(response)
+  const transfers = Array.isArray(data.pending_transfers) ? data.pending_transfers : []
+
+  return transfers.map(mapPendingBankTransfer)
+}
+
+export async function completeAdminBankTransfer(paymentIntentId) {
+  const response = await apiClient.post('/admin/wallet/complete-transfer', {
+    payment_intent_id: paymentIntentId,
+  })
+
+  return unwrapApiData(response)
+}
+
+export function fetchAdminPendingBankTransfersWithFallback() {
+  return adminWithOfflineMock(fetchAdminPendingBankTransfers, mockPendingBankTransfers)
+}
+
+/** @param {Record<string, unknown>} item */
+function mapWebhookEvent(item) {
+  return {
+    id: item.id ?? 0,
+    provider: item.provider ?? '',
+    eventType: item.event_type ?? item.eventType ?? '',
+    status: item.status ?? '',
+    paymentIntentId: item.payment_intent_id ?? item.paymentIntentId ?? null,
+    payload: item.payload ?? {},
+    createdAt: item.created_at ?? item.createdAt ?? '',
+  }
+}
+
+export async function fetchAdminWebhookEvents(params = {}) {
+  const response = await apiClient.get('/admin/webhooks/events', { params })
+  const data = unwrapApiData(response)
+  const events = Array.isArray(data.events) ? data.events : []
+
+  return {
+    events: events.map(mapWebhookEvent),
+    meta: response.data?.meta ?? {},
+  }
+}
+
+export function fetchAdminWebhookEventsWithFallback(params = {}) {
+  return adminWithOfflineMock(
+    () => fetchAdminWebhookEvents(params),
+    () => ({
+      events: mockWebhookEvents,
+      meta: { page: 1, per_page: 50, total: mockWebhookEvents.length, last_page: 1 },
+    }),
+  )
 }
 
 export { adminPartnersList, formatEuro }

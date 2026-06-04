@@ -1,11 +1,15 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowRight, Building2, LogIn, UserPlus } from 'lucide-react'
 import { WenandoMark } from '../../components/ui/WenandoLogo'
 import B2BOnboardingShell from '../../components/b2b/B2BOnboardingShell'
 import { useAuth } from '../../context/AuthContext'
-import { clearAutoDemo, getOnboardingStatus } from '../../services/b2bOnboardingService'
+import {
+  clearAutoDemo,
+  fetchOnboardingStatusAsync,
+  getB2BRedirectPathAsync,
+} from '../../services/b2bOnboardingService'
 import {
   obBadge,
   obCard,
@@ -24,15 +28,39 @@ export default function B2BPortal() {
 
   useEffect(() => {
     if (!isAuthenticated || userType !== 'b2b') return
-    const status = getOnboardingStatus(userEmail)
-    if (status === 'approved') {
-      navigate('/pro/dashboard', { replace: true })
-    }
-  }, [isAuthenticated, navigate, userEmail, userType])
 
-  const onboardingStatus = isAuthenticated && userType === 'b2b' ? getOnboardingStatus(userEmail) : null
+    let cancelled = false
+
+    getB2BRedirectPathAsync().then((target) => {
+      if (!cancelled && target === '/pro/dashboard') {
+        navigate(target, { replace: true })
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [isAuthenticated, navigate, userType])
+
+  const [onboardingStatus, setOnboardingStatus] = useState(null)
+
+  useEffect(() => {
+    if (!isAuthenticated || userType !== 'b2b') return
+
+    let cancelled = false
+
+    fetchOnboardingStatusAsync(userEmail).then((payload) => {
+      if (!cancelled) setOnboardingStatus(payload.status)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [isAuthenticated, userEmail, userType])
   const canResumeOnboarding =
-    onboardingStatus === 'in_progress' || onboardingStatus === 'pending_review'
+    isAuthenticated &&
+    userType === 'b2b' &&
+    (onboardingStatus === 'in_progress' || onboardingStatus === 'pending_review')
 
   return (
     <B2BOnboardingShell className="flex min-h-screen flex-col">

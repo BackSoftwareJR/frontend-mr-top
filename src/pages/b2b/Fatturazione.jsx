@@ -8,7 +8,9 @@ import {
   Clock,
   Table2,
   List,
+  Loader2,
 } from 'lucide-react'
+import B2BLoadError from '../../components/b2b/B2BLoadError'
 import {
   b2bCard,
   b2bEmptyState,
@@ -25,6 +27,7 @@ import {
 } from '../../components/b2b/b2bStyles'
 import { formatDateIT } from '../../data/mockB2B'
 import { useB2B } from '../../context/B2BContext'
+import { isApiConfigured } from '../../services/apiClient'
 
 const PERIOD_FILTERS = [
   { id: '1m', label: 'Ultimo mese', days: 31 },
@@ -173,7 +176,17 @@ function PaymentTimeline({ invoices, formatCurrency }) {
 }
 
 export default function Fatturazione() {
-  const { invoices, walletBalance, totalSpent, formatCurrency, openRechargeModal } = useB2B()
+  const {
+    invoices,
+    walletBalance,
+    totalSpent,
+    formatCurrency,
+    openRechargeModal,
+    loading,
+    initError,
+    retryInit,
+    useApi,
+  } = useB2B()
   const [period, setPeriod] = useState('3m')
   const [viewMode, setViewMode] = useState('table')
 
@@ -200,6 +213,15 @@ export default function Fatturazione() {
       .reduce((sum, i) => sum + i.amount, 0)
   }, [filteredInvoices])
 
+  if (isApiConfigured() && loading && !useApi && !initError) {
+    return (
+      <div className="flex min-h-[320px] items-center justify-center text-charcoal-muted">
+        <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
+        <span className="sr-only">Caricamento fatturazione…</span>
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -207,16 +229,22 @@ export default function Fatturazione() {
           <h1 className={b2bPageTitle}>Fatturazione</h1>
           <p className={b2bPageSubtitle}>Storico pagamenti, fatture e ricariche wallet</p>
         </div>
-        <button
-          type="button"
-          onClick={openRechargeModal}
-          className={`inline-flex items-center gap-2 ${b2bPrimaryBtn}`}
-        >
-          <Wallet className="h-4 w-4" />
-          Ricarica wallet
-        </button>
+        {!initError ? (
+          <button
+            type="button"
+            onClick={openRechargeModal}
+            className={`inline-flex items-center gap-2 ${b2bPrimaryBtn}`}
+          >
+            <Wallet className="h-4 w-4" />
+            Ricarica wallet
+          </button>
+        ) : null}
       </div>
 
+      {isApiConfigured() && initError ? (
+        <B2BLoadError message={initError} onRetry={retryInit} />
+      ) : (
+        <>
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
         <div className={`${b2bHeroStat} sm:col-span-1`}>
           <div className="flex items-center gap-2 text-xs font-medium text-charcoal-muted">
@@ -292,6 +320,8 @@ export default function Fatturazione() {
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   )
 }

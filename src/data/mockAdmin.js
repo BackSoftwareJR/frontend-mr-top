@@ -3,6 +3,7 @@ export const adminMetrics = {
   activeLeadsToday: { value: '127', change: '+18 oggi', positive: true },
   activePartners: { value: '84', change: '+3 questa settimana', positive: true },
   pendingApprovals: { value: '7', change: '2 urgenti', positive: false },
+  pendingBankTransfers: { value: '2', change: 'da verificare', positive: false },
   churn: { value: '2,1%', change: '-0,3 pp', positive: true },
   conversionRate: { value: '34,8%', change: '+2,1%', positive: true },
   avgDealSize: { value: '€ 1.240', change: '+8%', positive: true },
@@ -392,8 +393,94 @@ export const adminPartnersList = [
   'Residenza San Marco',
 ]
 
+export const mockAdminAdvisorBookings = {
+  upcoming: [
+    {
+      id: 101,
+      consumerName: 'Giulia Bianchi',
+      consumerEmail: 'giulia.bianchi@email.it',
+      leadTitle: 'RSA zona Milano, budget €1.800/mese',
+      scheduledAt: new Date(Date.now() + 2 * 86400000).toISOString(),
+      scheduledDate: new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10),
+      scheduledTime: '09:00',
+    },
+    {
+      id: 102,
+      consumerName: 'Marco Verdi',
+      consumerEmail: 'marco.verdi@email.it',
+      leadTitle: 'Assistenza domiciliare h24, Roma',
+      scheduledAt: new Date(Date.now() + 5 * 86400000).toISOString(),
+      scheduledDate: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10),
+      scheduledTime: '14:30',
+    },
+  ],
+  past: [
+    {
+      id: 99,
+      consumerName: 'Anna Neri',
+      consumerEmail: 'anna.neri@email.it',
+      leadTitle: null,
+      scheduledAt: new Date(Date.now() - 3 * 86400000).toISOString(),
+      scheduledDate: new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10),
+      scheduledTime: '11:00',
+    },
+  ],
+}
+
 export const adminNotifications = [
   { id: 1, title: 'Nuova registrazione partner', message: 'Residenza Aurora in attesa di approvazione', time: '5 min fa', read: false },
   { id: 2, title: 'Lead ad alta priorità', message: 'LD-2048 richiede override manuale', time: '12 min fa', read: false },
   { id: 3, title: 'Partner sospeso', message: 'Centro Benessere Anziani — verifica documenti', time: '1 ora fa', read: true },
+]
+
+export const mockPlatformSettings = {
+  security: { otpTtlMinutes: 10 },
+  automations: { autoMatchOnLead: true },
+  notifications: { adminEmail: 'admin@wenando.com' },
+}
+
+export const mockAdminSectors = [
+  { id: 1, slug: 'senior-care', name: 'Senior Care', isActive: true },
+  { id: 2, slug: 'assistenza-domiciliare', name: 'Assistenza domiciliare', isActive: true },
+  { id: 3, slug: 'centro-diurno', name: 'Centro diurno', isActive: false },
+]
+
+export const mockPendingBankTransfers = [
+  {
+    id: 'PI-MOCK-TRANSFER-1',
+    companyName: 'Casa del Sorriso',
+    credits: 100,
+    amountCents: 10000,
+    reference: 'WEN-9001',
+    createdAt: '2026-06-03T14:22:00+02:00',
+  },
+  {
+    id: 'PI-MOCK-TRANSFER-2',
+    companyName: 'Residenza Aurora',
+    credits: 50,
+    amountCents: 5000,
+    reference: 'WEN-9002',
+    createdAt: '2026-06-04T09:15:00+02:00',
+  },
+]
+
+export const mockWebhookEvents = [
+  {
+    id: 1,
+    provider: 'stripe',
+    eventType: 'payment_intent.succeeded',
+    status: 'processed',
+    paymentIntentId: 'PI-MOCK-STRIPE-1',
+    payload: { id: 'evt_mock_1', type: 'payment_intent.succeeded' },
+    createdAt: '2026-06-04T10:30:00+02:00',
+  },
+  {
+    id: 2,
+    provider: 'mock',
+    eventType: 'payment.failed',
+    status: 'failed',
+    paymentIntentId: null,
+    payload: { payment_intent_id: 'PI-MISSING', status: 'failed' },
+    createdAt: '2026-06-04T09:00:00+02:00',
+  },
 ]

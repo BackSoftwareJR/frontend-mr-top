@@ -15,6 +15,7 @@ const Accedi = lazy(() => import('./pages/Accedi'))
 const UserLayout = lazy(() => import('./components/user/UserLayout'))
 const UserHome = lazy(() => import('./pages/user/UserHome'))
 const UserSearches = lazy(() => import('./pages/user/UserSearches'))
+const UserSearchDetail = lazy(() => import('./pages/user/UserSearchDetail'))
 const UserHelp = lazy(() => import('./pages/user/UserHelp'))
 const UserProfile = lazy(() => import('./pages/user/UserProfile'))
 const B2BLayout = lazy(() => import('./components/b2b/B2BLayout'))
@@ -23,18 +24,22 @@ const LeadMarketplace = lazy(() => import('./pages/b2b/LeadMarketplace'))
 const SmartCRM = lazy(() => import('./pages/b2b/SmartCRM'))
 const Calendario = lazy(() => import('./pages/b2b/Calendario'))
 const Fatturazione = lazy(() => import('./pages/b2b/Fatturazione'))
+const CompanyProfile = lazy(() => import('./pages/b2b/CompanyProfile'))
 const ProAccedi = lazy(() => import('./pages/b2b/ProAccedi'))
 const B2BPortal = lazy(() => import('./pages/b2b/B2BPortal'))
 const B2BRegister = lazy(() => import('./pages/b2b/Register'))
 const B2BOnboarding = lazy(() => import('./pages/b2b/Onboarding'))
 const AdminLayout = lazy(() => import('./components/admin/AdminLayout'))
+const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'))
 const AdminHome = lazy(() => import('./pages/admin/AdminHome'))
 const AdminPortfolio = lazy(() => import('./pages/admin/AdminPortfolio'))
 const AdminTransactions = lazy(() => import('./pages/admin/AdminTransactions'))
+const AdminPendingTransfers = lazy(() => import('./pages/admin/AdminPendingTransfers'))
 const ManagePartners = lazy(() => import('./pages/admin/ManagePartners'))
 const LeadRouter = lazy(() => import('./pages/admin/LeadRouter'))
+const AdminAdvisorBookings = lazy(() => import('./pages/admin/AdminAdvisorBookings'))
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'))
-const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'))
+const ImpersonateBootstrap = lazy(() => import('./pages/b2b/ImpersonateBootstrap'))
 const DesktopRouteTransitions = lazy(() => import('./DesktopRouteTransitions'))
 const PrivacyPage = lazy(() => import('./pages/legal/PrivacyPage'))
 const CookiesPage = lazy(() => import('./pages/legal/CookiesPage'))
@@ -69,6 +74,14 @@ function UserShell() {
   )
 }
 
+/** Legacy `/user/*` paths → canonical `/area-personale/*`. */
+function UserLegacyRedirect() {
+  const { pathname, search, hash } = useLocation()
+  const suffix = pathname.replace(/^\/user\/?/, '') || ''
+  const target = suffix ? `/area-personale/${suffix}` : '/area-personale'
+  return <Navigate to={`${target}${search}${hash}`} replace />
+}
+
 function AppRoutes() {
   const location = useLocation()
   const isMobile = useIsMobile()
@@ -85,11 +98,13 @@ function AppRoutes() {
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/terms-partners" element={<TermsPartnersPage />} />
         <Route path="/login" element={<Navigate to="/accedi" replace />} />
-        <Route path="/dashboard" element={<Navigate to="/user" replace />} />
-        <Route path="/user" element={<UserShell />}>
+        <Route path="/dashboard" element={<Navigate to="/area-personale" replace />} />
+        <Route path="/user/*" element={<UserLegacyRedirect />} />
+        <Route path="/area-personale" element={<UserShell />}>
           <Route index element={<Navigate to="home" replace />} />
           <Route path="home" element={<UserHome />} />
           <Route path="ricerche" element={<UserSearches />} />
+          <Route path="ricerche/:ref" element={<UserSearchDetail />} />
           <Route path="aiuto" element={<UserHelp />} />
           <Route path="profilo" element={<UserProfile />} />
         </Route>
@@ -97,6 +112,7 @@ function AppRoutes() {
           <Route index element={<B2BPortal />} />
           <Route path="registrati" element={<B2BRegister />} />
           <Route path="accedi" element={<ProAccedi />} />
+          <Route path="impersonate" element={<ImpersonateBootstrap />} />
           <Route path="onboarding" element={<B2BOnboarding />} />
           <Route element={<B2BShell />}>
             <Route index element={<Navigate to="dashboard" replace />} />
@@ -105,6 +121,7 @@ function AppRoutes() {
             <Route path="crm" element={<SmartCRM />} />
             <Route path="calendario" element={<Calendario />} />
             <Route path="fatturazione" element={<Fatturazione />} />
+            <Route path="profilo" element={<CompanyProfile />} />
           </Route>
         </Route>
         <Route path="/admin/login" element={<AdminLogin />} />
@@ -119,8 +136,10 @@ function AppRoutes() {
           <Route index element={<AdminHome />} />
           <Route path="portfolio" element={<AdminPortfolio />} />
           <Route path="transactions" element={<AdminTransactions />} />
+          <Route path="wallet/pending" element={<AdminPendingTransfers />} />
           <Route path="partners" element={<ManagePartners />} />
           <Route path="leads" element={<LeadRouter />} />
+          <Route path="advisor-bookings" element={<AdminAdvisorBookings />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>
       </Routes>

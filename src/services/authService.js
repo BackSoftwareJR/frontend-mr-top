@@ -1,8 +1,9 @@
 /**
- * Auth — OTP via API when VITE_API_URL is set; localStorage mock fallback in dev when API is down.
+ * Auth — OTP via API when VITE_API_URL is set; localStorage mock when API is not configured.
  */
 
-import { AUTH_TOKEN_KEY, isApiConfigured } from './apiClient'
+import { ApiError, AUTH_TOKEN_KEY, isApiConfigured } from './apiClient'
+import { getImpersonationSession } from './impersonationService'
 import {
   clearAuthStorage,
   fetchResendCooldown,
@@ -23,9 +24,9 @@ const MAX_SEND_ATTEMPTS = 3
 const MIN_FORM_DURATION_MS = 2000
 
 export const MOCK_USERS = {
-  'partner@care.it': { type: 'b2b', name: 'Care Partner S.r.l.' },
-  'user@example.com': { type: 'consumer', name: 'Mario Rossi' },
-  'admin@wenando.it': { type: 'superadmin', name: 'Super Admin' },
+  'partner@care.it': { type: 'b2b', name: 'Care Partner S.r.l.', phone: null },
+  'user@example.com': { type: 'consumer', name: 'Mario Rossi', phone: '+39 333 111 2222' },
+  'admin@wenando.it': { type: 'superadmin', name: 'Super Admin', phone: null },
 }
 
 function normalizeEmail(email) {
@@ -72,7 +73,7 @@ function recordSendAttempt(email) {
 
 export function getRedirectForUserType(type) {
   if (type === 'superadmin') return '/admin'
-  return type === 'b2b' ? '/pro/dashboard' : '/user'
+  return type === 'b2b' ? '/pro/dashboard' : '/area-personale'
 }
 
 export function validateEmailForPortal(email, portal) {
@@ -108,6 +109,14 @@ export function validateEmailForPortal(email, portal) {
 }
 
 export function getSession() {
+  const impersonationSession = getImpersonationSession()
+  if (impersonationSession) {
+    if (impersonationSession.expiresAt && Date.now() > new Date(impersonationSession.expiresAt).getTime()) {
+      return null
+    }
+    return impersonationSession
+  }
+
   const session = readJson(SESSION_KEY, null)
   if (!session) return null
   if (session.expiresAt && Date.now() > session.expiresAt) {
@@ -121,11 +130,12 @@ export function clearSession() {
   clearAuthStorage()
 }
 
-export function saveSession({ email, type, name, token, onboardingStatus, userId }) {
+export function saveSession({ email, type, name, phone, token, onboardingStatus, userId }) {
   const session = {
     email,
     type,
     name,
+    phone: phone ?? null,
     token: token ?? null,
     userId: userId ?? null,
     onboardingStatus: onboardingStatus ?? null,
@@ -134,6 +144,14 @@ export function saveSession({ email, type, name, token, onboardingStatus, userId
   }
   writeJson(SESSION_KEY, session)
   return session
+}
+
+export function patchSession(updates) {
+  const session = getSession()
+  if (!session) return null
+  const next = { ...session, ...updates }
+  writeJson(SESSION_KEY, next)
+  return next
 }
 
 export function resolveUserType(email) {
@@ -157,6 +175,7 @@ export function buildCaptchaPayload(formData, challengePayload) {
     expectedChallenge: challengePayload?.expectedChallenge ?? '',
     formStartedAt: challengePayload?.formStartedAt ?? Date.now(),
     humanConfirmed: challengePayload?.humanConfirmed ?? false,
+    captchaToken: challengePayload?.captchaToken,
   }
 }
 
@@ -254,6 +273,7 @@ function mockVerifyLoginCode(email, code) {
     email: normalized,
     type: profile.type,
     name: profile.name,
+    phone: profile.phone ?? null,
     token: devToken,
   })
 
@@ -269,10 +289,23 @@ function mockVerifyLoginCode(email, code) {
  * @param {Record<string, unknown>} captchaPayload
  * @param {'consumer' | 'partner' | 'admin'} [portal='consumer']
  */
+function authApiErrorResult(error) {
+  const message =
+    error instanceof ApiError
+      ? error.message
+      : (error?.message ?? 'Errore di connessione. Riprova tra poco.')
+  return { ok: false, error: message }
+}
+
 export async function sendLoginCode(email, captchaPayload, portal = 'consumer') {
-  return requestOtpWithFallback(email, portal, captchaPayload, () =>
-    mockSendLoginCode(email, captchaPayload),
-  )
+  try {
+    return await requestOtpWithFallback(email, portal, captchaPayload, () =>
+      mockSendLoginCode(email, captchaPayload),
+    )
+  } catch (error) {
+    if (isApiConfigured()) return authApiErrorResult(error)
+    throw error
+  }
 }
 
 export async function getResendCooldown(email) {
@@ -293,7 +326,12 @@ export async function getResendCooldown(email) {
 }
 
 export async function verifyLoginCode(email, code) {
-  return verifyOtpWithFallback(email, code, () => mockVerifyLoginCode(email, code))
+  try {
+    return await verifyOtpWithFallback(email, code, () => mockVerifyLoginCode(email, code))
+  } catch (error) {
+    if (isApiConfigured()) return authApiErrorResult(error)
+    throw error
+  }
 }
 
 export async function logoutSession() {

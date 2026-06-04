@@ -29,7 +29,16 @@ export default function B2BToast() {
     <div className="pointer-events-none fixed bottom-6 left-1/2 z-[60] w-full max-w-sm -translate-x-1/2 px-4">
       <div role="status" className={`flex items-center gap-2.5 ${style}`}>
         <Icon className="h-4 w-4 shrink-0 opacity-80" />
-        <span>{toast.message}</span>
+        <span className="min-w-0 flex-1">{toast.message}</span>
+        {toast.action ? (
+          <button
+            type="button"
+            onClick={toast.action.onClick}
+            className="pointer-events-auto shrink-0 rounded-lg bg-white/20 px-2.5 py-1 text-xs font-semibold underline-offset-2 hover:underline"
+          >
+            {toast.action.label}
+          </button>
+        ) : null}
       </div>
     </div>
   )

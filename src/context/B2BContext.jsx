@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import {
   INITIAL_WALLET_BALANCE,
   UNLOCK_COST,
@@ -11,11 +11,24 @@ import {
   mockMarketplaceLeads,
   mockNotifications,
 } from '../data/mockB2B'
-import { getBearerToken, isApiConfigured } from '../services/apiClient'
+import { ApiError, getBearerToken, isApiConfigured } from '../services/apiClient'
 import { createAppointment, fetchAppointments } from '../services/b2bAppointmentsService'
-import { fetchCrmClients, updateCrmClientStatus } from '../services/b2bCrmService'
-import { fetchMarketplaceLeads, unlockMarketplaceLead } from '../services/b2bMarketplaceService'
-import { fetchWallet, rechargeWalletApi } from '../services/b2bWalletService'
+import { fetchCrmClientsWithOfflineMock, updateCrmClientStatus } from '../services/b2bCrmService'
+import {
+  fetchB2bDashboardWithOfflineMock,
+  fetchB2bNotificationsWithOfflineMock,
+  markAllB2bNotificationsRead,
+  markB2bNotificationRead,
+} from '../services/b2bDashboardService'
+import {
+  fetchMarketplaceLeadsWithOfflineMock,
+  unlockMarketplaceLead,
+} from '../services/b2bMarketplaceService'
+import {
+  fetchB2bInvoicesWithOfflineMock,
+  fetchWalletWithOfflineMock,
+  rechargeWalletApi,
+} from '../services/b2bWalletService'
 
 const B2BContext = createContext(null)
 
@@ -42,16 +55,24 @@ export function B2BProvider({ children }) {
   )
   const [crmClients, setCrmClients] = useState(mockCRMClients)
   const [appointments, setAppointments] = useState(mockAppointments)
-  const [invoices, setInvoices] = useState(mockInvoices)
+  const [invoices, setInvoices] = useState(() =>
+    isApiConfigured() && getBearerToken() ? [] : mockInvoices,
+  )
+  const [initError, setInitError] = useState(null)
+  const [retryCount, setRetryCount] = useState(0)
   const [activityFeed, setActivityFeed] = useState(mockActivityFeed)
+  const [dashboardStats, setDashboardStats] = useState(null)
+  const [leadsTrend, setLeadsTrend] = useState([])
   const [notifications, setNotifications] = useState(mockNotifications)
   const [toast, setToast] = useState(null)
   const [rechargeModalOpen, setRechargeModalOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const unlockIdempotencyKeys = useRef(new Map())
+  const appointmentIdempotencyKeys = useRef(new Map())
 
-  const showToast = useCallback((message, type = 'info') => {
-    setToast({ message, type, id: Date.now() })
-    setTimeout(() => setToast(null), 3500)
+  const showToast = useCallback((message, type = 'info', options = {}) => {
+    setToast({ message, type, id: Date.now(), action: options.action ?? null })
+    setTimeout(() => setToast(null), options.action ? 6000 : 3500)
   }, [])
 
   const addActivity = useCallback((entry) => {
@@ -62,41 +83,59 @@ export function B2BProvider({ children }) {
     setInvoices((prev) => [{ id: `INV-${Date.now()}`, ...invoice }, ...prev])
   }, [])
 
+  const apiReady = shouldUseApi()
+  const useApiEnabled = apiReady && useApi
+
+  const retryInit = useCallback(() => {
+    setRetryCount((n) => n + 1)
+  }, [])
+
   useEffect(() => {
-    const apiReady = shouldUseApi()
-    setUseApi(apiReady)
     if (!apiReady) return
 
     let cancelled = false
 
     async function loadFromApi() {
       setLoading(true)
+      setInitError(null)
       try {
-        const [leads, clients, wallet, appointmentsList] = await Promise.all([
-          fetchMarketplaceLeads(),
-          fetchCrmClients(),
-          fetchWallet().catch(() => null),
-          fetchAppointments().catch(() => null),
-        ])
+        const [leads, clients, wallet, appointmentsList, dashboard, notifPayload, invoiceList] =
+          await Promise.all([
+            fetchMarketplaceLeadsWithOfflineMock(),
+            fetchCrmClientsWithOfflineMock(),
+            fetchWalletWithOfflineMock(),
+            fetchAppointments(),
+            fetchB2bDashboardWithOfflineMock(),
+            fetchB2bNotificationsWithOfflineMock(),
+            fetchB2bInvoicesWithOfflineMock(),
+          ])
 
         if (cancelled) return
 
         setMarketplaceLeads(leads)
         setCrmClients(clients)
-        if (wallet) {
-          setWalletBalance(wallet.balanceCredits)
-          setTotalSpent(wallet.totalSpent)
-        }
+        setWalletBalance(wallet.balanceCredits)
+        setTotalSpent(wallet.totalSpent)
         if (appointmentsList?.length) {
           setAppointments(appointmentsList)
         }
+        setDashboardStats(dashboard.stats)
+        if (dashboard.activityFeed?.length) {
+          setActivityFeed(dashboard.activityFeed)
+        }
+        setLeadsTrend(dashboard.leadsTrend ?? [])
+        setNotifications(notifPayload.notifications)
+        setInvoices(invoiceList)
         setUseApi(true)
       } catch (error) {
         if (cancelled) return
 
-        if (import.meta.env.DEV) {
-          console.warn('[Wenando B2B] API unavailable — using mock fallback:', error)
-          setUseApi(false)
+        if (isApiConfigured()) {
+          setInitError(
+            error instanceof ApiError
+              ? error.message
+              : 'Impossibile caricare i dati dal server. Verifica la connessione e riprova.',
+          )
         } else {
           showToast('Impossibile caricare i dati dal server.', 'error')
         }
@@ -110,7 +149,33 @@ export function B2BProvider({ children }) {
     return () => {
       cancelled = true
     }
-  }, [showToast])
+  }, [apiReady, retryCount, showToast])
+
+  const finalizeRecharge = useCallback(
+    (amount, wallet, transaction) => {
+      if (wallet) {
+        setWalletBalance(wallet.balanceCredits)
+        setTotalSpent(wallet.totalSpent)
+      } else {
+        setWalletBalance((prev) => prev + amount)
+      }
+      const invoiceStatus =
+        transaction?.status === 'completed' ? 'Pagata' : 'In attesa'
+      addInvoice({
+        date: new Date().toISOString().slice(0, 10),
+        description: 'Ricarica credito wallet',
+        amount,
+        status: invoiceStatus,
+      })
+      addActivity({
+        type: 'recharge',
+        text: `Ricarica wallet: ${formatCurrency(amount)}`,
+        time: 'Adesso',
+      })
+      showToast(`Credito ricaricato: ${formatCurrency(amount)}`, 'success')
+    },
+    [addActivity, addInvoice, showToast],
+  )
 
   const rechargeWallet = useCallback(
     async (amount, paymentMethod = 'card') => {
@@ -119,35 +184,24 @@ export function B2BProvider({ children }) {
         return false
       }
 
-      if (useApi) {
+      if (useApiEnabled) {
         try {
           const result = await rechargeWalletApi({ amount, paymentMethod })
-          if (result.wallet) {
-            setWalletBalance(result.wallet.balanceCredits)
-            setTotalSpent(result.wallet.totalSpent)
-          } else {
-            setWalletBalance((prev) => prev + amount)
+
+          if (result.pending) {
+            showToast('Pagamento in attesa di conferma', 'info')
+            return 'pending'
           }
-          addInvoice({
-            date: new Date().toISOString().slice(0, 10),
-            description: 'Ricarica credito wallet',
-            amount,
-            status: 'Pagata',
-          })
-          addActivity({
-            type: 'recharge',
-            text: `Ricarica wallet: ${formatCurrency(amount)}`,
-            time: 'Adesso',
-          })
-          showToast(`Credito ricaricato: ${formatCurrency(amount)}`, 'success')
+
+          finalizeRecharge(amount, result.wallet, result.transaction)
           return true
         } catch (error) {
-          if (import.meta.env.DEV) {
-            console.warn('[Wenando B2B] Recharge API failed — mock fallback:', error)
-          } else {
-            showToast(error.message ?? 'Ricarica non riuscita.', 'error')
-            return false
-          }
+          const message =
+            error instanceof ApiError
+              ? error.message
+              : (error.message ?? 'Ricarica non riuscita.')
+          showToast(message, 'error')
+          return false
         }
       }
 
@@ -166,8 +220,12 @@ export function B2BProvider({ children }) {
       showToast(`Credito ricaricato: ${formatCurrency(amount)}`, 'success')
       return true
     },
-    [addActivity, addInvoice, showToast, useApi],
+    [addActivity, addInvoice, finalizeRecharge, showToast, useApiEnabled],
   )
+
+  const openRechargeFromToast = useCallback(() => {
+    setRechargeModalOpen(true)
+  }, [])
 
   const unlockLead = useCallback(
     async (leadId) => {
@@ -175,9 +233,17 @@ export function B2BProvider({ children }) {
       if (!lead) return false
       if (lead.unlocked) return false
 
-      if (useApi) {
+      if (useApiEnabled) {
+        let idempotencyKey = unlockIdempotencyKeys.current.get(leadId)
+        if (!idempotencyKey) {
+          idempotencyKey = crypto.randomUUID()
+          unlockIdempotencyKeys.current.set(leadId, idempotencyKey)
+        }
+
         try {
-          const result = await unlockMarketplaceLead(leadId)
+          const result = await unlockMarketplaceLead(leadId, idempotencyKey)
+
+          unlockIdempotencyKeys.current.delete(leadId)
 
           if (result.wallet) {
             setWalletBalance(result.wallet.balanceCredits)
@@ -185,7 +251,7 @@ export function B2BProvider({ children }) {
           }
 
           setMarketplaceLeads((prev) =>
-            prev.map((l) => (l.id === leadId ? result.lead : l)),
+            prev.map((l) => (l.id === leadId ? { ...result.lead, unlocked: true } : l)),
           )
 
           if (result.crmClient) {
@@ -205,20 +271,48 @@ export function B2BProvider({ children }) {
             text: `Lead sbloccato: ${result.lead.name}`,
             time: 'Adesso',
           })
-          showToast(`Contatto sbloccato: ${result.lead.name}`, 'success')
+          showToast(
+            `Contatto sbloccato: ${result.lead.name}. Trovi il lead in Il Mio CRM.`,
+            'success',
+          )
           return true
         } catch (error) {
-          if (import.meta.env.DEV) {
-            console.warn('[Wenando B2B] Unlock API failed — mock fallback:', error)
-          } else {
-            showToast(error.message ?? 'Sblocco non riuscito.', 'error')
+          const apiError = error instanceof ApiError ? error : null
+          const errorCode = apiError?.code
+
+          if (errorCode === 'INSUFFICIENT_CREDITS' || apiError?.status === 402) {
+            const balanceCredits = apiError?.details?.balance_credits
+            if (balanceCredits != null) {
+              setWalletBalance(balanceCredits)
+            }
+            showToast(
+              apiError?.message ??
+                'Credito insufficiente. Ricarica il wallet per sbloccare il lead.',
+              'error',
+              { action: { label: 'Ricarica wallet', onClick: openRechargeFromToast } },
+            )
             return false
           }
+
+          if (errorCode === 'IDEMPOTENCY_KEY_MISMATCH') {
+            unlockIdempotencyKeys.current.delete(leadId)
+            showToast(
+              apiError?.message ??
+                'La richiesta non corrisponde alla chiave di idempotenza già utilizzata. Riprova.',
+              'error',
+            )
+            return false
+          }
+
+          showToast(apiError?.message ?? 'Sblocco non riuscito.', 'error')
+          return false
         }
       }
 
       if (walletBalance < lead.unlockCost) {
-        showToast('Credito insufficiente. Ricarica il wallet per sbloccare il lead.', 'error')
+        showToast('Credito insufficiente. Ricarica il wallet per sbloccare il lead.', 'error', {
+          action: { label: 'Ricarica wallet', onClick: openRechargeFromToast },
+        })
         return false
       }
 
@@ -259,14 +353,23 @@ export function B2BProvider({ children }) {
       showToast(`Contatto sbloccato: ${lead.name}`, 'success')
       return true
     },
-    [addActivity, addInvoice, crmClients, marketplaceLeads, showToast, useApi, walletBalance],
+    [
+      addActivity,
+      addInvoice,
+      crmClients,
+      marketplaceLeads,
+      openRechargeFromToast,
+      showToast,
+      useApiEnabled,
+      walletBalance,
+    ],
   )
 
   const updateCRMStatus = useCallback(
     async (clientId, stato) => {
       const client = crmClients.find((c) => c.id === clientId)
 
-      if (useApi) {
+      if (useApiEnabled) {
         try {
           const updated = await updateCrmClientStatus(clientId, stato)
           setCrmClients((prev) =>
@@ -281,12 +384,12 @@ export function B2BProvider({ children }) {
           }
           return
         } catch (error) {
-          if (import.meta.env.DEV) {
-            console.warn('[Wenando B2B] CRM update API failed — mock fallback:', error)
-          } else {
-            showToast(error.message ?? 'Aggiornamento stato non riuscito.', 'error')
-            return
-          }
+          const message =
+            error instanceof ApiError
+              ? error.message
+              : (error.message ?? 'Aggiornamento stato non riuscito.')
+          showToast(message, 'error')
+          return
         }
       }
 
@@ -308,7 +411,7 @@ export function B2BProvider({ children }) {
         })
       }
     },
-    [addActivity, crmClients, showToast, useApi],
+    [addActivity, crmClients, showToast, useApiEnabled],
   )
 
   const scheduleVisit = useCallback(
@@ -318,9 +421,24 @@ export function B2BProvider({ children }) {
 
       const formattedDate = formatDateIT(date)
 
-      if (useApi) {
+      if (useApiEnabled) {
+        const visitKey = `${clientId}:${date}:${time}`
+        let idempotencyKey = appointmentIdempotencyKeys.current.get(visitKey)
+        if (!idempotencyKey) {
+          idempotencyKey = crypto.randomUUID()
+          appointmentIdempotencyKeys.current.set(visitKey, idempotencyKey)
+        }
+
         try {
-          const result = await createAppointment({ clientId, date, time, note })
+          const result = await createAppointment({
+            clientId,
+            date,
+            time,
+            note,
+            idempotencyKey,
+          })
+
+          appointmentIdempotencyKeys.current.delete(visitKey)
           const appointment = result.appointment ?? {
             id: `APT-${Date.now()}`,
             clientId,
@@ -351,12 +469,19 @@ export function B2BProvider({ children }) {
           showToast(`Visita fissata con ${client.cliente}`, 'success')
           return true
         } catch (error) {
-          if (import.meta.env.DEV) {
-            console.warn('[Wenando B2B] Appointment API failed — mock fallback:', error)
-          } else {
-            showToast(error.message ?? 'Impossibile fissare la visita.', 'error')
+          const apiError = error instanceof ApiError ? error : null
+          if (apiError?.code === 'IDEMPOTENCY_KEY_MISMATCH') {
+            appointmentIdempotencyKeys.current.delete(visitKey)
+            showToast(
+              apiError.message ??
+                'La richiesta non corrisponde alla chiave di idempotenza già utilizzata. Riprova.',
+              'error',
+            )
             return false
           }
+
+          showToast(apiError?.message ?? 'Impossibile fissare la visita.', 'error')
+          return false
         }
       }
 
@@ -389,18 +514,47 @@ export function B2BProvider({ children }) {
       showToast(`Visita fissata con ${client.cliente}`, 'success')
       return true
     },
-    [addActivity, crmClients, showToast, useApi],
+    [addActivity, crmClients, showToast, useApiEnabled],
   )
 
-  const markNotificationRead = useCallback((notifId) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === notifId ? { ...n, read: true } : n)),
-    )
-  }, [])
+  const markNotificationRead = useCallback(
+    async (notifId) => {
+      if (useApiEnabled) {
+        try {
+          await markB2bNotificationRead(notifId)
+        } catch (error) {
+          const message =
+            error instanceof ApiError
+              ? error.message
+              : (error.message ?? 'Impossibile aggiornare la notifica.')
+          showToast(message, 'error')
+          return
+        }
+      }
 
-  const markAllNotificationsRead = useCallback(() => {
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notifId ? { ...n, read: true } : n)),
+      )
+    },
+    [showToast, useApiEnabled],
+  )
+
+  const markAllNotificationsRead = useCallback(async () => {
+    if (useApiEnabled) {
+      try {
+        await markAllB2bNotificationsRead()
+      } catch (error) {
+        const message =
+          error instanceof ApiError
+            ? error.message
+            : (error.message ?? 'Impossibile aggiornare le notifiche.')
+        showToast(message, 'error')
+        return
+      }
+    }
+
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
-  }, [])
+  }, [showToast, useApiEnabled])
 
   const unreadCount = useMemo(
     () => notifications.filter((n) => !n.read).length,
@@ -415,18 +569,23 @@ export function B2BProvider({ children }) {
       crmClients,
       appointments,
       invoices,
+      initError,
       activityFeed,
+      dashboardStats,
+      leadsTrend,
       notifications,
       unreadCount,
       toast,
       rechargeModalOpen,
       loading,
-      useApi,
+      useApi: useApiEnabled,
+      retryInit,
       unlockCost: UNLOCK_COST,
       openRechargeModal: () => setRechargeModalOpen(true),
       closeRechargeModal: () => setRechargeModalOpen(false),
       showToast,
       rechargeWallet,
+      finalizeRecharge,
       unlockLead,
       updateCRMStatus,
       scheduleVisit,
@@ -441,15 +600,20 @@ export function B2BProvider({ children }) {
       crmClients,
       appointments,
       invoices,
+      initError,
       activityFeed,
+      dashboardStats,
+      leadsTrend,
       notifications,
       unreadCount,
       toast,
       rechargeModalOpen,
       loading,
-      useApi,
+      useApiEnabled,
+      retryInit,
       showToast,
       rechargeWallet,
+      finalizeRecharge,
       unlockLead,
       updateCRMStatus,
       scheduleVisit,

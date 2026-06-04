@@ -1,4 +1,13 @@
+import { mockCRMClients, mockMarketplaceLeads } from '../data/mockB2B'
 import apiClient, { unwrapApiData } from './apiClient'
+import { b2bWithOfflineMock } from './b2bApiUtils'
+
+function getMockMarketplaceLeads() {
+  return mockMarketplaceLeads.map((lead) => ({
+    ...lead,
+    unlocked: mockCRMClients.some((c) => c.marketplaceId === lead.id),
+  }))
+}
 
 /** @param {Record<string, unknown>} apiLead */
 export function mapMarketplaceLead(apiLead) {
@@ -43,9 +52,16 @@ export async function fetchMarketplaceLeads(params = {}) {
 /**
  * POST /b2b/marketplace/leads/{id}/unlock
  * @param {string} leadId
+ * @param {string} [idempotencyKey]
  */
-export async function unlockMarketplaceLead(leadId) {
-  const response = await apiClient.post(`/b2b/marketplace/leads/${leadId}/unlock`)
+export function fetchMarketplaceLeadsWithOfflineMock(params = {}) {
+  return b2bWithOfflineMock(() => fetchMarketplaceLeads(params), getMockMarketplaceLeads)
+}
+
+export async function unlockMarketplaceLead(leadId, idempotencyKey = crypto.randomUUID()) {
+  const response = await apiClient.post(`/b2b/marketplace/leads/${leadId}/unlock`, {}, {
+    headers: { 'Idempotency-Key': idempotencyKey },
+  })
   const data = unwrapApiData(response)
 
   return {

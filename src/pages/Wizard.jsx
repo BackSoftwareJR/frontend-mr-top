@@ -14,6 +14,7 @@ import AutonomyStep, {
   isContactSubmitReady,
 } from '../components/wizard/WizardSteps'
 import { buildWizardConsentPayload } from '../constants/wizardConsent'
+import { ApiError, isApiConfigured } from '../services/apiClient'
 import { submitLead } from '../services/leadService'
 
 const slideVariants = {
@@ -41,6 +42,7 @@ export default function Wizard() {
     privacy: false,
     terms: false,
     partnerContact: false,
+    marketing: false,
   })
   const [submitError, setSubmitError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
@@ -84,7 +86,13 @@ export default function Wizard() {
       setAnalyzing(true)
     } catch (error) {
       console.error('[Wenando] Wizard lead submit failed:', error)
-      setSubmitError(error.message ?? 'Invio non riuscito. Riprova tra poco.')
+      if (isApiConfigured()) {
+        const message =
+          error instanceof ApiError
+            ? error.message
+            : (error?.message ?? 'Invio non riuscito. Riprova tra poco.')
+        setSubmitError(message)
+      }
     } finally {
       setSubmitting(false)
     }
@@ -193,11 +201,14 @@ export default function Wizard() {
                 trigger="mount"
               />
               {renderStepContent()}
-              {submitError && (
-                <p className="mt-4 rounded-xl border border-red-200/60 bg-red-50/80 px-4 py-3 text-sm text-red-800" role="alert">
+              {isApiConfigured() && submitError ? (
+                <p
+                  className="mt-4 rounded-xl border border-red-200/60 bg-red-50/80 px-4 py-3 text-sm text-red-800"
+                  role="alert"
+                >
                   {submitError}
                 </p>
-              )}
+              ) : null}
             </motion.div>
           </AnimatePresence>
         </div>

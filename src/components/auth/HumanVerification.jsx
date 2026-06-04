@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import HCaptcha from '@hcaptcha/react-hcaptcha'
 import { RefreshCw, ShieldCheck } from 'lucide-react'
 import {
   b2bIconAccent,
@@ -11,8 +12,8 @@ import {
  * Human verification step.
  *
  * DEV / no env keys: honeypot + visual 4-digit challenge + minimum form timing.
- * PRODUCTION: set VITE_HCAPTCHA_SITE_KEY or VITE_RECAPTCHA_SITE_KEY in .env
- * and replace the inline challenge with the provider widget + server-side verify.
+ * PRODUCTION: set VITE_HCAPTCHA_SITE_KEY (or VITE_RECAPTCHA_SITE_KEY placeholder)
+ * to render hCaptcha and send captcha_token for server-side verify.
  */
 const HCAPTCHA_KEY = import.meta.env.VITE_HCAPTCHA_SITE_KEY
 const RECAPTCHA_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY
@@ -22,12 +23,15 @@ function generateChallenge() {
 }
 
 export default function HumanVerification({ onVerified, onChallengeReady }) {
+  const hcaptchaRef = useRef(null)
   const [challenge, setChallenge] = useState(() => generateChallenge())
   const [answer, setAnswer] = useState('')
   const [checked, setChecked] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState('')
   const [error, setError] = useState('')
   const [formStartedAt] = useState(() => Date.now())
 
+  const hasHcaptcha = Boolean(HCAPTCHA_KEY)
   const hasExternalCaptcha = Boolean(HCAPTCHA_KEY || RECAPTCHA_KEY)
 
   const payload = useMemo(
@@ -36,9 +40,10 @@ export default function HumanVerification({ onVerified, onChallengeReady }) {
       challengeAnswer: answer,
       expectedChallenge: challenge,
       formStartedAt,
-      humanConfirmed: checked,
+      humanConfirmed: hasHcaptcha ? Boolean(captchaToken) : checked,
+      captchaToken: captchaToken || undefined,
     }),
-    [answer, challenge, checked, formStartedAt]
+    [answer, captchaToken, challenge, checked, formStartedAt, hasHcaptcha]
   )
 
   useEffect(() => {
@@ -51,8 +56,27 @@ export default function HumanVerification({ onVerified, onChallengeReady }) {
     setError('')
   }
 
+  const handleHcaptchaVerify = useCallback((token) => {
+    setCaptchaToken(token)
+    setError('')
+  }, [])
+
+  const handleHcaptchaExpire = useCallback(() => {
+    setCaptchaToken('')
+  }, [])
+
   const handleVerify = () => {
     setError('')
+
+    if (hasHcaptcha) {
+      if (!captchaToken) {
+        setError('Completa la verifica captcha.')
+        return
+      }
+
+      onVerified(payload)
+      return
+    }
 
     if (!checked) {
       setError('Conferma di non essere un robot.')
@@ -74,14 +98,20 @@ export default function HumanVerification({ onVerified, onChallengeReady }) {
         Verifica umana
       </div>
 
-      {hasExternalCaptcha ? (
+      {hasHcaptcha ? (
+        <div className="flex justify-center rounded-2xl bg-warm-cream/80 px-4 py-6 ring-1 ring-black/5">
+          <HCaptcha
+            ref={hcaptchaRef}
+            sitekey={HCAPTCHA_KEY}
+            onVerify={handleHcaptchaVerify}
+            onExpire={handleHcaptchaExpire}
+          />
+        </div>
+      ) : hasExternalCaptcha ? (
         <div className="rounded-2xl bg-warm-cream/80 px-4 py-6 text-center ring-1 ring-black/5">
           <p className="text-sm text-charcoal-muted">
-            Captcha esterno configurato — integrare widget hCaptcha/reCAPTCHA qui usando{' '}
-            <code className={`text-xs ${b2bLink}`}>
-              {HCAPTCHA_KEY ? 'VITE_HCAPTCHA_SITE_KEY' : 'VITE_RECAPTCHA_SITE_KEY'}
-            </code>
-            .
+            Captcha esterno configurato — integrare widget reCAPTCHA qui usando{' '}
+            <code className={`text-xs ${b2bLink}`}>VITE_RECAPTCHA_SITE_KEY</code>.
           </p>
         </div>
       ) : (
@@ -116,17 +146,19 @@ export default function HumanVerification({ onVerified, onChallengeReady }) {
         </div>
       )}
 
-      <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-white/80 px-4 py-3 ring-1 ring-black/5">
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={(e) => setChecked(e.target.checked)}
-          className="mt-0.5 h-4 w-4 rounded border-slate-300 text-accent-coral focus:ring-accent-coral/25"
-        />
-        <span className="text-sm text-charcoal-muted">
-          Confermo di essere una persona e accetto l&apos;invio del codice di accesso.
-        </span>
-      </label>
+      {!hasHcaptcha && (
+        <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-white/80 px-4 py-3 ring-1 ring-black/5">
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={(e) => setChecked(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-accent-coral focus:ring-accent-coral/25"
+          />
+          <span className="text-sm text-charcoal-muted">
+            Confermo di essere una persona e accetto l&apos;invio del codice di accesso.
+          </span>
+        </label>
+      )}
 
       <input
         type="text"

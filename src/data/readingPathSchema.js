@@ -325,30 +325,6 @@ function computeHeroPassThroughEntry(ctaEl) {
   return buildHeroCtaPassThroughPoints(ctaEl)[0]
 }
 
-/** Final CTA orbit entry — bridge ends here, arc begins here */
-function computeCtaOrbitEntry(ctaEl, entryPoint, variant = 'final') {
-  const btn = resolveCtaButtonEl(ctaEl) ?? ctaEl
-  const rect = btn.getBoundingClientRect()
-  const scrollX = window.scrollX
-  const scrollY = window.scrollY
-  const left = rect.left + scrollX
-  const right = rect.right + scrollX
-  const top = rect.top + scrollY
-  const bottom = rect.bottom + scrollY
-  const cx = (left + right) / 2
-  const btnW = right - left
-  const btnH = bottom - top
-  const pad = CTA_ORBIT_SIDE_PAD + 6
-
-  const entryX = entryPoint?.x ?? cx - btnW * 0.18
-  const entryY = entryPoint?.y ?? top + btnH * 0.55
-
-  return {
-    x: Math.max(left - pad * 0.28, Math.min(entryX, cx - btnW * 0.12)),
-    y: Math.max(top + btnH * 0.48, Math.min(entryY, top + btnH * 0.72)),
-  }
-}
-
 /** Point on an axis-aligned ellipse in document space */
 function ellipsePoint(cx, cy, rx, ry, theta) {
   return {
@@ -358,7 +334,7 @@ function ellipsePoint(cx, cy, rx, ry, theta) {
 }
 
 /** Elliptical arc under the final CTA pill */
-export function buildCtaOrbitPoints(ctaEl, entryPoint) {
+export function buildCtaOrbitPoints(ctaEl) {
   const btn = resolveCtaButtonEl(ctaEl) ?? ctaEl
   const rect = btn.getBoundingClientRect()
   const scrollX = window.scrollX
@@ -1550,11 +1526,6 @@ export function getPathTipPosition(
   pathEl,
   totalLength,
   progress,
-  {
-    strokeWidth = READING_STROKE_WIDTH,
-    dotRadius = DOT_SIZE / 2,
-    overlap = PATH_TIP_OVERLAP,
-  } = {},
 ) {
   if (!pathEl || !totalLength) {
     return { x: -9999, y: -9999 }
@@ -1565,17 +1536,12 @@ export function getPathTipPosition(
     return pathEl.getPointAtLength(0)
   }
 
-  const tipLen = pathTipCenterLength(totalLength, p, dotRadius, overlap)
+  const tipLen = pathTipCenterLength(totalLength, p)
   return pathEl.getPointAtLength(tipLen)
 }
 
 /** Arc length at path progress — shared by dash reveal and getPointAtLength */
-export function pathTipCenterLength(
-  totalLength,
-  progress,
-  _dotRadius = DOT_SIZE / 2,
-  _overlap = PATH_TIP_OVERLAP,
-) {
+export function pathTipCenterLength(totalLength, progress) {
   if (!totalLength || progress <= 0) return 0
   return Math.min(totalLength, totalLength * Math.max(0, Math.min(1, progress)))
 }
@@ -1588,7 +1554,6 @@ export function pathVisibleLength(
   progress,
   strokeWidth = READING_STROKE_WIDTH,
   dotRadius = DOT_SIZE / 2,
-  overlap = PATH_TIP_OVERLAP,
 ) {
   if (!totalLength || progress <= 0) return 0
   const center = pathTipCenterLength(totalLength, progress)
@@ -1901,7 +1866,7 @@ export function computeStatCardGlowRanges(pathEl) {
 }
 
 /** Measure ordered waypoints in document space, with CTA arcs after hero/final CTAs */
-export function measureReadingPathPoints(fallback = FALLBACK_PATH_POINTS) {
+export function measureReadingPathPoints() {
   if (typeof document === 'undefined') return []
 
   const docWidth = document.documentElement.clientWidth

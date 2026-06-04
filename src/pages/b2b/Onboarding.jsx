@@ -1,22 +1,31 @@
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useReducer, useState } from 'react'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react'
+import B2BLoadError from '../../components/b2b/B2BLoadError'
 import OnboardingLayout from '../../components/b2b/OnboardingLayout'
 import StepLegal from '../../components/b2b/onboarding/StepLegal'
 import StepOperations from '../../components/b2b/onboarding/StepOperations'
 import StepTrustTest, { TRUST_QUESTIONS } from '../../components/b2b/onboarding/StepTrustTest'
 import PendingReview from '../../components/b2b/onboarding/PendingReview'
+import RejectedReview from '../../components/b2b/onboarding/RejectedReview'
+import SuspendedReview from '../../components/b2b/onboarding/SuspendedReview'
 import { obGlassCard, obPrimaryBtn, obSecondaryBtn } from '../../components/b2b/onboardingStyles'
 import { getSession } from '../../services/authService'
 import { useAuth } from '../../context/AuthContext'
+import { useB2BOnboardingGate } from '../../components/auth/ProtectedRoute'
+import {
+  B2B_TERMS_CONSENT_UI,
+  buildB2bOnboardingSubmitPayload,
+} from '../../constants/b2bConsent'
+import { isApiConfigured } from '../../services/apiClient'
 import {
   clearAutoDemo,
   getOnboardingData,
-  getOnboardingStatus,
   getRegistration,
   loadOnboardingDataAsync,
   saveOnboardingDataAsync,
   submitOnboardingForReviewAsync,
+  uploadOnboardingDocumentAsync,
 } from '../../services/b2bOnboardingService'
 
 const STEP_META = [
@@ -69,9 +78,18 @@ export default function Onboarding() {
 
   const [stepIndex, setStepIndex] = useState(0)
   const [data, setData] = useState(() => (email ? getOnboardingData(email) : {}))
+  const [termsAccepted, setTermsAccepted] = useState(false)
   const [statusTick, bumpStatus] = useReducer((n) => n + 1, 0)
+  const [loadRetry, bumpLoadRetry] = useReducer((n) => n + 1, 0)
+  const [loadError, setLoadError] = useState(null)
+  const [submitError, setSubmitError] = useState(null)
+  const [documentUpload, setDocumentUpload] = useState({
+    visura: { loading: false, progress: 0, error: null },
+    identityDoc: { loading: false, progress: 0, error: null },
+  })
 
-  const status = useMemo(() => getOnboardingStatus(email), [email, statusTick])
+  const onboardingGate = useB2BOnboardingGate(email, statusTick)
+  const status = onboardingGate.status
 
   useEffect(() => {
     clearAutoDemo()
@@ -90,13 +108,22 @@ export default function Onboarding() {
   useEffect(() => {
     if (!email) return
     let cancelled = false
-    loadOnboardingDataAsync(email).then((loaded) => {
-      if (!cancelled && loaded) setData(loaded)
-    })
+    loadOnboardingDataAsync(email)
+      .then((loaded) => {
+        if (!cancelled) {
+          if (loaded) setData(loaded)
+          setLoadError(null)
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setLoadError(err?.message ?? 'Impossibile caricare i dati onboarding.')
+        }
+      })
     return () => {
       cancelled = true
     }
-  }, [email])
+  }, [email, loadRetry])
 
   const persist = useCallback(
     (patch) => {
@@ -108,6 +135,53 @@ export default function Onboarding() {
     [data, email]
   )
 
+  const handleDocumentUpload = useCallback(
+    async (field, file) => {
+      if (!email) return
+
+      if (!file) {
+        const patch = { [field]: null }
+        setData((prev) => ({ ...prev, ...patch }))
+        saveOnboardingDataAsync(email, { ...data, ...patch })
+        setDocumentUpload((prev) => ({
+          ...prev,
+          [field]: { loading: false, progress: 0, error: null },
+        }))
+        return
+      }
+
+      setDocumentUpload((prev) => ({
+        ...prev,
+        [field]: { loading: true, progress: 0, error: null },
+      }))
+
+      try {
+        await uploadOnboardingDocumentAsync(email, field, file, {
+          onProgress: (progress) => {
+            setDocumentUpload((prev) => ({
+              ...prev,
+              [field]: { ...prev[field], progress },
+            }))
+          },
+        })
+        const loaded = await loadOnboardingDataAsync(email)
+        if (loaded) setData(loaded)
+        setDocumentUpload((prev) => ({
+          ...prev,
+          [field]: { loading: false, progress: 100, error: null },
+        }))
+      } catch (err) {
+        const message =
+          err?.message ?? 'Caricamento non riuscito. Verifica formato (PDF/JPG/PNG) e dimensione (max 10 MB).'
+        setDocumentUpload((prev) => ({
+          ...prev,
+          [field]: { loading: false, progress: 0, error: message },
+        }))
+      }
+    },
+    [data, email],
+  )
+
   const session = getSession()
   const hasB2BAccess =
     (isAuthenticated && userType === 'b2b') || session?.type === 'b2b'
@@ -116,8 +190,29 @@ export default function Onboarding() {
     return null
   }
 
+  if (onboardingGate.loading) {
+    return null
+  }
+
+  const gateError = isApiConfigured() ? onboardingGate.error : null
+  const dataLoadError = isApiConfigured() ? loadError : null
+
+  if (gateError || dataLoadError) {
+    const message = gateError ?? dataLoadError
+    const retry = () => {
+      setLoadError(null)
+      bumpStatus()
+      bumpLoadRetry()
+    }
+    return (
+      <OnboardingLayout currentStepIndex={0} title="" subtitle="">
+        <B2BLoadError message={message} onRetry={retry} />
+      </OnboardingLayout>
+    )
+  }
+
   if (status === 'approved') {
-    return <Navigate to="/pro/dashboard" replace />
+    return <Navigate to={onboardingGate.redirectTo ?? '/pro/dashboard'} replace />
   }
 
   if (status === 'pending_review') {
@@ -128,11 +223,33 @@ export default function Onboarding() {
     )
   }
 
+  if (status === 'rejected') {
+    return (
+      <OnboardingLayout currentStepIndex={3} title="" subtitle="">
+        <RejectedReview email={email} rejectionReason={onboardingGate.rejectionReason} />
+      </OnboardingLayout>
+    )
+  }
+
+  if (status === 'suspended') {
+    return (
+      <OnboardingLayout currentStepIndex={3} title="" subtitle="">
+        <SuspendedReview email={email} />
+      </OnboardingLayout>
+    )
+  }
+
   const meta = STEP_META[stepIndex]
 
   const handleSubmitReview = async () => {
-    await submitOnboardingForReviewAsync(email)
-    bumpStatus()
+    if (!termsAccepted) return
+    setSubmitError(null)
+    try {
+      await submitOnboardingForReviewAsync(email, buildB2bOnboardingSubmitPayload())
+      bumpStatus()
+    } catch (err) {
+      setSubmitError(err?.message ?? 'Invio non riuscito. Riprova.')
+    }
   }
 
   const footer = (
@@ -159,6 +276,7 @@ export default function Onboarding() {
       ) : (
         <button
           type="button"
+          disabled={!termsAccepted}
           onClick={handleSubmitReview}
           className={`${obPrimaryBtn} sm:!w-auto sm:min-w-[200px]`}
         >
@@ -180,7 +298,8 @@ export default function Onboarding() {
         <StepLegal
           data={data}
           onChange={persist}
-          onFilesChange={(files) => persist(files)}
+          onDocumentUpload={handleDocumentUpload}
+          documentUpload={documentUpload}
         />
       )}
       {stepIndex === 1 && <StepOperations data={data} onChange={persist} />}
@@ -215,10 +334,38 @@ export default function Onboarding() {
               </li>
             </ul>
           </div>
+          <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200/60 bg-white/70 p-4">
+            <input
+              type="checkbox"
+              checked={termsAccepted}
+              onChange={(e) => setTermsAccepted(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-teal-800 focus:ring-teal-800/20"
+            />
+            <span className="text-sm text-charcoal">
+              {B2B_TERMS_CONSENT_UI.prefix}
+              <Link
+                to={B2B_TERMS_CONSENT_UI.link.to}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-teal-800 underline-offset-2 hover:underline"
+              >
+                {B2B_TERMS_CONSENT_UI.link.text}
+              </Link>
+              {B2B_TERMS_CONSENT_UI.suffix}
+            </span>
+          </label>
           <p className="text-xs text-charcoal-muted">
             Cliccando &quot;Invia per revisione&quot; il profilo passerà in attesa di approvazione
             dal team Wenando.
           </p>
+          {isApiConfigured() && submitError && (
+            <p
+              className="rounded-2xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700"
+              role="alert"
+            >
+              {submitError}
+            </p>
+          )}
         </div>
       )}
     </OnboardingLayout>

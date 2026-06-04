@@ -27,13 +27,7 @@ export function isLowCoreDevice() {
 }
 
 export function useLowCoreDevice() {
-  const [lowCore, setLowCore] = useState(() => isLowCoreDevice())
-
-  useEffect(() => {
-    setLowCore(isLowCoreDevice())
-  }, [])
-
-  return lowCore
+  return isLowCoreDevice()
 }
 
 /** Heuristic for low-end phones — invisible to the user, reduces path math only */

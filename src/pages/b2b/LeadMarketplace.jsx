@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { CheckCircle2, Filter, Lock, MapPin, Wallet } from 'lucide-react'
+import { CheckCircle2, Filter, Loader2, Lock, MapPin, Wallet } from 'lucide-react'
+import B2BLoadError from '../../components/b2b/B2BLoadError'
 import B2BModal from '../../components/b2b/B2BModal'
 import {
   b2bCard,
@@ -15,6 +16,7 @@ import {
   b2bSegmentedInactive,
 } from '../../components/b2b/b2bStyles'
 import { useB2B } from '../../context/B2BContext'
+import { isApiConfigured } from '../../services/apiClient'
 
 function ObfuscatedField({ value }) {
   return (
@@ -49,10 +51,17 @@ function MatchBadge({ score }) {
 function LeadCard({ lead, onUnlock, walletBalance, onRecharge }) {
   const canAfford = walletBalance >= lead.unlockCost
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [unlocking, setUnlocking] = useState(false)
 
-  const handleConfirm = () => {
-    onUnlock(lead.id)
-    setConfirmOpen(false)
+  const handleCloseConfirm = () => {
+    if (!unlocking) setConfirmOpen(false)
+  }
+
+  const handleConfirm = async () => {
+    setUnlocking(true)
+    const ok = await onUnlock(lead.id)
+    setUnlocking(false)
+    if (ok) setConfirmOpen(false)
   }
 
   return (
@@ -111,16 +120,27 @@ function LeadCard({ lead, onUnlock, walletBalance, onRecharge }) {
         )}
       </article>
 
-      <B2BModal open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Conferma sblocco" size="sm">
+      <B2BModal open={confirmOpen} onClose={handleCloseConfirm} title="Conferma sblocco" size="sm">
         <p className="mb-4 text-sm text-charcoal-muted">
           Sbloccare <strong className="text-charcoal">{lead.name}</strong> costerà{' '}
           <strong>€ {lead.unlockCost},00</strong> dal credito wallet.
         </p>
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={() => setConfirmOpen(false)} className={b2bSecondaryBtn}>
+          <button
+            type="button"
+            onClick={handleCloseConfirm}
+            disabled={unlocking}
+            className={b2bSecondaryBtn}
+          >
             Annulla
           </button>
-          <button type="button" onClick={handleConfirm} className={b2bPrimaryBtn}>
+          <button
+            type="button"
+            onClick={handleConfirm}
+            disabled={unlocking}
+            className={`flex items-center gap-2 ${b2bPrimaryBtn}`}
+          >
+            {unlocking && <Loader2 className="h-4 w-4 animate-spin" />}
             Conferma
           </button>
         </div>
@@ -130,9 +150,19 @@ function LeadCard({ lead, onUnlock, walletBalance, onRecharge }) {
 }
 
 export default function LeadMarketplace() {
-  const { marketplaceLeads, walletBalance, unlockLead, openRechargeModal } = useB2B()
+  const {
+    marketplaceLeads,
+    walletBalance,
+    unlockLead,
+    openRechargeModal,
+    loading,
+    initError,
+    retryInit,
+    useApi,
+  } = useB2B()
   const [locationFilter, setLocationFilter] = useState('')
   const [scoreSegment, setScoreSegment] = useState('all')
+  const [availableOnly, setAvailableOnly] = useState(false)
 
   const locations = useMemo(
     () => [...new Set(marketplaceLeads.map((l) => l.location))].sort(),
@@ -144,11 +174,21 @@ export default function LeadMarketplace() {
     return marketplaceLeads.filter((lead) => {
       const matchesLocation = !locationFilter || lead.location === locationFilter
       const matchesScore = !minScore || lead.matchScore >= minScore
-      return matchesLocation && matchesScore
+      const matchesAvailability = !availableOnly || !lead.unlocked
+      return matchesLocation && matchesScore && matchesAvailability
     })
-  }, [marketplaceLeads, locationFilter, scoreSegment])
+  }, [marketplaceLeads, locationFilter, scoreSegment, availableOnly])
 
   const lockedCount = marketplaceLeads.filter((l) => !l.unlocked).length
+
+  if (isApiConfigured() && loading && !useApi && !initError) {
+    return (
+      <div className="flex min-h-[320px] items-center justify-center text-charcoal-muted">
+        <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
+        <span className="sr-only">Caricamento marketplace…</span>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -159,6 +199,10 @@ export default function LeadMarketplace() {
         </p>
       </div>
 
+      {isApiConfigured() && initError ? (
+        <B2BLoadError message={initError} onRetry={retryInit} />
+      ) : (
+        <>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2 text-xs font-medium text-charcoal-muted">
           <Filter className="h-3.5 w-3.5" />
@@ -193,6 +237,15 @@ export default function LeadMarketplace() {
             </option>
           ))}
         </select>
+        <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-charcoal">
+          <input
+            type="checkbox"
+            checked={availableOnly}
+            onChange={(e) => setAvailableOnly(e.target.checked)}
+            className="h-4 w-4 rounded border-black/20 text-accent-coral focus:ring-accent-coral/30"
+          />
+          Solo disponibili
+        </label>
       </div>
 
       {filteredLeads.length === 0 ? (
@@ -212,6 +265,8 @@ export default function LeadMarketplace() {
             />
           ))}
         </div>
+      )}
+        </>
       )}
     </div>
   )

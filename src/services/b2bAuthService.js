@@ -27,14 +27,20 @@ export async function loginB2B({ email, password, deviceName = 'wenando-pro' }) 
     name: data.company?.organization_name ?? data.user?.name ?? email.split('@')[0],
     token,
     companyId: data.company?.id ?? null,
-    vettingStatus: data.company?.vetting_status ?? null,
+    onboardingStatus: data.company?.vetting_status ?? null,
     authenticatedAt: Date.now(),
     expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
   }
 
   localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session))
 
-  return { ok: true, session, user: data.user, company: data.company }
+  return {
+    ok: true,
+    session,
+    user: data.user,
+    company: data.company,
+    redirectTo: data.redirect_to ?? null,
+  }
 }
 
 export function clearB2BAuth() {
