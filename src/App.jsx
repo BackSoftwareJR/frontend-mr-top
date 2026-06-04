@@ -2,13 +2,13 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import AppErrorBoundary from './components/errors/AppErrorBoundary'
 import { AuthProvider } from './context/AuthContext'
+import { B2BProvider } from './context/B2BContext'
 import AdminProtectedRoute from './components/auth/AdminProtectedRoute'
-import ConsumerProtectedRoute from './components/auth/ConsumerProtectedRoute'
+import { B2BProtectedRoute, ConsumerProtectedRoute } from './components/auth/ProtectedRoute'
 import { usePlausibleAnalytics } from './hooks/usePlausibleAnalytics'
 import { useIsMobile } from './utils/performanceTier'
 
 const CookieBanner = lazy(() => import('./components/CookieBanner'))
-const B2BShell = lazy(() => import('./shells/B2BShell'))
 
 const Home = lazy(() => import('./pages/Home'))
 const Wizard = lazy(() => import('./pages/Wizard'))
@@ -20,6 +20,7 @@ const UserSearches = lazy(() => import('./pages/user/UserSearches'))
 const UserSearchDetail = lazy(() => import('./pages/user/UserSearchDetail'))
 const UserHelp = lazy(() => import('./pages/user/UserHelp'))
 const UserProfile = lazy(() => import('./pages/user/UserProfile'))
+const B2BLayout = lazy(() => import('./components/b2b/B2BLayout'))
 const DashboardHome = lazy(() => import('./pages/b2b/DashboardHome'))
 const LeadMarketplace = lazy(() => import('./pages/b2b/LeadMarketplace'))
 const SmartCRM = lazy(() => import('./pages/b2b/SmartCRM'))
@@ -59,6 +60,16 @@ function AppShell() {
         <CookieBanner />
       </Suspense>
     </AppErrorBoundary>
+  )
+}
+
+function B2BShell() {
+  return (
+    <B2BProtectedRoute>
+      <B2BProvider>
+        <B2BLayout />
+      </B2BProvider>
+    </B2BProtectedRoute>
   )
 }
 
