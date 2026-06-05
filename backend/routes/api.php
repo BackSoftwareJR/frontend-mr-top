@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\V1\B2C\AdvisorController;
 use App\Http\Controllers\Api\V1\B2C\LeadResultsController;
 use App\Http\Controllers\Api\V1\B2C\LeadSubmissionController;
 use App\Http\Controllers\Api\V1\B2C\LocationsController;
+use App\Http\Controllers\Api\V1\B2C\NandoController;
 use App\Http\Controllers\Api\V1\B2C\WizardController;
 use App\Http\Controllers\Api\V1\ConsentController;
 use App\Http\Controllers\Api\V1\GeoController;
@@ -85,6 +86,9 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/locations/autocomplete', [LocationsController::class, 'autocomplete'])
             ->middleware('throttle:locations-autocomplete');
         Route::get('/advisor', [AdvisorController::class, 'show']);
+
+        Route::post('/nando/refine', [NandoController::class, 'refine'])
+            ->middleware('throttle:nando-refine');
 
         Route::post('/leads', [LeadSubmissionController::class, 'store'])
             ->middleware('throttle:wizard-submit');

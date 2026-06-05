@@ -3,6 +3,7 @@
 @theme {
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-brand: "Fredoka", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-search: "Instrument Serif", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
   --color-warm-white: #fafaf8;
   --color-warm-cream: #f8f7f4;
   --color-charcoal: #1e293b;
@@ -230,6 +231,147 @@ body {
 
 .reading-line-cta[data-reading-locked="true"]:hover {
   border-color: var(--color-accent-coral-dark);
+}
+
+/* Apple Intelligence — soft multicolor rotating border */
+:root {
+  --ai-magenta: #e879f9;
+  --ai-violet: #a78bfa;
+  --ai-indigo: #818cf8;
+  --ai-blue: #60a5fa;
+  --ai-cyan: #22d3ee;
+  --ai-teal: #2dd4bf;
+  --ai-amber: #fbbf24;
+  --ai-orange: #fb923c;
+  --ai-rose: #fb7185;
+  --ai-pink: #f472b6;
+  --ai-border-width: 2px;
+  --ai-border-speed: 2.75s;
+}
+
+.apple-intelligence-border {
+  position: relative;
+  padding: var(--ai-border-width);
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--ai-border-angle, 0deg),
+    var(--ai-magenta) 0deg,
+    var(--ai-violet) 36deg,
+    var(--ai-indigo) 72deg,
+    var(--ai-blue) 108deg,
+    var(--ai-cyan) 144deg,
+    var(--ai-teal) 180deg,
+    var(--ai-amber) 216deg,
+    var(--ai-orange) 252deg,
+    var(--ai-rose) 288deg,
+    var(--ai-pink) 324deg,
+    var(--ai-magenta) 360deg
+  );
+  animation: ai-border-sweep var(--ai-border-speed) linear infinite;
+}
+
+/* Soft outer bloom — tight blur, keeps border sfumato without wide glow */
+.apple-intelligence-border::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: inherit;
+  filter: blur(3px);
+  opacity: 0.55;
+  animation: ai-border-sweep var(--ai-border-speed) linear infinite;
+  pointer-events: none;
+}
+
+.apple-intelligence-border__inner {
+  position: relative;
+  border-radius: inherit;
+  pointer-events: auto;
+}
+
+@keyframes ai-border-sweep {
+  to {
+    --ai-border-angle: 360deg;
+  }
+}
+
+@property --ai-border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .apple-intelligence-border,
+  .apple-intelligence-border::after {
+    animation: none;
+    --ai-border-angle: 140deg;
+  }
+
+  .home-sticky-search-bar {
+    transition: none;
+  }
+}
+
+/* Sticky search bar — fixed below home nav */
+.home-sticky-search-bar {
+  top: calc(env(safe-area-inset-top, 0px) + 4.75rem);
+  will-change: opacity, transform;
+}
+
+@media (min-width: 769px) {
+  .home-sticky-search-bar {
+    top: calc(env(safe-area-inset-top, 0px) + 5.5rem);
+  }
+}
+
+/* Reading-line search bar: optional scroll-synced box-shadow (border stays always-on via .apple-intelligence-border) */
+.reading-line-search {
+  transition: box-shadow 0.22s ease;
+  box-shadow: 0 2px 12px rgb(15 23 42 / 0.04);
+}
+
+.reading-line-search > * {
+  position: relative;
+  z-index: 1;
+}
+
+.reading-line-search[data-reading-active="true"] {
+  box-shadow: 0 4px 20px rgb(15 23 42 / 0.07);
+}
+
+.reading-line-search[data-reading-locked="true"] {
+  box-shadow: 0 4px 22px rgb(15 23 42 / 0.08);
+}
+
+.reading-line-search:focus-within {
+  box-shadow: 0 6px 24px rgb(15 23 42 / 0.1);
+}
+
+/* Search bar — pill capsule, serif input typography */
+.search-bar-field {
+  border-radius: 9999px;
+}
+
+.search-bar-field__inner {
+  border-radius: 9999px;
+  background: #fff;
+}
+
+.search-bar-input {
+  font-family: var(--font-search);
+  font-weight: 400;
+  font-feature-settings: "liga" 1, "kern" 1;
+  letter-spacing: 0.012em;
+}
+
+.search-bar-input::placeholder {
+  font-family: var(--font-search);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  opacity: 0.55;
 }
 
 /* Reading-line stat cards: border glow + left-to-right fill, reversible on scroll up */

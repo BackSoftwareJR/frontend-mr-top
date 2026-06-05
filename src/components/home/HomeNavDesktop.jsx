@@ -35,23 +35,30 @@ function useNavMorph() {
   return { borderRadius, headerTop, headerPadX, navMaxWidth }
 }
 
-function HomeNavLinks() {
+function HomeNavLogo() {
   return (
-    <>
-      <Link
-        to="/"
-        className="flex min-w-0 items-center gap-1 overflow-visible sm:gap-1.5"
+    <Link
+      to="/"
+      className="flex min-w-0 shrink-0 items-center gap-1 overflow-visible sm:gap-1.5"
+    >
+      <WenandoMark className="h-14 w-14 shrink-0 sm:h-16 sm:w-16" />
+      <WenandoLogo size="nav" className="min-w-0 overflow-visible" />
+    </Link>
+  )
+}
+
+function HomeNavActions() {
+  return (
+    <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+      <ConsumerAccediNavLink />
+      <MagneticButton
+        to="/wizard"
+        variant="outline-coral"
+        className="!px-4 !py-2 !text-sm sm:!px-5 sm:!py-2.5"
       >
-        <WenandoMark className="h-14 w-14 shrink-0 sm:h-16 sm:w-16" />
-        <WenandoLogo size="nav" className="min-w-0 overflow-visible" />
-      </Link>
-      <div className="flex items-center gap-2 sm:gap-3">
-        <ConsumerAccediNavLink />
-        <MagneticButton to="/wizard" variant="outline-coral" className="!px-4 !py-2 !text-sm sm:!px-5 sm:!py-2.5">
-          Inizia ora →
-        </MagneticButton>
-      </div>
-    </>
+        Inizia ora →
+      </MagneticButton>
+    </div>
   )
 }
 
@@ -72,9 +79,10 @@ export default function HomeNavDesktop() {
     >
       <motion.nav
         style={{ borderRadius, maxWidth: navMaxWidth }}
-        className="flex min-h-[56px] w-full items-center justify-between gap-3 overflow-visible border border-slate-200/80 bg-white/80 px-3 py-1 shadow-sm backdrop-blur-2xl sm:px-4 sm:py-1.5"
+        className="flex min-h-[56px] w-full items-center justify-between gap-3 overflow-visible border border-slate-200/80 bg-white/80 px-3 py-1.5 shadow-sm backdrop-blur-2xl sm:px-4 sm:py-2"
       >
-        <HomeNavLinks />
+        <HomeNavLogo />
+        <HomeNavActions />
       </motion.nav>
     </motion.header>
   )

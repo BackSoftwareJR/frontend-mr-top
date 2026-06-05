@@ -14,6 +14,7 @@ import { useIsMobile } from './utils/performanceTier'
 import DeferredCookieBanner from './components/DeferredCookieBanner'
 
 const Wizard = lazyRoute(() => import('./pages/Wizard'))
+const ExplorePage = lazyRoute(() => import('./pages/ExplorePage'))
 const ResultsPage = lazyRoute(() => import('./pages/ResultsPage'))
 const Accedi = lazyRoute(() => import('./pages/Accedi'))
 const UserLayout = lazyRoute(() => import('./components/user/UserLayout'))
@@ -100,6 +101,7 @@ function AppRoutes() {
       <Routes location={location} key={isMobile ? undefined : location.pathname}>
         <Route path="/" element={<Home />} />
         <Route path="/wizard" element={<Wizard />} />
+        <Route path="/esplora" element={<ExplorePage />} />
         <Route path="/results" element={<ResultsPage />} />
         <Route path="/accedi" element={<Accedi />} />
         <Route path="/privacy" element={<PrivacyPage />} />

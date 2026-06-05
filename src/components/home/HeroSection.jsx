@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useIsMobile } from '../../utils/performanceTier'
 import ConsumerAccediNavLink from './ConsumerAccediNavLink'
 import MagneticButton from '../ui/MagneticButton'
+import HomeSearchBar from './HomeSearchBar'
 import MulticolorHeading from '../ui/MulticolorHeading'
 import WenandoLogo, { WenandoMark } from '../ui/WenandoLogo'
 import BentoSteps from './BentoSteps'
@@ -18,22 +19,25 @@ import SectionBlob from '../ui/SectionBlob'
 const HomeNavDesktop = lazy(() => import('./HomeNavDesktop'))
 const HeroSectionDesktop = lazy(() => import('./HeroSectionDesktop'))
 
+const MOBILE_NAV_CTA_CLASS =
+  'shrink-0 whitespace-nowrap !min-h-[40px] !rounded-full !px-3.5 !py-2 !text-[0.8125rem] !font-semibold sm:!px-4 sm:!text-sm'
+
 function MobileHomeNavLinks() {
   return (
     <>
       <Link
         to="/"
-        className="flex min-w-0 items-center gap-2 overflow-visible"
+        className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden pr-2"
       >
-        <WenandoMark className="h-14 w-14 shrink-0" width={56} height={56} />
-        <WenandoLogo size="nav-mobile" className="min-w-0 overflow-visible" />
+        <WenandoMark className="h-12 w-12 shrink-0 sm:h-14 sm:w-14" width={48} height={48} />
+        <WenandoLogo size="nav-mobile" className="min-w-0 overflow-hidden" />
       </Link>
-      <div className="flex items-center gap-2">
-        <ConsumerAccediNavLink />
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <ConsumerAccediNavLink className="!px-3 !text-[0.8125rem] sm:!px-4 sm:!text-sm" />
         <MagneticButton
           to="/wizard"
           variant="outline-coral"
-          className="!min-h-[44px] !px-5 !py-2.5 !text-sm !font-semibold"
+          className={MOBILE_NAV_CTA_CLASS}
         >
           Inizia ora →
         </MagneticButton>
@@ -188,14 +192,8 @@ function HeroSectionStatic() {
         con l&apos;empatia di chi vi ascolta davvero.
       </p>
 
-      <div
-        className="hero-fade-in-delay relative z-10 flex justify-center"
-        data-scroll-anchor="hero-cta"
-        data-scroll-label="CTA Hero"
-      >
-        <MagneticButton to="/wizard" variant="outline-coral" readingLineCta>
-          Inizia ora →
-        </MagneticButton>
+      <div className="hero-fade-in-delay relative z-10 flex w-full justify-center px-1">
+        <HomeSearchBar />
       </div>
     </section>
   )

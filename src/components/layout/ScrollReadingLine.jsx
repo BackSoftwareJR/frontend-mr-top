@@ -28,6 +28,8 @@ import {
   resolveMobileScrollFrameSampleCount,
   resolveProgressLookupSampleCount,
   resolveReadingPathProgress,
+  resolveVisibleScrollAnchor,
+  resolveCtaButtonEl,
   SCROLL_REMAP_SAMPLES,
   measureReadingPathPoints,
 } from '../../data/readingPathSchema'
@@ -303,7 +305,8 @@ function useCtaAnchorRects() {
   const remeasure = useCallback(() => {
     const next = {}
     for (const id of CTA_GLOW_SEGMENTS) {
-      const el = document.querySelector(`[data-scroll-anchor="${id}"]`)
+      const wrap = resolveVisibleScrollAnchor(id)
+      const el = resolveCtaButtonEl(wrap) ?? wrap
       if (!el) continue
       const r = el.getBoundingClientRect()
       next[id] = {
@@ -321,10 +324,30 @@ function useCtaAnchorRects() {
   return rects
 }
 
-function resetReadingCta(btn) {
-  btn.style.setProperty('--reading-fill', '0')
-  btn.dataset.readingActive = 'false'
-  btn.dataset.readingLocked = 'false'
+function resolveReadingGlowEl(wrap) {
+  return (
+    wrap?.querySelector('.reading-line-cta') ??
+    wrap?.querySelector('.reading-line-search') ??
+    null
+  )
+}
+
+function isReadingLineSearchEl(el) {
+  return el?.classList.contains('reading-line-search') ?? false
+}
+
+function setReadingFill(el, fill) {
+  if (!isReadingLineSearchEl(el)) {
+    el.style.setProperty('--reading-fill', fill.toFixed(3))
+  }
+}
+
+function resetReadingGlowEl(el) {
+  if (!isReadingLineSearchEl(el)) {
+    el.style.setProperty('--reading-fill', '0')
+  }
+  el.dataset.readingActive = 'false'
+  el.dataset.readingLocked = 'false'
 }
 
 const CtaFillSync = memo(function CtaFillSync({
@@ -342,11 +365,11 @@ const CtaFillSync = memo(function CtaFillSync({
 
     const buttons = new Map()
     for (const range of glowRanges) {
-      const wrap = document.querySelector(`[data-scroll-anchor="${range.id}"]`)
-      const btn = wrap?.querySelector('.reading-line-cta')
+      const wrap = resolveVisibleScrollAnchor(range.id)
+      const btn = resolveReadingGlowEl(wrap)
       if (btn) {
         buttons.set(range.id, btn)
-        resetReadingCta(btn)
+        resetReadingGlowEl(btn)
       }
     }
     buttonsRef.current = buttons
@@ -363,7 +386,7 @@ const CtaFillSync = memo(function CtaFillSync({
 
         if (isReversible) {
           const fill = computeReadingFill(progress, range)
-          btn.style.setProperty('--reading-fill', fill.toFixed(3))
+          setReadingFill(btn, fill)
           btn.dataset.readingActive = fill > 0.08 ? 'true' : 'false'
           btn.dataset.readingLocked = fill >= 1 ? 'true' : 'false'
           continue
@@ -377,7 +400,7 @@ const CtaFillSync = memo(function CtaFillSync({
           passedRef.current[range.id] = true
           maxFillRef.current[range.id] = 1
           btn.dataset.readingLocked = 'true'
-          btn.style.setProperty('--reading-fill', '1')
+          setReadingFill(btn, 1)
           btn.dataset.readingActive = 'true'
           continue
         }
@@ -386,7 +409,7 @@ const CtaFillSync = memo(function CtaFillSync({
           passedRef.current[range.id] = true
           maxFillRef.current[range.id] = 1
           btn.dataset.readingLocked = 'true'
-          btn.style.setProperty('--reading-fill', '1')
+          setReadingFill(btn, 1)
           btn.dataset.readingActive = 'true'
           continue
         }
@@ -396,7 +419,7 @@ const CtaFillSync = memo(function CtaFillSync({
         const fill = Math.min(1, Math.max(prev, instant))
         maxFillRef.current[range.id] = fill
 
-        btn.style.setProperty('--reading-fill', fill.toFixed(3))
+        setReadingFill(btn, fill)
         btn.dataset.readingActive = 'false'
       }
     }
@@ -511,13 +534,19 @@ const CtaGlowRing = memo(function CtaGlowRing({
   cy,
   size,
 }) {
+  const isHeroSearch = range.id === 'hero-cta'
+
   const glowOpacity = useTransform(pathProgress, (p) => {
     if (p <= 0 || p < range.start || p > range.end) return 0
     const mid = (range.start + range.end) / 2
     const half = (range.end - range.start) / 2 || 0.01
     const t = 1 - Math.min(1, Math.abs(p - mid) / half)
-    return t * 0.55
+    return t * (isHeroSearch ? 0.72 : 0.55)
   })
+
+  const glowBackground = isHeroSearch
+    ? 'radial-gradient(circle, rgba(224,122,95,0.34) 0%, rgba(155,142,196,0.22) 38%, rgba(92,184,168,0.14) 58%, transparent 74%)'
+    : 'radial-gradient(circle, rgba(224,122,95,0.28) 0%, rgba(255,255,255,0.08) 40%, transparent 70%)'
 
   return (
     <motion.div
@@ -528,8 +557,7 @@ const CtaGlowRing = memo(function CtaGlowRing({
         width: size,
         height: size,
         opacity: glowOpacity,
-        background:
-          'radial-gradient(circle, rgba(224,122,95,0.28) 0%, rgba(255,255,255,0.08) 40%, transparent 70%)',
+        background: glowBackground,
         willChange: 'opacity',
       }}
       aria-hidden="true"

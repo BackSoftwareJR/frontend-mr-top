@@ -2,6 +2,7 @@
 const ROUTE_LOADERS = {
   '/': () => import('../pages/Home.jsx'),
   '/wizard': () => import('../pages/Wizard.jsx'),
+  '/esplora': () => import('../pages/ExplorePage.jsx'),
   '/results': () => import('../pages/ResultsPage.jsx'),
   '/accedi': () => import('../pages/Accedi.jsx'),
   '/pro': () => import('../pages/b2b/B2BPortal.jsx'),
@@ -11,6 +12,7 @@ const ROUTE_LOADERS = {
 }
 
 const MOBILE_CRITICAL_PATHS = [
+  '/esplora',
   '/wizard',
   '/results',
   '/accedi',

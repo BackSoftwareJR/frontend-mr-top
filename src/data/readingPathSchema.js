@@ -174,14 +174,43 @@ export const FALLBACK_PATH_POINTS = [
   { x: 0.5, y: 0.96, normalized: true },
 ]
 
-/** Actual pill button inside a CTA anchor wrapper */
+/** Actual interactive target inside a CTA / search anchor wrapper */
 export function resolveCtaButtonEl(wrapEl) {
   if (!wrapEl) return null
+  if (
+    wrapEl.classList.contains('reading-line-search') ||
+    wrapEl.classList.contains('reading-line-cta')
+  ) {
+    return wrapEl
+  }
   return (
     wrapEl.querySelector('.reading-line-cta') ??
+    wrapEl.querySelector('.reading-line-search') ??
     wrapEl.querySelector('a, button') ??
     wrapEl
   )
+}
+
+/** True when anchor participates in layout (not display:none / zero-size). */
+export function isScrollAnchorVisible(el) {
+  if (!el) return false
+  const rect = el.getBoundingClientRect()
+  return rect.width > 0 && rect.height > 0
+}
+
+/** Prefer visible duplicate anchors — hero search below lg, header search at lg+. */
+export function resolveVisibleScrollAnchor(id) {
+  if (typeof document === 'undefined') return null
+
+  const matches = document.querySelectorAll(`[data-scroll-anchor="${id}"]`)
+  let fallback = null
+
+  for (const el of matches) {
+    if (!fallback) fallback = el
+    if (isScrollAnchorVisible(el)) return el
+  }
+
+  return fallback
 }
 
 /** Optical center of the trailing period glyph (not the line box) */
@@ -1875,7 +1904,17 @@ export function measureReadingPathPoints() {
   const byId = new Map()
   document.querySelectorAll('[data-scroll-anchor]').forEach((el) => {
     const id = el.dataset.scrollAnchor
-    if (id && !byId.has(id)) byId.set(id, el)
+    if (!id) return
+
+    const existing = byId.get(id)
+    if (!existing) {
+      byId.set(id, el)
+      return
+    }
+
+    if (isScrollAnchorVisible(el) && !isScrollAnchorVisible(existing)) {
+      byId.set(id, el)
+    }
   })
 
   if (!byId.has('hero-dot') && !byId.size) {

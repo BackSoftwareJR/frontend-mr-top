@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { useRef } from 'react'
-import MagneticButton from '../ui/MagneticButton'
+import HomeSearchBar from './HomeSearchBar'
 import MulticolorHeading from '../ui/MulticolorHeading'
 import WenandoLogo, { WenandoMark } from '../ui/WenandoLogo'
 import SectionBlob from '../ui/SectionBlob'
@@ -55,13 +55,9 @@ export default function HeroSectionDesktop() {
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.7, duration: 0.6 }}
-        className="relative z-10 mt-2 flex justify-center"
-        data-scroll-anchor="hero-cta"
-        data-scroll-label="CTA Hero"
+        className="relative z-10 mt-2 flex w-full max-w-xl justify-center px-2"
       >
-        <MagneticButton to="/wizard" variant="outline-coral" readingLineCta>
-          Inizia ora →
-        </MagneticButton>
+        <HomeSearchBar />
       </motion.div>
     </section>
   )
