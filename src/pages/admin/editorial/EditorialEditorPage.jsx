@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Loader2, Save, Send } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, Loader2, Save, Send } from 'lucide-react'
 import {
   createContent,
   getContent,
@@ -12,7 +12,9 @@ import { fetchEditorialRubrics } from '../../../services/editorialService'
 import { ApiError, isApiConfigured } from '../../../services/apiClient'
 import AdminLoadError from '../../../components/admin/AdminLoadError'
 import BlockEditor from '../../../components/admin/editorial/BlockEditor'
+import SeoReviewPanel from '../../../components/admin/editorial/SeoReviewPanel'
 import { createEmptyBlock } from '../../../components/admin/editorial/blockUtils'
+import { isSeoApproved } from '../../../components/admin/editorial/seoUtils'
 import { adminGlassCard, adminPageSubtitle, adminPageTitle } from '../../../components/admin/adminStyles'
 
 const inputClass =
@@ -81,18 +83,6 @@ function SuggestedLinksPanel({ uuid }) {
   )
 }
 
-function SeoPanelPlaceholder() {
-  return (
-    <div className={`${adminGlassCard} p-4`}>
-      <h3 className="text-sm font-semibold text-white">SEO</h3>
-      <p className="mt-0.5 text-xs text-zinc-500">Pannello approvazione SEO — Sprint 5b</p>
-      <div className="mt-4 rounded-lg border border-dashed border-white/10 bg-zinc-950/40 px-4 py-8 text-center text-sm text-zinc-600">
-        Regenera, rivedi e approva meta title/description prima della pubblicazione
-      </div>
-    </div>
-  )
-}
-
 export default function EditorialEditorPage() {
   const { uuid } = useParams()
   const navigate = useNavigate()
@@ -107,6 +97,7 @@ export default function EditorialEditorPage() {
   )
   const [toast, setToast] = useState(null)
   const [updatedAt, setUpdatedAt] = useState(null)
+  const [seoPack, setSeoPack] = useState(null)
 
   const [title, setTitle] = useState('')
   const [subtitle, setSubtitle] = useState('')
@@ -152,6 +143,7 @@ export default function EditorialEditorPage() {
             : [createEmptyBlock('heading'), createEmptyBlock('paragraph')],
         )
         setUpdatedAt(content.updatedAt)
+        setSeoPack(content.seoPack ?? null)
       })
       .catch((err) => {
         if (!cancelled) {
@@ -169,23 +161,28 @@ export default function EditorialEditorPage() {
     }
   }, [isNew, uuid])
 
+  const applyContent = (content) => {
+    setTitle(content.title ?? '')
+    setSubtitle(content.subtitle ?? '')
+    setContentType(content.contentType ?? 'article')
+    setRubricId(content.rubricId ? String(content.rubricId) : '')
+    setFeatured(Boolean(content.featured))
+    setBodyBlocks(
+      content.bodyBlocks?.length > 0
+        ? content.bodyBlocks
+        : [createEmptyBlock('heading'), createEmptyBlock('paragraph')],
+    )
+    setUpdatedAt(content.updatedAt)
+    setSeoPack(content.seoPack ?? null)
+  }
+
   const reloadContent = () => {
     if (isNew || !uuid) return
     setLoading(true)
     setLoadError(null)
     getContent(uuid)
       .then((content) => {
-        setTitle(content.title ?? '')
-        setSubtitle(content.subtitle ?? '')
-        setContentType(content.contentType ?? 'article')
-        setRubricId(content.rubricId ? String(content.rubricId) : '')
-        setFeatured(Boolean(content.featured))
-        setBodyBlocks(
-          content.bodyBlocks?.length > 0
-            ? content.bodyBlocks
-            : [createEmptyBlock('heading'), createEmptyBlock('paragraph')],
-        )
-        setUpdatedAt(content.updatedAt)
+        applyContent(content)
       })
       .catch((err) => {
         setLoadError(
@@ -354,6 +351,19 @@ export default function EditorialEditorPage() {
         </div>
       ) : null}
 
+      {!isNew && !isSeoApproved(seoPack) ? (
+        <div
+          role="status"
+          className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300"
+        >
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+          <p>
+            SEO non ancora approvato. Rigenera e approva il pacchetto SEO nel pannello a destra
+            prima di pubblicare.
+          </p>
+        </div>
+      ) : null}
+
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
           <div className={`${adminGlassCard} space-y-4 p-4 sm:p-5`}>
@@ -438,7 +448,14 @@ export default function EditorialEditorPage() {
         </div>
 
         <aside className="space-y-4">
-          <SeoPanelPlaceholder />
+          <SeoReviewPanel
+            uuid={isNew ? null : uuid}
+            contentSeoPack={seoPack}
+            onApproved={(content) => {
+              applyContent(content)
+              setToast({ type: 'success', message: 'SEO approvato' })
+            }}
+          />
           {!isNew ? <SuggestedLinksPanel uuid={uuid} /> : null}
         </aside>
       </div>

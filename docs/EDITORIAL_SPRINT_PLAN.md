@@ -28,7 +28,7 @@ Each sprint is split into **agent-sized sub-phases** (0a, 0b, …). After comple
 | **2** | Workflow + Groq SEO + B2B moderation | 2a ✅, 2b ✅, 2c ✅ | backend |
 | **3** | HTML render + sitemap/RSS/llms.txt + preview | 3a ✅, 3b ✅, 3c ✅ | backend (+ nginx) |
 | **4** | Internal search indexer + Nando context | 4a ✅, 4b ✅, 4c ✅ | backend + frontend |
-| **5** | Admin CMS UI + SEO approval + B2B portal | 5a ✅, 5b, 5c | frontend + backend |
+| **5** | Admin CMS UI + SEO approval + B2B portal | 5a ✅, 5b ✅, 5c | frontend + backend |
 | **6** | Agent webhooks + analytics polish | 6a, 6b, 6c | backend + frontend |
 
 ---
@@ -555,7 +555,9 @@ backend/.env.example
 
 **Commit:** `7560430` in `backend/`
 **Tests run:** `php artisan test --filter=EditorialSeo` — 8 passed; `php artisan test --filter=Editorial` — 47 passed, 292 assertions
-**Known gaps:** B2B author API (Sprint 2c); SEO approval UI (Sprint 5b).
+**Known gaps:** SEO approval UI panel is placeholder only (Sprint 5b); publish from review queue requires SEO gate from 2b.
+
+**Next agent START: Sprint 5b — SEO approval UI**
 
 **Next agent START: Sprint 2c — B2B author API + moderation queue**
 
@@ -1139,24 +1141,69 @@ VERIFY:
 
 ---
 
-### Sprint 5b — SEO approval UI
+### Sprint 5b — SEO approval UI ✅ DONE
+
+**Status:** ✅ DONE (2026-06-06)
 
 **Goals:** Side-by-side SEO review per spec §8.4.
 
-**Agent tasks**
+**Agent tasks (completed)**
 
-- `SeoReviewPanel.jsx` — title/description variants, geo excerpt, issues
-- Wire regenerate + approve to 2b API
-- Publish button disabled until SEO approved
+- [x] `SeoReviewPanel.jsx` — editable SEO fields, score badge, breakdown, FAQ hints
+- [x] Wire `getSeo`, `regenerateSeo`, `approveSeo`, `rejectSeo` in `adminEditorialService`
+- [x] Replace `SeoPanelPlaceholder` in `EditorialEditorPage`
+- [x] Amber banner when SEO not approved; refresh content after approve
+- [x] Consistent SEO score badge colors in `EditorialListPage`
 
 **Acceptance criteria**
 
-- Reviewer approves SEO; publish enables
-- Manual overrides persist in `seo_pack.manual_overrides`
+- [x] Reviewer approves SEO; content `seo_pack.approved` refreshes in editor
+- [x] Approve disabled when score &lt; 70; reject modal with note
+- [ ] Manual overrides persist in `seo_pack.manual_overrides` — frontend sends `manual_overrides` on approve; backend merge pending
 
 **Dependencies:** Sprint 2b, 5a
 
 **Repo:** `frontend/`
+
+**Tests run:** `npm run lint` — pass
+
+**Files changed**
+
+```
+src/components/admin/editorial/SeoReviewPanel.jsx
+src/components/admin/editorial/seoUtils.js
+src/services/adminEditorialService.js
+src/pages/admin/editorial/EditorialEditorPage.jsx
+src/pages/admin/editorial/EditorialListPage.jsx
+docs/EDITORIAL_SPRINT_PLAN.md
+```
+
+### Handoff — Sprint 5b COMPLETE
+
+**Tests run:** `npm run lint` — pass
+**Known gaps:** Backend `approve` endpoint does not yet merge `manual_overrides` from request body; publish button not yet in editor (banner only).
+
+**Next agent START: Sprint 5c — B2B author portal**
+
+```
+READ:
+  docs/EDITORIAL_SPRINT_PLAN.md Sprint 5c section
+  backend/app/Http/Controllers/Api/V1/B2B/EditorialContentController.php
+  src/pages/admin/editorial/EditorialEditorPage.jsx (reference for block editor patterns)
+
+CREATE:
+  src/pages/pro/editorial/ — list + editor pages
+
+IMPLEMENT:
+  /pro/editoriale routes — simplified editor, restricted blocks
+  Structure disclaimer preview
+  Submit to moderation flow
+
+VERIFY:
+  Partner submits story; sees queue status
+  Cannot use faq/structure_card blocks
+  npm run lint
+```
 
 ---
 
@@ -1294,4 +1341,4 @@ When finishing any sub-phase, append:
 
 ---
 
-*Document version: 2.4 · Sprint 5a complete · Next: Sprint 5b SEO approval UI*
+*Document version: 2.5 · Sprint 5b complete · Next: Sprint 5c B2B author portal*

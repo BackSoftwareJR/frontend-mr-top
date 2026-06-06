@@ -262,32 +262,99 @@ export async function generatePreviewToken(uuid) {
   }
 }
 
+/** @param {Record<string, unknown>} generation */
+function mapSeoGeneration(generation) {
+  return {
+    id: generation.id,
+    contentId: generation.content_id ?? generation.contentId ?? null,
+    seoPack: generation.seo_pack ?? generation.seoPack ?? null,
+    score: generation.score ?? generation.seo_pack?.seo_score ?? generation.seoPack?.seo_score ?? null,
+    status: generation.status ?? null,
+    groqModel: generation.groq_model ?? generation.groqModel ?? null,
+    promptVersion: generation.prompt_version ?? generation.promptVersion ?? null,
+    latencyMs: generation.latency_ms ?? generation.latencyMs ?? null,
+    errorMessage: generation.error_message ?? generation.errorMessage ?? null,
+    reviewedByUserId: generation.reviewed_by_user_id ?? generation.reviewedByUserId ?? null,
+    reviewedAt: generation.reviewed_at ?? generation.reviewedAt ?? null,
+    createdAt: generation.created_at ?? generation.createdAt ?? null,
+  }
+}
+
+/** @param {import('axios').AxiosResponse} response */
+function mapSeoShowResponse(response) {
+  const data = unwrapApiData(response)
+  const latest = data.latest ?? null
+  const history = Array.isArray(data.history) ? data.history : []
+
+  return {
+    latest: latest ? mapSeoGeneration(latest) : null,
+    history: history.map(mapSeoGeneration),
+    historyCount: history.length,
+    contentSeoPack: data.content_seo_pack ?? data.contentSeoPack ?? null,
+    groqConfigured: Boolean(data.groq_configured ?? data.groqConfigured),
+  }
+}
+
 export async function getSeo(uuid) {
   const response = await apiClient.get(`/admin/editorial/contents/${encodeURIComponent(uuid)}/seo`)
-  return unwrapApiData(response)
+  return mapSeoShowResponse(response)
 }
 
 export async function regenerateSeo(uuid) {
   const response = await apiClient.post(
     `/admin/editorial/contents/${encodeURIComponent(uuid)}/seo/regenerate`,
   )
-  return unwrapApiData(response)
+  const data = unwrapApiData(response)
+  const generation = data.generation ?? data
+
+  return {
+    generation: generation ? mapSeoGeneration(generation) : null,
+  }
 }
 
-export async function approveSeo(uuid, generationId) {
+/**
+ * @param {string} uuid
+ * @param {{ generationId?: number, manualOverrides?: Record<string, unknown>, seoPack?: Record<string, unknown> }} [options]
+ */
+export async function approveSeo(uuid, options = {}) {
+  const body = {}
+
+  if (options.generationId) body.generation_id = options.generationId
+  if (options.manualOverrides) body.manual_overrides = options.manualOverrides
+  if (options.seoPack) body.seo_pack = options.seoPack
+
   const response = await apiClient.post(
     `/admin/editorial/contents/${encodeURIComponent(uuid)}/seo/approve`,
-    generationId ? { generation_id: generationId } : undefined,
+    Object.keys(body).length > 0 ? body : undefined,
   )
-  return unwrapApiData(response)
+  const data = unwrapApiData(response)
+  const content = data.content ?? data
+
+  return {
+    content: content ? mapContentFull(content) : null,
+  }
 }
 
-export async function rejectSeo(uuid, reason) {
+/**
+ * @param {string} uuid
+ * @param {{ note?: string | null, generationId?: number }} [options]
+ */
+export async function rejectSeo(uuid, options = {}) {
+  const body = {}
+
+  if (options.note) body.note = options.note
+  if (options.generationId) body.generation_id = options.generationId
+
   const response = await apiClient.post(
     `/admin/editorial/contents/${encodeURIComponent(uuid)}/seo/reject`,
-    reason ? { reason } : undefined,
+    Object.keys(body).length > 0 ? body : undefined,
   )
-  return unwrapApiData(response)
+  const data = unwrapApiData(response)
+  const generation = data.generation ?? data
+
+  return {
+    generation: generation ? mapSeoGeneration(generation) : null,
+  }
 }
 
 export const EDITORIAL_CONTENT_TYPES = [

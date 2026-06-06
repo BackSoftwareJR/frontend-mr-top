@@ -12,6 +12,7 @@ import { fetchEditorialRubrics } from '../../services/editorialService'
 import { ApiError, isApiConfigured } from '../../services/apiClient'
 import AdminLoadError from '../../components/admin/AdminLoadError'
 import EditorialSubNav from '../../components/admin/editorial/EditorialSubNav'
+import { getSeoScoreBadgeClass } from '../../components/admin/editorial/seoUtils'
 import { adminGlassCard, adminPageSubtitle, adminPageTitle } from '../../components/admin/adminStyles'
 
 function StatusBadge({ status }) {
@@ -33,10 +34,13 @@ function SeoScoreBadge({ score }) {
     return <span className="text-xs text-zinc-600">—</span>
   }
 
-  const color =
-    score >= 70 ? 'text-emerald-400' : score >= 50 ? 'text-amber-400' : 'text-red-400'
-
-  return <span className={`text-sm font-semibold tabular-nums ${color}`}>{score}</span>
+  return (
+    <span
+      className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold tabular-nums ${getSeoScoreBadgeClass(score)}`}
+    >
+      {score}
+    </span>
+  )
 }
 
 export default function EditorialListPage() {
