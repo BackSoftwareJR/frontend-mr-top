@@ -1255,49 +1255,77 @@ docs/EDITORIAL_SPRINT_PLAN.md
 **Tests run:** `npm run lint` — pass; `php artisan test --filter=EditorialSeoTest` — 9 passed
 **Known gaps:** Admin publish button still banner-only; B2B quote/event_details blocks not in UI (API allows them).
 
-**Next agent START: Sprint 6a — Agent webhook draft ingest**
+### Handoff — Sprint 6a COMPLETE
+
+**Tests run:** `php artisan test --filter=AgentEditorial` — 5 passed; `php artisan test --filter=Editorial` — pass
+**Known gaps:** Agent system user must exist (`EDITORIAL_AGENT_USER_EMAIL`); no admin UI for agent drafts yet.
+
+**Next agent START: Sprint 6b — Magazine public hub**
 
 ```
 READ:
-  docs/EDITORIAL_SPRINT_PLAN.md Sprint 6a section
-  backend/app/Services/Editorial/EditorialWorkflowService.php
+  docs/EDITORIAL_SPRINT_PLAN.md Sprint 6b section
+  backend/app/Http/Controllers/Api/V1/B2C/EditorialController.php
+  backend/resources/views/editorial/hub.blade.php
 
 CREATE:
-  backend/app/Http/Controllers/Webhooks/AgentEditorialWebhookController.php
+  src/pages/MagazineHome.jsx (or hybrid shell)
 
 IMPLEMENT:
-  POST /webhooks/editorial/agent-draft — HMAC-signed agent drafts
+  /magazine hub — featured + rubric rails from 1b API
 
 VERIFY:
-  Signed payload → draft with author_type=agent
-  Cannot auto-publish
-  php artisan test --filter=AgentEditorial
+  Hub matches wireframe §14.1 aesthetic
+  npm run lint
 ```
 
 ---
 
-## Sprint 6 — Agents, analytics, polish
+### Sprint 6a — Agent webhook draft ingest ✅ DONE
 
-### Sprint 6a — Agent webhook draft ingest
+**Status:** ✅ DONE (2026-06-06)
 
 **Goals:** HMAC webhook creates agent drafts; full audit trail.
 
-**Agent tasks**
+**Agent tasks (completed)**
 
-- `AgentEditorialWebhookController`
-- System user with `editorial.agent` permission
-- `POST /webhooks/editorial/agent-draft`
+- [x] `AgentEditorialWebhookController` — `POST /api/v1/webhooks/editorial/agent-draft`
+- [x] `VerifyEditorialAgentWebhookSignature` middleware — HMAC-SHA256 over raw body
+- [x] `AgentEditorialIngestService` — draft create, idempotent `external_ref`, optional `auto_submit_review`
+- [x] `editorial.agent` permission + `editorial_agent` role
+- [x] Config `EDITORIAL_AGENT_WEBHOOK_SECRET`, `EDITORIAL_AGENT_USER_EMAIL`
 
 **Acceptance criteria**
 
-- Signed payload → draft with `author_type=agent`
-- Audit `actor_type=agent`; cannot auto-publish
+- [x] Signed payload → draft with `author_type=agent`
+- [x] Audit workflow event with note `agent ingest`; cannot auto-publish
+- [x] Idempotent `external_ref`; `auto_submit_review` → `pending_review` + SEO job
 
 **Dependencies:** Sprint 2a
 
 **Repo:** `backend/`
 
-**Deploy notes:** `EDITORIAL_AGENT_WEBHOOK_SECRET`
+**Deploy notes:** `EDITORIAL_AGENT_WEBHOOK_SECRET`, `EDITORIAL_AGENT_USER_EMAIL`
+
+**Tests run:** `php artisan test --filter=AgentEditorial` — 5 passed
+
+**Files added/changed**
+
+```
+backend/config/editorial.php
+backend/.env.example
+backend/bootstrap/app.php
+backend/routes/api.php
+backend/database/migrations/2026_06_06_000002_add_external_ref_to_editorial_contents_table.php
+backend/app/Models/EditorialContent.php
+backend/app/Http/Middleware/VerifyEditorialAgentWebhookSignature.php
+backend/app/Http/Controllers/Webhooks/AgentEditorialWebhookController.php
+backend/app/Http/Requests/Webhooks/StoreAgentEditorialDraftRequest.php
+backend/app/Services/Editorial/AgentEditorialIngestService.php
+backend/database/seeders/EditorialPermissionSeeder.php
+backend/tests/Feature/Webhooks/AgentEditorialWebhookTest.php
+docs/EDITORIAL_SPRINT_PLAN.md
+```
 
 ---
 
@@ -1362,7 +1390,7 @@ flowchart TD
   S2b --> S5b[5b SEO UI]
   S1a --> S5a[5a admin UI]
   S2c --> S5c[5c B2B UI]
-  S2a --> S6a[6a agent webhooks]
+  S2a --> S6a[6a agent webhooks ✅]
   S4a --> S6c[6c analytics]
 ```
 
@@ -1389,4 +1417,4 @@ When finishing any sub-phase, append:
 
 ---
 
-*Document version: 2.6 · Sprint 5c complete · Next: Sprint 6a agent webhooks*
+*Document version: 2.7 · Sprint 6a complete · Next: Sprint 6b magazine hub*

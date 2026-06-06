@@ -1,6 +1,10 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Admin\AdvisorBookingsController;
+use App\Http\Controllers\Api\V1\Admin\EditorialContentController;
+use App\Http\Controllers\Api\V1\Admin\EditorialIndexController;
+use App\Http\Controllers\Api\V1\Admin\EditorialSeoController;
+use App\Http\Controllers\Api\V1\Admin\EditorialWorkflowController;
 use App\Http\Controllers\Api\V1\Admin\AnalyticsController;
 use App\Http\Controllers\Api\V1\Admin\CompanyVettingController;
 use App\Http\Controllers\Api\V1\Admin\DashboardStatsController;
@@ -21,13 +25,14 @@ use App\Http\Controllers\Api\V1\B2B\AuthController as B2BAuthController;
 use App\Http\Controllers\Api\V1\B2B\CompanyProfileController;
 use App\Http\Controllers\Api\V1\B2B\CoverageZoneController;
 use App\Http\Controllers\Api\V1\B2B\CrmController;
-use App\Http\Controllers\Api\V1\B2B\DashboardController as B2BDashboardController;
+use App\Http\Controllers\Api\V1\B2B\EditorialContentController as B2BEditorialContentController;
 use App\Http\Controllers\Api\V1\B2B\LeadMarketplaceController;
 use App\Http\Controllers\Api\V1\B2B\OnboardingController;
 use App\Http\Controllers\Api\V1\B2B\RegisterController;
 use App\Http\Controllers\Api\V1\B2B\SmartCrmController;
 use App\Http\Controllers\Api\V1\B2B\WalletController;
 use App\Http\Controllers\Api\V1\B2C\AdvisorController;
+use App\Http\Controllers\Api\V1\B2C\EditorialController;
 use App\Http\Controllers\Api\V1\B2C\LeadResultsController;
 use App\Http\Controllers\Api\V1\B2C\LeadSubmissionController;
 use App\Http\Controllers\Api\V1\B2C\LocationsController;
@@ -42,6 +47,7 @@ use App\Http\Controllers\Api\V1\User\PrivacyController;
 use App\Http\Controllers\Api\V1\User\UserAreaController;
 use App\Http\Controllers\Api\V1\Webhooks\PaymentWebhookController;
 use App\Http\Controllers\Api\V1\Webhooks\StripePaymentWebhookController;
+use App\Http\Controllers\Webhooks\AgentEditorialWebhookController;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Route;
 
@@ -59,6 +65,9 @@ Route::prefix('v1')->group(function (): void {
     Route::post('/webhooks/payments/{provider}', [PaymentWebhookController::class, 'handle'])
         ->where('provider', 'mock|mollie')
         ->middleware(['wenando.webhook', 'throttle:60,1']);
+
+    Route::post('/webhooks/editorial/agent-draft', [AgentEditorialWebhookController::class, 'store'])
+        ->middleware(['editorial.agent.webhook', 'throttle:60,1']);
 
     Route::post('/login', [B2BAuthController::class, 'login'])
         ->middleware('throttle:auth-otp-verify');
@@ -90,12 +99,20 @@ Route::prefix('v1')->group(function (): void {
 
         Route::post('/nando/refine', [NandoController::class, 'refine'])
             ->middleware('throttle:nando-refine');
+        Route::get('/nando/editorial-context', [NandoController::class, 'editorialContext'])
+            ->middleware('throttle:nando-refine');
 
         Route::post('/search/orchestrate', [B2CSearchController::class, 'orchestrate'])
             ->middleware('throttle:search-orchestrate');
 
         Route::get('/search/editorial', [B2CSearchController::class, 'editorial'])
             ->middleware('throttle:search-editorial');
+
+        Route::prefix('editorial')->middleware('throttle:search-editorial')->group(function (): void {
+            Route::get('/contents', [EditorialController::class, 'index']);
+            Route::get('/contents/{slug}', [EditorialController::class, 'show']);
+            Route::get('/rubrics', [EditorialController::class, 'rubrics']);
+        });
 
         Route::post('/search/contact-intent', [B2CSearchController::class, 'contactIntent'])
             ->middleware('throttle:wizard-submit');
@@ -201,7 +218,42 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/notifications', [B2BDashboardController::class, 'notifications']);
             Route::patch('/notifications/{id}/read', [B2BDashboardController::class, 'markNotificationRead']);
             Route::post('/notifications/read-all', [B2BDashboardController::class, 'markAllNotificationsRead']);
+
+            Route::prefix('editorial')->group(function (): void {
+                Route::get('/contents', [B2BEditorialContentController::class, 'index']);
+                Route::post('/contents', [B2BEditorialContentController::class, 'store']);
+                Route::get('/contents/{uuid}', [B2BEditorialContentController::class, 'show']);
+                Route::patch('/contents/{uuid}', [B2BEditorialContentController::class, 'update']);
+                Route::post('/contents/{uuid}/submit', [B2BEditorialContentController::class, 'submit']);
+            });
         });
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Admin — Editorial CMS (Sanctum + policy; chief_editor / editor roles)
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('admin/editorial')->middleware(['auth:sanctum', 'throttle:admin'])->group(function (): void {
+        Route::get('/contents', [EditorialContentController::class, 'index']);
+        Route::post('/contents', [EditorialContentController::class, 'store']);
+        Route::get('/contents/{uuid}', [EditorialContentController::class, 'show']);
+        Route::patch('/contents/{uuid}', [EditorialContentController::class, 'update']);
+        Route::delete('/contents/{uuid}', [EditorialContentController::class, 'destroy']);
+        Route::post('/contents/{uuid}/revisions', [EditorialContentController::class, 'storeRevision']);
+        Route::get('/contents/{uuid}/revisions', [EditorialContentController::class, 'listRevisions']);
+        Route::post('/contents/{uuid}/preview-token', [EditorialContentController::class, 'previewToken']);
+        Route::get('/contents/{uuid}/suggested-links', [EditorialContentController::class, 'suggestedLinks']);
+        Route::post('/contents/{uuid}/transition', [EditorialWorkflowController::class, 'transition']);
+        Route::get('/review-queue', [EditorialWorkflowController::class, 'reviewQueue']);
+        Route::get('/contents/{uuid}/seo', [EditorialSeoController::class, 'show']);
+        Route::post('/contents/{uuid}/seo/regenerate', [EditorialSeoController::class, 'regenerate']);
+        Route::post('/contents/{uuid}/seo/approve', [EditorialSeoController::class, 'approve']);
+        Route::post('/contents/{uuid}/seo/reject', [EditorialSeoController::class, 'reject']);
+        Route::get('/index-rules', [EditorialIndexController::class, 'indexRules']);
+        Route::patch('/index-rules/{id}', [EditorialIndexController::class, 'updateIndexRule']);
+        Route::post('/reindex', [EditorialIndexController::class, 'reindex']);
+        Route::get('/index-queue', [EditorialIndexController::class, 'indexQueue']);
     });
 
     /*
