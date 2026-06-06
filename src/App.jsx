@@ -54,6 +54,7 @@ const EditorialEditorPage = lazyRoute(() => import('./pages/admin/editorial/Edit
 const EditorialReviewPage = lazyRoute(() => import('./pages/admin/editorial/EditorialReviewPage'))
 const EditorialIndexingPage = lazyRoute(() => import('./pages/admin/editorial/EditorialIndexingPage'))
 const EditorialMetricsPage = lazyRoute(() => import('./pages/admin/editorial/EditorialMetricsPage'))
+const EditorialAnalyticsPage = lazyRoute(() => import('./pages/admin/editorial/EditorialAnalyticsPage'))
 const ImpersonateBootstrap = lazyRoute(() => import('./pages/b2b/ImpersonateBootstrap'))
 const DesktopRouteTransitions = lazyRoute(() => import('./DesktopRouteTransitions'))
 const PrivacyPage = lazyRoute(() => import('./pages/legal/PrivacyPage'))
@@ -176,6 +177,7 @@ function AppRoutes() {
           <Route path="editorial/review" element={<EditorialReviewPage />} />
           <Route path="editorial/indexing" element={<EditorialIndexingPage />} />
           <Route path="editorial/metrics" element={<EditorialMetricsPage />} />
+          <Route path="editorial/analytics" element={<EditorialAnalyticsPage />} />
           <Route path="editorial/:uuid/edit" element={<EditorialEditorPage />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>

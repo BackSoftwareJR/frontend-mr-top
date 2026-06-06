@@ -388,6 +388,7 @@ function mapMetrics(data) {
       : (data.topPublishedByType ?? []),
     searchesCount: data.searches_count ?? data.searchesCount ?? 0,
     leadsWithEmail: data.leads_with_email ?? data.leadsWithEmail ?? 0,
+    totalViews30d: data.total_views_30d ?? data.totalViews30d ?? 0,
   }
 }
 
@@ -396,6 +397,70 @@ export async function getMetrics() {
   const data = unwrapApiData(response)
 
   return mapMetrics(data)
+}
+
+/** @param {Record<string, unknown>} data */
+function mapAnalyticsOverview(data) {
+  return {
+    viewsByDay: (Array.isArray(data.views_by_day) ? data.views_by_day : []).map((row) => ({
+      date: row.date,
+      views: row.views ?? 0,
+      uniques: row.uniques ?? 0,
+      botViews: row.bot_views ?? 0,
+    })),
+    totals: {
+      pageViews: data.totals?.page_views ?? 0,
+      uniqueVisitors: data.totals?.unique_visitors ?? 0,
+      botViews: data.totals?.bot_views ?? 0,
+    },
+    topArticles: (Array.isArray(data.top_articles) ? data.top_articles : []).map((item) => ({
+      uuid: item.uuid,
+      title: item.title ?? '',
+      slug: item.slug ?? '',
+      rubricSlug: item.rubric_slug ?? null,
+      contentType: item.content_type ?? 'article',
+      pageViews: item.page_views ?? 0,
+      uniqueVisitors: item.unique_visitors ?? 0,
+    })),
+  }
+}
+
+export async function fetchAdminEditorialAnalytics({ from, to } = {}) {
+  const params = {}
+
+  if (from) params.from = from
+  if (to) params.to = to
+
+  const response = await apiClient.get('/admin/editorial/analytics', { params })
+  const data = unwrapApiData(response)
+
+  return mapAnalyticsOverview(data)
+}
+
+export async function fetchContentAnalytics(uuid, { from, to } = {}) {
+  const params = {}
+
+  if (from) params.from = from
+  if (to) params.to = to
+
+  const response = await apiClient.get(
+    `/admin/editorial/contents/${encodeURIComponent(uuid)}/analytics`,
+    { params },
+  )
+  const data = unwrapApiData(response)
+  const content = data.content ?? null
+
+  return {
+    content: content
+      ? {
+          uuid: content.uuid,
+          title: content.title ?? '',
+          slug: content.slug ?? '',
+          rubricSlug: content.rubric_slug ?? null,
+        }
+      : null,
+    ...mapAnalyticsOverview(data),
+  }
 }
 
 export const EDITORIAL_STATUS_COLORS = {

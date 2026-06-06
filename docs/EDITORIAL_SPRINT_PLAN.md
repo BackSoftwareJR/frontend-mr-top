@@ -30,7 +30,7 @@ Each sprint is split into **agent-sized sub-phases** (0a, 0b, …). After comple
 | **4** | Internal search indexer + Nando context | 4a ✅, 4b ✅, 4c ✅ | backend + frontend |
 | **5** | Admin CMS UI + SEO approval + B2B portal | 5a ✅, 5b ✅, 5c ✅ | frontend + backend |
 | **6** | Agent webhooks + analytics polish | 6a ✅, 6b ✅, 6c ✅ | backend + frontend |
-| **7** | Editorial analytics dashboards | 7a ✅, 7b ✅, 7c | backend + frontend |
+| **7** | Editorial analytics dashboards | 7a ✅, 7b ✅, 7c ✅ | backend + frontend |
 
 ---
 
@@ -1630,21 +1630,47 @@ VERIFY:
 
 ---
 
-### Sprint 7c — Admin analytics charts UI (planned)
+### Sprint 7c — Admin analytics charts UI ✅ DONE
 
-**Goals:** Extend `/admin/editorial/metrics` or new `/admin/editorial/analytics` with platform charts.
+**Status:** ✅ DONE (2026-06-06)
 
-**Agent tasks**
+**Goals:** Separate `/admin/editorial/analytics` command center with platform charts alongside pipeline metrics.
 
-- `adminEditorialService.getAnalytics(from?, to?)`
-- `EditorialAnalyticsPage.jsx` — totals, views_by_day chart, top_articles table
-- Optional: per-article drill-down link from list → `contents/{uuid}/analytics`
-- Wire `total_views_30d` into existing metrics page KPI row
+**Delivered**
+
+- [x] `fetchAdminEditorialAnalytics({ from, to })` + `fetchContentAnalytics(uuid, { from, to })` in `src/services/adminEditorialService.js`
+- [x] `EditorialAnalyticsPage.jsx` at `/admin/editorial/analytics`
+- [x] KPI cards: page views, visitatori unici, visualizzazioni bot (30d default)
+- [x] Shared `EditorialViewsTrendChart` (`variant="admin"`) — extracted from B2B SVG pattern
+- [x] Top 10 articles table with edit + preview actions
+- [x] Period selector: 7 / 30 / 90 giorni
+- [x] `EditorialSubNav` — Analytics tab
+- [x] Link + `totalViews30d` KPI from `EditorialMetricsPage`
+- [x] Loading + error states via `AdminLoadError`
 
 **Dependencies:** Sprint 7a ✅, Sprint 6c ✅
 
-**Repo:** `frontend/`
+**Repo:** `frontend/` (workspace root)
+
+### Handoff — Sprint 7c COMPLETE
+
+**Next agent START: Sprint 7d — Template polish & per-article analytics drill-down**
+
+```
+READ:
+  docs/EDITORIAL_SPRINT_PLAN.md
+  src/pages/admin/editorial/EditorialAnalyticsPage.jsx
+  src/services/adminEditorialService.js — fetchContentAnalytics()
+
+OPTIONAL:
+  Per-article analytics panel in EditorialEditorPage sidebar (fetchContentAnalytics)
+  Magazine HTML template polish (show.blade.php typography, related articles rail)
+  Empty-state illustrations for zero-view periods
+
+VERIFY:
+  npm run lint && npm run build
+```
 
 ---
 
-*Document version: 2.10 · Sprint 7b complete · B2B analytics dashboard live*
+*Document version: 2.11 · Sprint 7c complete · Admin platform analytics dashboard live*

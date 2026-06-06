@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ArrowRight, Loader2 } from 'lucide-react'
 import {
   EDITORIAL_CONTENT_STATUSES,
   EDITORIAL_CONTENT_TYPES,
@@ -138,7 +139,28 @@ export default function EditorialMetricsPage() {
               value={pipelineTotal}
               hint="Tutti gli stati pipeline"
             />
+            <StatCard
+              label="Views magazine (30 gg)"
+              value={metrics.totalViews30d}
+              hint="Visualizzazioni HTML piattaforma"
+            />
           </div>
+
+          <section className={`${adminGlassCard} flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6`}>
+            <div>
+              <h2 className="text-sm font-semibold text-white">Analytics piattaforma</h2>
+              <p className="mt-1 text-xs text-zinc-500">
+                Trend giornaliero, visitatori unici, bot e top articoli
+              </p>
+            </div>
+            <Link
+              to="/admin/editorial/analytics"
+              className="inline-flex items-center gap-2 rounded-xl border border-accent-coral/30 bg-accent-coral/10 px-4 py-2 text-sm font-medium text-accent-coral transition-colors hover:bg-accent-coral/20"
+            >
+              Apri analytics
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </section>
 
           <div className="grid gap-4 lg:grid-cols-2">
             <section className={`${adminGlassCard} p-5 sm:p-6`}>
