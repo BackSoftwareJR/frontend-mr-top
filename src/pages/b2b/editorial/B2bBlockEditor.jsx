@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
-import { b2bCard, b2bInput, b2bInputFocus } from '../../components/b2b/b2bStyles'
-import { createEmptyBlock } from '../../components/admin/editorial/blockUtils'
+import { b2bCard, b2bInput, b2bInputFocus } from '../../../components/b2b/b2bStyles'
+import { createEmptyBlock } from '../../../components/admin/editorial/blockUtils'
 
 const inputClass = `${b2bInput} ${b2bInputFocus} text-sm`
 const textareaClass = `${inputClass} min-h-[6rem] resize-y`

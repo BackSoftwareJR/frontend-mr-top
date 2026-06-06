@@ -7,13 +7,13 @@ import {
   EDITORIAL_STATUS_COLORS,
   generatePreviewToken,
   listContents,
-} from '../../services/adminEditorialService'
-import { fetchEditorialRubrics } from '../../services/editorialService'
-import { ApiError, isApiConfigured } from '../../services/apiClient'
-import AdminLoadError from '../../components/admin/AdminLoadError'
-import EditorialSubNav from '../../components/admin/editorial/EditorialSubNav'
-import { getSeoScoreBadgeClass } from '../../components/admin/editorial/seoUtils'
-import { adminGlassCard, adminPageSubtitle, adminPageTitle } from '../../components/admin/adminStyles'
+} from '../../../services/adminEditorialService'
+import { fetchEditorialRubrics } from '../../../services/editorialService'
+import { ApiError, isApiConfigured } from '../../../services/apiClient'
+import AdminLoadError from '../../../components/admin/AdminLoadError'
+import EditorialSubNav from '../../../components/admin/editorial/EditorialSubNav'
+import { getSeoScoreBadgeClass } from '../../../components/admin/editorial/seoUtils'
+import { adminGlassCard, adminPageSubtitle, adminPageTitle } from '../../../components/admin/adminStyles'
 
 function StatusBadge({ status }) {
   const label = EDITORIAL_CONTENT_STATUSES.find((s) => s.value === status)?.label ?? status
