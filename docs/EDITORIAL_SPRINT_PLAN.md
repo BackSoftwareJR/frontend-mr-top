@@ -1675,23 +1675,37 @@ VERIFY:
 
 **Next agent START: Sprint 7e — Notifications & alerts**
 
-```
-READ:
-  docs/EDITORIAL_SPRINT_PLAN.md
-  backend/app/Services/Editorial/EditorialWorkflowService.php
-  backend/app/Models/EditorialModerationQueue.php
+### Sprint 7e — Notifications & alerts ✅ DONE
 
-IMPLEMENT:
-  Email/in-app alerts when content enters pending_review or moderation queue
-  Admin digest for SEO rejections and low-score generations
-  B2B notification when structure content is approved/rejected
-  Optional: webhook callback for agent pipeline on review outcome
+**Scope delivered**
 
-VERIFY:
-  php artisan test --filter=EditorialWorkflow
-  npm run lint && npm run build
+- Email notifications (Laravel Mail, database queue) on workflow and SEO events:
+  - B2B submit → `pending_review` → reviewers (`Nuovo contenuto in revisione`)
+  - Structure content approved/rejected → company users (`Esito revisione editoriale`)
+  - SEO rejected or score below threshold → author + reviewers (`SEO da rivedere`)
+- In-app records via existing `notifications` table (User for admin, Company for B2B)
+- APIs: `GET/PATCH /api/v1/admin/editorial/notifications`, `GET/PATCH /api/v1/b2b/editorial/notifications`
+- Daily digest: `editorial:review-digest` command + `SendEditorialReviewDigestJob` (scheduled 08:00 Europe/Rome)
+- Admin editorial sub-nav unread badge (frontend)
+- Idempotent dedupe via `data.dedupe_key` on notification records
+- Feature tests: `tests/Feature/Editorial/EditorialNotificationTest.php`
+
+**Notification types**
+
+| Type | Value |
+|------|-------|
+| Pending review | `editorial.pending_review` |
+| Review outcome | `editorial.review_outcome` |
+| SEO needs review | `editorial.seo_needs_review` |
+| Review digest (email only) | `editorial.review_digest` |
+
+**Verify**
+
+```bash
+php artisan test --filter=EditorialNotification
+npm run lint && npm run build
 ```
 
 ---
 
-*Document version: 2.12 · Sprint 7d complete · Layout templates + SEO review checklist live*
+*Document version: 2.13 · Sprint 7e complete · Editorial notifications & digest live*
