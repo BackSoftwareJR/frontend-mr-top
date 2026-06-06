@@ -4,7 +4,7 @@ import TemplatePicker from './TemplatePicker'
 import LayoutSection from './layouts/LayoutSection'
 import BlockEditor from './BlockEditor'
 import { createLayoutBlock } from './blockUtils'
-import { getLayoutTemplate } from './layouts/registry'
+import { getLayoutTemplate, QUICK_ADD_TEMPLATES } from './layouts/registry'
 
 function SectionToolbar({ index, total, label, onMoveUp, onMoveDown, onDelete, disabled }) {
   return (
@@ -48,7 +48,13 @@ function SectionToolbar({ index, total, label, onMoveUp, onMoveDown, onDelete, d
 export default function TileEditor({ blocks, onChange, disabled = false, b2bMode = false }) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [mode, setMode] = useState('visual')
+  const [selectedIndex, setSelectedIndex] = useState(null)
   const safeBlocks = Array.isArray(blocks) ? blocks : []
+
+  const quickAddTemplates = QUICK_ADD_TEMPLATES.filter(({ id }) => {
+    const template = getLayoutTemplate(id)
+    return template && (!b2bMode || template.b2bAllowed)
+  })
 
   const updateBlock = (index, nextBlock) => {
     const next = [...safeBlocks]
@@ -62,18 +68,37 @@ export default function TileEditor({ blocks, onChange, disabled = false, b2bMode
     const next = [...safeBlocks]
     ;[next[index], next[target]] = [next[target], next[index]]
     onChange(next)
+    if (selectedIndex === index) {
+      setSelectedIndex(target)
+    } else if (selectedIndex === target) {
+      setSelectedIndex(index)
+    }
   }
 
   const deleteBlock = (index) => {
     onChange(safeBlocks.filter((_, i) => i !== index))
+    if (selectedIndex === index) {
+      setSelectedIndex(null)
+    } else if (selectedIndex !== null && selectedIndex > index) {
+      setSelectedIndex(selectedIndex - 1)
+    }
   }
 
   const addLayout = (templateId) => {
-    onChange([...safeBlocks, createLayoutBlock(templateId)])
+    const newBlock = createLayoutBlock(templateId)
+    if (selectedIndex !== null && selectedIndex >= 0 && selectedIndex < safeBlocks.length) {
+      const next = [...safeBlocks]
+      next.splice(selectedIndex + 1, 0, newBlock)
+      onChange(next)
+      setSelectedIndex(selectedIndex + 1)
+    } else {
+      onChange([...safeBlocks, newBlock])
+      setSelectedIndex(safeBlocks.length)
+    }
   }
 
   const addParagraph = () => {
-    onChange([...safeBlocks, createLayoutBlock('prose-block')])
+    addLayout('prose-block')
   }
 
   const blockLabel = (block) => {
@@ -134,6 +159,24 @@ export default function TileEditor({ blocks, onChange, disabled = false, b2bMode
         ) : null}
       </div>
 
+      {!disabled && mode === 'visual' && quickAddTemplates.length > 0 ? (
+        <div className="-mx-1 flex items-center gap-2 overflow-x-auto pb-1">
+          <span className="shrink-0 pl-1 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+            Rapidi
+          </span>
+          {quickAddTemplates.map(({ id, chipLabel }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => addLayout(id)}
+              className="shrink-0 rounded-full border border-[#E07A5F]/25 bg-[#FDFBF7] px-3 py-1 text-xs font-medium text-[#1F2937] transition-colors hover:border-[#E07A5F]/50 hover:bg-[#E07A5F]/10 hover:text-[#E07A5F]"
+            >
+              {chipLabel}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       {mode === 'advanced' ? (
         <BlockEditor blocks={safeBlocks} onChange={onChange} />
       ) : (
@@ -159,7 +202,25 @@ export default function TileEditor({ blocks, onChange, disabled = false, b2bMode
           ) : (
             <div className="space-y-6">
               {safeBlocks.map((block, index) => (
-                <div key={block.id ?? index} className="group relative">
+                <div
+                  key={block.id ?? index}
+                  className={`group relative rounded-xl transition-shadow ${
+                    selectedIndex === index
+                      ? 'ring-2 ring-[#E07A5F] ring-offset-2 ring-offset-[#FDFBF7]'
+                      : ''
+                  }`}
+                  onClick={() => setSelectedIndex(index)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setSelectedIndex(index)
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={selectedIndex === index}
+                  aria-label={`Sezione ${index + 1}: ${blockLabel(block)}`}
+                >
                   <SectionToolbar
                     index={index}
                     total={safeBlocks.length}
@@ -200,7 +261,10 @@ export default function TileEditor({ blocks, onChange, disabled = false, b2bMode
               {!disabled ? (
                 <button
                   type="button"
-                  onClick={() => setPickerOpen(true)}
+                  onClick={() => {
+                    setSelectedIndex(null)
+                    setPickerOpen(true)
+                  }}
                   className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#E07A5F]/30 py-6 text-sm font-medium text-[#E07A5F] transition-colors hover:border-[#E07A5F]/50 hover:bg-[#E07A5F]/5"
                 >
                   <Plus className="h-4 w-4" />
@@ -217,6 +281,7 @@ export default function TileEditor({ blocks, onChange, disabled = false, b2bMode
         onClose={() => setPickerOpen(false)}
         onSelect={addLayout}
         b2bMode={b2bMode}
+        insertIndex={selectedIndex}
       />
     </div>
   )

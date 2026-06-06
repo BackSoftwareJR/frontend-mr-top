@@ -7,6 +7,7 @@
  *   description: string,
  *   category: 'intro'|'content'|'trust'|'action',
  *   b2bAllowed: boolean,
+ *   previewAccent?: string,
  *   defaultSlots: Record<string, string>,
  *   fields: LayoutField[],
  * }} LayoutTemplate
@@ -20,6 +21,7 @@ export const LAYOUT_TEMPLATES = {
     description: 'Titolo grande con sfondo onda coral — ideale per l’apertura',
     category: 'intro',
     b2bAllowed: true,
+    previewAccent: '#E07A5F',
     defaultSlots: {
       eyebrow: 'GUIDA PRATICA',
       title: 'Titolo principale dell’articolo',
@@ -39,6 +41,7 @@ export const LAYOUT_TEMPLATES = {
     description: 'Paragrafo lungo — clicca e scrivi direttamente',
     category: 'content',
     b2bAllowed: true,
+    previewAccent: '#D1D5DB',
     defaultSlots: {
       body: 'Scrivi qui il contenuto. Puoi usare più paragrafi: ogni riga vuota crea un nuovo paragrafo nel testo pubblicato.',
     },
@@ -50,6 +53,7 @@ export const LAYOUT_TEMPLATES = {
     description: 'Due colonne con testo e area immagine',
     category: 'content',
     b2bAllowed: true,
+    previewAccent: '#E07A5F',
     defaultSlots: {
       title: 'Sezione con immagine',
       body: 'Descrivi il concetto accanto a un’immagine illustrativa. Aggiungi l’URL immagine nel pannello laterale.',
@@ -69,6 +73,7 @@ export const LAYOUT_TEMPLATES = {
     description: 'Banda colorata con punti chiave',
     category: 'content',
     b2bAllowed: true,
+    previewAccent: '#F4A261',
     defaultSlots: {
       title: 'Cosa devi sapere',
       item1: 'Primo punto importante da ricordare',
@@ -88,6 +93,7 @@ export const LAYOUT_TEMPLATES = {
     description: 'Sezione FAQ — ottima per SEO e Google AI',
     category: 'trust',
     b2bAllowed: false,
+    previewAccent: '#6B7280',
     defaultSlots: {
       title: 'Domande frequenti',
       q1: 'Qual è la domanda più comune?',
@@ -113,6 +119,7 @@ export const LAYOUT_TEMPLATES = {
     description: 'Citazione in evidenza con autore',
     category: 'trust',
     b2bAllowed: true,
+    previewAccent: '#1F2937',
     defaultSlots: {
       quote: '« Una citazione che dà voce a un’esperienza o a un esperto. »',
       author: 'Nome Cognome, ruolo',
@@ -128,6 +135,7 @@ export const LAYOUT_TEMPLATES = {
     description: 'Tre statistiche o dati in evidenza',
     category: 'trust',
     b2bAllowed: true,
+    previewAccent: '#E07A5F',
     defaultSlots: {
       stat1_value: '85%',
       stat1_label: 'Famiglie soddisfatte',
@@ -151,6 +159,7 @@ export const LAYOUT_TEMPLATES = {
     description: 'Box finale con link verso Wenando o risorse',
     category: 'action',
     b2bAllowed: false,
+    previewAccent: '#E07A5F',
     defaultSlots: {
       title: 'Hai bisogno di aiuto per orientarti?',
       body: 'Wenando ti aiuta a trovare la soluzione giusta per te o per un tuo caro.',
@@ -170,6 +179,7 @@ export const LAYOUT_TEMPLATES = {
     description: 'Domande e risposte alternate — ideale per colloqui ed esperti',
     category: 'content',
     b2bAllowed: true,
+    previewAccent: '#9CA3AF',
     defaultSlots: {
       title: 'Colloquio con l’esperto',
       intro: 'Breve presentazione dell’intervistato e del contesto dell’incontro.',
@@ -197,6 +207,7 @@ export const LAYOUT_TEMPLATES = {
     description: 'Data, luogo e CTA iscrizione — per webinar e open day',
     category: 'action',
     b2bAllowed: true,
+    previewAccent: '#F4A261',
     defaultSlots: {
       title: 'Nome dell’evento',
       event_date: 'Sabato 15 giugno 2026',
@@ -222,6 +233,7 @@ export const LAYOUT_TEMPLATES = {
     description: 'Lista verifiche passo-passo — anti-truffe e guide pratiche',
     category: 'trust',
     b2bAllowed: false,
+    previewAccent: '#10B981',
     defaultSlots: {
       title: 'Checklist prima di firmare',
       intro: 'Verifica questi punti prima di prendere una decisione importante.',
@@ -248,6 +260,16 @@ export const LAYOUT_CATEGORIES = [
   { id: 'content', label: 'Contenuto' },
   { id: 'trust', label: 'Fiducia & FAQ' },
   { id: 'action', label: 'Azione' },
+]
+
+/** Most-used templates for the quick-add strip in TileEditor */
+export const QUICK_ADD_TEMPLATES = [
+  { id: 'hero-coral', chipLabel: 'Hero' },
+  { id: 'prose-block', chipLabel: 'Testo' },
+  { id: 'faq-band', chipLabel: 'FAQ' },
+  { id: 'split-text-image', chipLabel: 'Immagine' },
+  { id: 'quote-spotlight', chipLabel: 'Citazione' },
+  { id: 'cta-coral', chipLabel: 'CTA' },
 ]
 
 /** @param {string} templateId */
