@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Loader2, Pencil, Plus } from 'lucide-react'
 import B2BLoadError from '../../../components/b2b/B2BLoadError'
+import B2bEditorialSubNav from '../../../components/b2b/editorial/B2bEditorialSubNav'
 import {
   b2bCard,
   b2bGhostBtn,
@@ -94,6 +95,8 @@ export default function EditorialListPage() {
           Nuovo contenuto
         </Link>
       </div>
+
+      <B2bEditorialSubNav />
 
       <div className={`${b2bCard} flex flex-wrap items-center gap-3 p-4`}>
         <label htmlFor="b2b-editorial-status" className="text-sm font-medium text-charcoal-muted">

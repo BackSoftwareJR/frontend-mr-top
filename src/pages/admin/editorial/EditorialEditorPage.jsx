@@ -13,7 +13,7 @@ import { ApiError, isApiConfigured } from '../../../services/apiClient'
 import AdminLoadError from '../../../components/admin/AdminLoadError'
 import TileEditor from '../../../components/admin/editorial/TileEditor'
 import SeoReviewPanel from '../../../components/admin/editorial/SeoReviewPanel'
-import { createStarterArticleBlocks } from '../../../components/admin/editorial/blockUtils'
+import { createEmptyBlock, createStarterArticleBlocks } from '../../../components/admin/editorial/blockUtils'
 import { isSeoApproved } from '../../../components/admin/editorial/seoUtils'
 import { adminGlassCard, adminPageSubtitle, adminPageTitle } from '../../../components/admin/adminStyles'
 

@@ -126,3 +126,39 @@ export const B2B_STRUCTURE_DISCLAIMER_FALLBACK =
   'Contenuto redatto dalla struttura. Wenando non garantisce l\'accuratezza delle informazioni e non sostituisce consulenza medica o professionale.'
 
 export const B2B_ALLOWED_BLOCK_TYPES = ['heading', 'paragraph', 'image']
+
+/**
+ * @param {{ from?: string, to?: string }} range ISO date strings (YYYY-MM-DD)
+ */
+export async function fetchB2bEditorialAnalytics({ from, to } = {}) {
+  const params = {}
+
+  if (from) params.from = from
+  if (to) params.to = to
+
+  const response = await apiClient.get('/b2b/editorial/analytics', { params })
+  const data = unwrapApiData(response)
+
+  return {
+    viewsByDay: (Array.isArray(data.views_by_day) ? data.views_by_day : []).map((row) => ({
+      date: row.date,
+      views: row.views ?? 0,
+      uniques: row.uniques ?? 0,
+      botViews: row.bot_views ?? 0,
+    })),
+    totals: {
+      pageViews: data.totals?.page_views ?? 0,
+      uniqueVisitors: data.totals?.unique_visitors ?? 0,
+      botViews: data.totals?.bot_views ?? 0,
+    },
+    topArticles: (Array.isArray(data.top_articles) ? data.top_articles : []).map((item) => ({
+      uuid: item.uuid,
+      title: item.title ?? '',
+      slug: item.slug ?? '',
+      rubricSlug: item.rubric_slug ?? null,
+      contentType: item.content_type ?? 'article',
+      pageViews: item.page_views ?? 0,
+      uniqueVisitors: item.unique_visitors ?? 0,
+    })),
+  }
+}

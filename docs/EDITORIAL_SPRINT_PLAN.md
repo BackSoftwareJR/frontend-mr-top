@@ -30,6 +30,7 @@ Each sprint is split into **agent-sized sub-phases** (0a, 0b, …). After comple
 | **4** | Internal search indexer + Nando context | 4a ✅, 4b ✅, 4c ✅ | backend + frontend |
 | **5** | Admin CMS UI + SEO approval + B2B portal | 5a ✅, 5b ✅, 5c ✅ | frontend + backend |
 | **6** | Agent webhooks + analytics polish | 6a ✅, 6b ✅, 6c ✅ | backend + frontend |
+| **7** | Editorial analytics dashboards | 7a ✅, 7b ✅, 7c | backend + frontend |
 
 ---
 
@@ -1458,4 +1459,192 @@ When finishing any sub-phase, append:
 
 ---
 
-*Document version: 2.8 · Sprint 6b + 6c complete · Editorial CMS MVP complete*
+---
+
+## Sprint 7 — Editorial analytics
+
+### Sprint 7a — Analytics foundation (view tracking + aggregation APIs) ✅ DONE
+
+**Status:** ✅ DONE (2026-06-06)
+
+**Goals:** Privacy-safe server-side view tracking on published magazine HTML; daily aggregates; admin + B2B analytics JSON APIs. No dashboard UI yet.
+
+**Agent tasks (completed)**
+
+- [x] Migration `editorial_content_daily_stats` + lightweight `editorial_view_events` (90-day dedupe retention, no raw IP)
+- [x] `EditorialViewTracker` — hash-based unique visitors, bot UA detection → `bot_views`
+- [x] Track in `EditorialPageController::show()` only (preview excluded)
+- [x] `EditorialAnalyticsService` — content / company / platform overview
+- [x] APIs: `GET /admin/editorial/analytics`, `GET /admin/editorial/contents/{uuid}/analytics`, `GET /b2b/editorial/analytics`
+- [x] `total_views_30d` on `EditorialMetricsService` aggregate
+- [x] `editorial:purge-view-events` weekly schedule (90-day GDPR retention)
+- [x] Feature tests `EditorialAnalyticsTest`
+
+**Acceptance criteria**
+
+- [x] Human GET `/magazine/{rubric}/{slug}` increments `page_views` + `unique_visitors`
+- [x] Crawler UA increments `bot_views` only (not human counts)
+- [x] Admin sees platform totals + top 10; B2B sees company-scoped stats only
+- [x] `php artisan test --filter=EditorialAnalytics` — 7 passed
+- [x] Existing `EditorialMetrics` tests still pass
+
+**Dependencies:** Sprint 3a (HTML render), Sprint 6c (metrics shell)
+
+**Repo:** `backend/` only
+
+**Deploy notes:** Run migration `2026_06_06_000003`. Ensure cron runs `editorial:purge-view-events`. No new env vars — uses `APP_KEY` as visitor-hash salt.
+
+**GDPR:** No PII in analytics tables; visitor identity is a daily SHA-256 of `(ip + user_agent + app key)`. Aligns with `EDITORIAL_CMS.md` §17.4 (analytics after consent banner on SPA; server-side page views are first-party operational metrics on public HTML).
+
+**API response shapes**
+
+```json
+// GET /api/v1/admin/editorial/analytics?from=2026-05-01&to=2026-06-06
+{
+  "success": true,
+  "data": {
+    "views_by_day": [
+      { "date": "2026-06-01", "views": 120, "uniques": 85, "bot_views": 12 }
+    ],
+    "totals": { "page_views": 4200, "unique_visitors": 3100, "bot_views": 180 },
+    "top_articles": [
+      {
+        "uuid": "...",
+        "title": "Guida badante",
+        "slug": "guida-badante",
+        "rubric_slug": "guide",
+        "content_type": "article",
+        "page_views": 890,
+        "unique_visitors": 620
+      }
+    ]
+  }
+}
+
+// GET /api/v1/admin/editorial/contents/{uuid}/analytics
+{
+  "success": true,
+  "data": {
+    "content": { "uuid": "...", "title": "...", "slug": "...", "rubric_slug": "guide" },
+    "views_by_day": [...],
+    "totals": { "page_views": 42, "unique_visitors": 17, "bot_views": 3 },
+    "top_articles": []
+  }
+}
+
+// GET /api/v1/b2b/editorial/analytics — same envelope, scoped to partner company_id
+```
+
+**Files added**
+
+```
+backend/database/migrations/2026_06_06_000003_create_editorial_analytics_tables.php
+backend/app/Models/EditorialContentDailyStat.php
+backend/app/Models/EditorialViewEvent.php
+backend/app/Services/Editorial/EditorialViewTracker.php
+backend/app/Services/Editorial/EditorialAnalyticsService.php
+backend/app/Http/Controllers/Api/V1/Admin/AdminEditorialAnalyticsController.php
+backend/app/Http/Controllers/Api/V1/B2B/B2BEditorialAnalyticsController.php
+backend/app/Console/Commands/PurgeEditorialViewEventsCommand.php
+backend/tests/Feature/Editorial/EditorialAnalyticsTest.php
+```
+
+**Files changed**
+
+```
+backend/app/Http/Controllers/Web/EditorialPageController.php
+backend/app/Services/Editorial/EditorialMetricsService.php
+backend/routes/api.php
+backend/routes/console.php
+docs/EDITORIAL_SPRINT_PLAN.md
+```
+
+### Handoff — Sprint 7a COMPLETE
+
+**Next agent START: Sprint 7b — B2B analytics dashboard UI**
+
+```
+READ:
+  docs/EDITORIAL_SPRINT_PLAN.md Sprint 7b section (create below)
+  backend/app/Http/Controllers/Api/V1/B2B/B2BEditorialAnalyticsController.php
+  src/pages/b2b/editorial/EditorialListPage.jsx
+
+CREATE:
+  src/services/b2bEditorialService.js — getAnalytics(from?, to?)
+  src/pages/b2b/editorial/EditorialAnalyticsPage.jsx
+
+IMPLEMENT:
+  Route /pro/editoriale/analytics in App.jsx + B2B sidebar link
+  KPI cards: page_views, unique_visitors (30d default)
+  Simple line chart from views_by_day (reuse admin chart lib from 7c or lightweight SVG)
+  Top articles table from top_articles
+
+VERIFY:
+  Partner A cannot see Partner B stats (API already scoped)
+  npm run lint
+```
+
+### Handoff — Sprint 7b COMPLETE
+
+**Next agent START: Sprint 7c — Admin analytics charts UI**
+
+```
+READ:
+  docs/EDITORIAL_SPRINT_PLAN.md Sprint 7c section
+  backend/app/Http/Controllers/Api/V1/Admin/AdminEditorialAnalyticsController.php
+  src/pages/admin/editorial/EditorialMetricsPage.jsx
+  src/pages/b2b/editorial/EditorialAnalyticsPage.jsx (chart/KPI patterns to reuse)
+
+CREATE:
+  src/services/adminEditorialService.js — getAnalytics(from?, to?)
+  src/pages/admin/editorial/EditorialAnalyticsPage.jsx (or extend metrics page)
+
+IMPLEMENT:
+  Route /admin/editorial/analytics (or extend /admin/editorial/metrics)
+  Platform totals, views_by_day chart, top_articles table
+  Optional per-article drill-down via contents/{uuid}/analytics
+  Wire total_views_30d into existing metrics KPI row
+
+VERIFY:
+  npm run lint && npm run build
+```
+
+### Sprint 7b — B2B analytics dashboard UI ✅
+
+**Goals:** Partner portal page showing company-scoped views, uniques, top articles.
+
+**Delivered**
+
+- [x] `fetchB2bEditorialAnalytics({ from, to })` in `src/services/b2bEditorialService.js`
+- [x] `EditorialAnalyticsPage.jsx` at `/pro/editoriale/analytics`
+- [x] KPI cards: page views, visitatori unici, articoli pubblicati
+- [x] SVG line chart for `views_by_day` (no new chart library)
+- [x] Top articles table with edit links
+- [x] Period selector: 7 / 30 / 90 giorni
+- [x] `B2bEditorialSubNav` — Contenuti | Statistiche
+- [x] Loading + error states via `B2BLoadError`
+
+**Dependencies:** Sprint 7a ✅, Sprint 5c ✅
+
+**Repo:** `frontend/` (workspace root)
+
+---
+
+### Sprint 7c — Admin analytics charts UI (planned)
+
+**Goals:** Extend `/admin/editorial/metrics` or new `/admin/editorial/analytics` with platform charts.
+
+**Agent tasks**
+
+- `adminEditorialService.getAnalytics(from?, to?)`
+- `EditorialAnalyticsPage.jsx` — totals, views_by_day chart, top_articles table
+- Optional: per-article drill-down link from list → `contents/{uuid}/analytics`
+- Wire `total_views_30d` into existing metrics page KPI row
+
+**Dependencies:** Sprint 7a ✅, Sprint 6c ✅
+
+**Repo:** `frontend/`
+
+---
+
+*Document version: 2.10 · Sprint 7b complete · B2B analytics dashboard live*

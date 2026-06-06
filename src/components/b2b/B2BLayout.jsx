@@ -58,6 +58,7 @@ const ROUTE_LABELS = {
   '/pro/crm': 'Il Mio CRM',
   '/pro/calendario': 'Calendario',
   '/pro/editoriale': 'Editoriale',
+  '/pro/editoriale/analytics': 'Statistiche editoriali',
   '/pro/fatturazione': 'Fatturazione',
   '/pro/exports': 'Export Center',
   '/pro/profilo': 'Profilo Azienda',

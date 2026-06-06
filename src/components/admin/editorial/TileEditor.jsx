@@ -3,7 +3,7 @@ import { ChevronDown, ChevronUp, LayoutGrid, Plus, Trash2, Type } from 'lucide-r
 import TemplatePicker from './TemplatePicker'
 import LayoutSection from './layouts/LayoutSection'
 import BlockEditor from './BlockEditor'
-import { createEmptyBlock, createLayoutBlock } from './blockUtils'
+import { createLayoutBlock } from './blockUtils'
 import { getLayoutTemplate } from './layouts/registry'
 
 function SectionToolbar({ index, total, label, onMoveUp, onMoveDown, onDelete, disabled }) {
