@@ -46,6 +46,10 @@ const ManagePartners = lazyRoute(() => import('./pages/admin/ManagePartners'))
 const LeadRouter = lazyRoute(() => import('./pages/admin/LeadRouter'))
 const AdminAdvisorBookings = lazyRoute(() => import('./pages/admin/AdminAdvisorBookings'))
 const AdminSettings = lazyRoute(() => import('./pages/admin/AdminSettings'))
+const EditorialListPage = lazyRoute(() => import('./pages/admin/editorial/EditorialListPage'))
+const EditorialEditorPage = lazyRoute(() => import('./pages/admin/editorial/EditorialEditorPage'))
+const EditorialReviewPage = lazyRoute(() => import('./pages/admin/editorial/EditorialReviewPage'))
+const EditorialIndexingPage = lazyRoute(() => import('./pages/admin/editorial/EditorialIndexingPage'))
 const ImpersonateBootstrap = lazyRoute(() => import('./pages/b2b/ImpersonateBootstrap'))
 const DesktopRouteTransitions = lazyRoute(() => import('./DesktopRouteTransitions'))
 const PrivacyPage = lazyRoute(() => import('./pages/legal/PrivacyPage'))
@@ -157,6 +161,11 @@ function AppRoutes() {
           <Route path="partners" element={<ManagePartners />} />
           <Route path="leads" element={<LeadRouter />} />
           <Route path="advisor-bookings" element={<AdminAdvisorBookings />} />
+          <Route path="editorial" element={<EditorialListPage />} />
+          <Route path="editorial/new" element={<EditorialEditorPage />} />
+          <Route path="editorial/review" element={<EditorialReviewPage />} />
+          <Route path="editorial/indexing" element={<EditorialIndexingPage />} />
+          <Route path="editorial/:uuid/edit" element={<EditorialEditorPage />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>
         <Route path="/errore/:code" element={<ErrorStatusPage />} />

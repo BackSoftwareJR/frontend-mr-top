@@ -16,6 +16,7 @@ import {
   Settings,
   Users,
   CalendarClock,
+  Newspaper,
   Wallet,
 } from 'lucide-react'
 import { WenandoMark } from '../ui/WenandoLogo'
@@ -33,6 +34,7 @@ const NAV_ITEMS = [
   { icon: Building2, label: 'Partners', to: '/admin/partners' },
   { icon: Users, label: 'Leads', to: '/admin/leads' },
   { icon: CalendarClock, label: 'Advisor', to: '/admin/advisor-bookings' },
+  { icon: Newspaper, label: 'Editoriale', to: '/admin/editorial' },
   { icon: Settings, label: 'Settings', to: '/admin/settings' },
 ]
 
@@ -48,6 +50,7 @@ const MOBILE_MORE_ITEMS = [
   { icon: Building2, label: 'Partners', to: '/admin/partners' },
   { icon: Landmark, label: 'Bonifici', to: '/admin/wallet/pending' },
   { icon: CalendarClock, label: 'Advisor', to: '/admin/advisor-bookings' },
+  { icon: Newspaper, label: 'Editoriale', to: '/admin/editorial' },
   { icon: Settings, label: 'Settings', to: '/admin/settings' },
 ]
 
@@ -59,6 +62,10 @@ const ROUTE_LABELS = {
   '/admin/partners': 'Partner',
   '/admin/leads': 'Lead Router',
   '/admin/advisor-bookings': 'Consulenze advisor',
+  '/admin/editorial': 'Editoriale',
+  '/admin/editorial/new': 'Nuovo contenuto',
+  '/admin/editorial/review': 'Revisione editoriale',
+  '/admin/editorial/indexing': 'Indicizzazione',
   '/admin/settings': 'Impostazioni',
 }
 
@@ -695,7 +702,11 @@ export default function AdminLayout() {
     }
   }, [])
 
-  const currentLabel = ROUTE_LABELS[location.pathname] || 'God Mode'
+  const currentLabel =
+    ROUTE_LABELS[location.pathname] ??
+    (location.pathname.match(/^\/admin\/editorial\/[^/]+\/edit$/)
+      ? 'Modifica contenuto'
+      : 'God Mode')
 
   return (
     <div className="flex min-h-screen bg-black text-white">

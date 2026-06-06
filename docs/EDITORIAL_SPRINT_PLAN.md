@@ -28,7 +28,7 @@ Each sprint is split into **agent-sized sub-phases** (0a, 0b, …). After comple
 | **2** | Workflow + Groq SEO + B2B moderation | 2a ✅, 2b ✅, 2c ✅ | backend |
 | **3** | HTML render + sitemap/RSS/llms.txt + preview | 3a ✅, 3b ✅, 3c ✅ | backend (+ nginx) |
 | **4** | Internal search indexer + Nando context | 4a ✅, 4b ✅, 4c ✅ | backend + frontend |
-| **5** | Admin CMS UI + SEO approval + B2B portal | 5a, 5b, 5c | frontend + backend |
+| **5** | Admin CMS UI + SEO approval + B2B portal | 5a ✅, 5b, 5c | frontend + backend |
 | **6** | Agent webhooks + analytics polish | 6a, 6b, 6c | backend + frontend |
 
 ---
@@ -1061,27 +1061,81 @@ VERIFY:
 
 ## Sprint 5 — Admin CMS UI + SEO approval + B2B portal
 
-### Sprint 5a — Admin editorial module (list + block editor MVP)
+### Sprint 5a — Admin editorial module (list + block editor MVP) ✅ DONE
+
+**Status:** ✅ DONE (2026-06-06)
 
 **Goals:** React routes `/admin/editorial`; filters; long-form block editor shell.
 
 **Agent tasks**
 
-- `src/pages/admin/editorial/` — list, editor layout
-- Block components: heading, paragraph, image, callout (phase 1)
-- Wire to 1a admin API
-- **Review queues UI:** tabs for editorial moderation + link to partner vetting
-- **Indexing admin panel UI:** rules list, reindex button, queue status (calls 4a)
+- [x] `src/pages/admin/editorial/` — list, editor layout
+- [x] Block components: heading, paragraph, image, callout (phase 1)
+- [x] Wire to 1a admin API
+- [x] **Review queues UI:** tabs for editorial moderation + link to partner vetting
+- [x] **Indexing admin panel UI:** rules list, reindex button, queue status (calls 4a)
 
 **Acceptance criteria**
 
-- Editor creates article with H2 + paragraph, saves draft
-- List filters by type, rubric, status, SEO score
-- Reindex triggers job; queue status visible
+- [x] Editor creates article with H2 + paragraph, saves draft
+- [x] List filters by type, rubric, status, SEO score
+- [x] Reindex triggers job; queue status visible
 
 **Dependencies:** Sprint 1a, 2a, 4a
 
-**Repo:** `frontend/` + `backend/`
+**Repo:** `frontend/` (workspace root)
+
+**Files added**
+
+```
+src/services/adminEditorialService.js
+src/pages/admin/editorial/EditorialListPage.jsx
+src/pages/admin/editorial/EditorialEditorPage.jsx
+src/pages/admin/editorial/EditorialReviewPage.jsx
+src/pages/admin/editorial/EditorialIndexingPage.jsx
+src/components/admin/editorial/BlockEditor.jsx
+src/components/admin/editorial/EditorialSubNav.jsx
+src/components/admin/editorial/blockUtils.js
+src/components/admin/editorial/blocks/HeadingBlock.jsx
+src/components/admin/editorial/blocks/ParagraphBlock.jsx
+src/components/admin/editorial/blocks/ImageBlock.jsx
+src/components/admin/editorial/blocks/CalloutBlock.jsx
+```
+
+**Files changed**
+
+```
+src/App.jsx
+src/components/admin/AdminLayout.jsx
+docs/EDITORIAL_SPRINT_PLAN.md
+```
+
+### Handoff — Sprint 5a COMPLETE
+
+**Tests run:** `npm run lint` — pass
+**Known gaps:** SEO approval UI panel is placeholder only (Sprint 5b); publish from review queue requires SEO gate from 2b.
+
+**Next agent START: Sprint 5b — SEO approval UI**
+
+```
+READ:
+  docs/EDITORIAL_SPRINT_PLAN.md Sprint 5b section
+  backend/app/Http/Controllers/Api/V1/Admin/EditorialSeoController.php
+  src/pages/admin/editorial/EditorialEditorPage.jsx (SeoPanelPlaceholder)
+
+CREATE:
+  src/components/admin/editorial/SeoReviewPanel.jsx
+
+IMPLEMENT:
+  Wire getSeo, regenerateSeo, approveSeo, rejectSeo from adminEditorialService
+  Side-by-side SEO review: title/description variants, geo excerpt, issues list
+  Publish / approve buttons disabled until seo_pack.approved && score >= min
+  Replace SeoPanelPlaceholder in EditorialEditorPage
+
+VERIFY:
+  Reviewer approves SEO; publish enables in editor + review queue
+  npm run lint
+```
 
 ---
 
@@ -1240,4 +1294,4 @@ When finishing any sub-phase, append:
 
 ---
 
-*Document version: 2.3 · Sprint 4c complete · Next: Sprint 5a Admin editorial module*
+*Document version: 2.4 · Sprint 5a complete · Next: Sprint 5b SEO approval UI*
