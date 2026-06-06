@@ -11,9 +11,9 @@ import {
 import { fetchEditorialRubrics } from '../../../services/editorialService'
 import { ApiError, isApiConfigured } from '../../../services/apiClient'
 import AdminLoadError from '../../../components/admin/AdminLoadError'
-import BlockEditor from '../../../components/admin/editorial/BlockEditor'
+import TileEditor from '../../../components/admin/editorial/TileEditor'
 import SeoReviewPanel from '../../../components/admin/editorial/SeoReviewPanel'
-import { createEmptyBlock } from '../../../components/admin/editorial/blockUtils'
+import { createStarterArticleBlocks } from '../../../components/admin/editorial/blockUtils'
 import { isSeoApproved } from '../../../components/admin/editorial/seoUtils'
 import { adminGlassCard, adminPageSubtitle, adminPageTitle } from '../../../components/admin/adminStyles'
 
@@ -104,10 +104,7 @@ export default function EditorialEditorPage() {
   const [contentType, setContentType] = useState('article')
   const [rubricId, setRubricId] = useState('')
   const [featured, setFeatured] = useState(false)
-  const [bodyBlocks, setBodyBlocks] = useState([
-    createEmptyBlock('heading'),
-    createEmptyBlock('paragraph'),
-  ])
+  const [bodyBlocks, setBodyBlocks] = useState(createStarterArticleBlocks())
 
   useEffect(() => {
     if (!isApiConfigured()) return undefined
@@ -140,7 +137,7 @@ export default function EditorialEditorPage() {
         setBodyBlocks(
           content.bodyBlocks?.length > 0
             ? content.bodyBlocks
-            : [createEmptyBlock('heading'), createEmptyBlock('paragraph')],
+            : createStarterArticleBlocks(),
         )
         setUpdatedAt(content.updatedAt)
         setSeoPack(content.seoPack ?? null)
@@ -443,7 +440,11 @@ export default function EditorialEditorPage() {
 
           <div>
             <h2 className="mb-3 text-sm font-semibold text-white">Corpo articolo</h2>
-            <BlockEditor blocks={bodyBlocks} onChange={setBodyBlocks} />
+            <p className="mb-4 text-xs text-zinc-500">
+              Editor visuale stile Wix — clicca sul testo per modificarlo, aggiungi sezioni dalla
+              libreria.
+            </p>
+            <TileEditor blocks={bodyBlocks} onChange={setBodyBlocks} />
           </div>
         </div>
 

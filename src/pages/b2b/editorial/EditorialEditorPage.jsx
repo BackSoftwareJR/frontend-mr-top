@@ -11,7 +11,8 @@ import {
   b2bPageTitle,
   b2bPrimaryBtn,
 } from '../../../components/b2b/b2bStyles'
-import { createEmptyBlock } from '../../../components/admin/editorial/blockUtils'
+import { createStarterArticleBlocks } from '../../../components/admin/editorial/blockUtils'
+import TileEditor from '../../../components/admin/editorial/TileEditor'
 import { useB2B } from '../../../context/B2BContext'
 import { fetchEditorialRubrics } from '../../../services/editorialService'
 import {
@@ -25,7 +26,6 @@ import {
   updateB2bContent,
 } from '../../../services/b2bEditorialService'
 import { ApiError, isApiConfigured } from '../../../services/apiClient'
-import B2bBlockEditor from './B2bBlockEditor'
 
 const inputClass = `${b2bInput} ${b2bInputFocus}`
 
@@ -83,10 +83,7 @@ export default function EditorialEditorPage() {
   const [subtitle, setSubtitle] = useState('')
   const [contentType, setContentType] = useState('story')
   const [rubricId, setRubricId] = useState('')
-  const [bodyBlocks, setBodyBlocks] = useState([
-    createEmptyBlock('heading'),
-    createEmptyBlock('paragraph'),
-  ])
+  const [bodyBlocks, setBodyBlocks] = useState(createStarterArticleBlocks())
 
   const isEditable = status === 'draft' || status === 'rejected'
 
@@ -120,7 +117,7 @@ export default function EditorialEditorPage() {
         setBodyBlocks(
           content.bodyBlocks?.length > 0
             ? content.bodyBlocks
-            : [createEmptyBlock('heading'), createEmptyBlock('paragraph')],
+            : createStarterArticleBlocks(),
         )
         setUpdatedAt(content.updatedAt)
         setStatus(content.status ?? 'draft')
@@ -227,7 +224,7 @@ export default function EditorialEditorPage() {
         setBodyBlocks(
           content.bodyBlocks?.length > 0
             ? content.bodyBlocks
-            : [createEmptyBlock('heading'), createEmptyBlock('paragraph')],
+            : createStarterArticleBlocks(),
         )
         setUpdatedAt(content.updatedAt)
         setStatus(content.status ?? 'draft')
@@ -412,7 +409,7 @@ export default function EditorialEditorPage() {
           Blocchi disponibili: titolo, paragrafo e immagine. FAQ e schede struttura non sono
           consentiti per i contenuti partner.
         </p>
-        <B2bBlockEditor blocks={bodyBlocks} onChange={setBodyBlocks} disabled={!isEditable} />
+        <TileEditor blocks={bodyBlocks} onChange={setBodyBlocks} disabled={!isEditable} b2bMode />
       </div>
     </div>
   )
