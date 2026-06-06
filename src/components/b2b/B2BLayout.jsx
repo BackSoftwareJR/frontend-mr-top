@@ -5,6 +5,7 @@ import {
   Calendar,
   CreditCard,
   Download,
+  FileText,
   LayoutDashboard,
   LogOut,
   MapPinned,
@@ -41,6 +42,7 @@ const NAV_ITEMS = [
   { icon: ShoppingBag, label: 'Marketplace Lead', to: '/pro/marketplace' },
   { icon: Table2, label: 'Il Mio CRM', to: '/pro/crm' },
   { icon: Calendar, label: 'Calendario', to: '/pro/calendario' },
+  { icon: FileText, label: 'Editoriale', to: '/pro/editoriale' },
   { icon: CreditCard, label: 'Fatturazione', to: '/pro/fatturazione' },
   { icon: Download, label: 'Export Center', to: '/pro/exports' },
 ]
@@ -55,6 +57,7 @@ const ROUTE_LABELS = {
   '/pro/marketplace': 'Marketplace Lead',
   '/pro/crm': 'Il Mio CRM',
   '/pro/calendario': 'Calendario',
+  '/pro/editoriale': 'Editoriale',
   '/pro/fatturazione': 'Fatturazione',
   '/pro/exports': 'Export Center',
   '/pro/profilo': 'Profilo Azienda',
@@ -292,7 +295,9 @@ export default function B2BLayout() {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const { walletBalance, formatCurrency, openRechargeModal } = useB2B()
 
-  const currentLabel = ROUTE_LABELS[location.pathname] || 'Wenando Pro'
+  const currentLabel =
+    ROUTE_LABELS[location.pathname] ??
+    (location.pathname.startsWith('/pro/editoriale') ? 'Editoriale' : 'Wenando Pro')
   const lowBalance = walletBalance < LOW_BALANCE_THRESHOLD
 
   return (

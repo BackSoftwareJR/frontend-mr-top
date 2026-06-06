@@ -32,6 +32,8 @@ const ExportCenter = lazyRoute(() => import('./pages/b2b/ExportCenter'))
 const Fatturazione = lazyRoute(() => import('./pages/b2b/Fatturazione'))
 const CompanyProfile = lazyRoute(() => import('./pages/b2b/CompanyProfile'))
 const Copertura = lazyRoute(() => import('./pages/b2b/Copertura'))
+const B2bEditorialListPage = lazyRoute(() => import('./pages/b2b/editorial/EditorialListPage'))
+const B2bEditorialEditorPage = lazyRoute(() => import('./pages/b2b/editorial/EditorialEditorPage'))
 const ProAccedi = lazyRoute(() => import('./pages/b2b/ProAccedi'))
 const B2BPortal = lazyRoute(() => import('./pages/b2b/B2BPortal'))
 const B2BRegister = lazyRoute(() => import('./pages/b2b/Register'))
@@ -143,6 +145,9 @@ function AppRoutes() {
             <Route path="fatturazione" element={<Fatturazione />} />
             <Route path="copertura" element={<Copertura />} />
             <Route path="profilo" element={<CompanyProfile />} />
+            <Route path="editoriale" element={<B2bEditorialListPage />} />
+            <Route path="editoriale/new" element={<B2bEditorialEditorPage />} />
+            <Route path="editoriale/:uuid/edit" element={<B2bEditorialEditorPage />} />
           </Route>
         </Route>
         <Route path="/admin/login" element={<AdminLogin />} />

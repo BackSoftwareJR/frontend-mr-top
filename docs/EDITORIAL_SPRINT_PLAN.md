@@ -28,7 +28,7 @@ Each sprint is split into **agent-sized sub-phases** (0a, 0b, …). After comple
 | **2** | Workflow + Groq SEO + B2B moderation | 2a ✅, 2b ✅, 2c ✅ | backend |
 | **3** | HTML render + sitemap/RSS/llms.txt + preview | 3a ✅, 3b ✅, 3c ✅ | backend (+ nginx) |
 | **4** | Internal search indexer + Nando context | 4a ✅, 4b ✅, 4c ✅ | backend + frontend |
-| **5** | Admin CMS UI + SEO approval + B2B portal | 5a ✅, 5b ✅, 5c | frontend + backend |
+| **5** | Admin CMS UI + SEO approval + B2B portal | 5a ✅, 5b ✅, 5c ✅ | frontend + backend |
 | **6** | Agent webhooks + analytics polish | 6a, 6b, 6c | backend + frontend |
 
 ---
@@ -1159,7 +1159,7 @@ VERIFY:
 
 - [x] Reviewer approves SEO; content `seo_pack.approved` refreshes in editor
 - [x] Approve disabled when score &lt; 70; reject modal with note
-- [ ] Manual overrides persist in `seo_pack.manual_overrides` — frontend sends `manual_overrides` on approve; backend merge pending
+- [x] Manual overrides persist in `seo_pack.manual_overrides` — backend merge on approve (2026-06-06)
 
 **Dependencies:** Sprint 2b, 5a
 
@@ -1181,7 +1181,7 @@ docs/EDITORIAL_SPRINT_PLAN.md
 ### Handoff — Sprint 5b COMPLETE
 
 **Tests run:** `npm run lint` — pass
-**Known gaps:** Backend `approve` endpoint does not yet merge `manual_overrides` from request body; publish button not yet in editor (banner only).
+**Known gaps:** Publish button not yet in admin editor (banner only). Backend `manual_overrides` merge fixed in separate commit.
 
 **Next agent START: Sprint 5c — B2B author portal**
 
@@ -1207,24 +1207,72 @@ VERIFY:
 
 ---
 
-### Sprint 5c — B2B author portal
+### Sprint 5c — B2B author portal ✅ DONE
+
+**Status:** ✅ DONE (2026-06-06)
 
 **Goals:** `/pro/editoriale` — simplified editor + moderation status.
 
-**Agent tasks**
+**Agent tasks (completed)**
 
-- `src/pages/pro/editorial/` — list, editor (restricted blocks)
-- Structure disclaimer preview
-- Submit to moderation flow
+- [x] `src/services/b2bEditorialService.js` — list, create, get, update, submit
+- [x] `src/pages/b2b/editorial/` — list + editor (restricted blocks: heading, paragraph, image)
+- [x] Structure disclaimer banner (non-removable)
+- [x] Submit to moderation flow (no publish)
+- [x] B2B sidebar nav + routes in `App.jsx`
+- [x] Backend fix: `ApproveEditorialSeoRequest` + `EditorialSeoService::mergeManualOverrides`
 
 **Acceptance criteria**
 
-- Partner submits story; sees queue status
-- Cannot use faq/structure_card blocks
+- [x] Partner submits story; sees queue status in list/editor
+- [x] Cannot use faq/structure_card/callout blocks (B2B block picker limited)
+- [x] `npm run lint` — pass
 
 **Dependencies:** Sprint 2c, 5a
 
-**Repo:** `frontend/`
+**Repo:** `frontend/` + backend SEO fix
+
+**Tests run:** `npm run lint` — pass; `php artisan test --filter=EditorialSeoTest` — 9 passed
+
+**Files added/changed**
+
+```
+src/services/b2bEditorialService.js
+src/pages/b2b/editorial/EditorialListPage.jsx
+src/pages/b2b/editorial/EditorialEditorPage.jsx
+src/pages/b2b/editorial/B2bBlockEditor.jsx
+src/App.jsx
+src/components/b2b/B2BLayout.jsx
+backend/app/Http/Requests/V1/Admin/ApproveEditorialSeoRequest.php
+backend/app/Services/Editorial/EditorialSeoService.php
+backend/app/Http/Controllers/Api/V1/Admin/EditorialSeoController.php
+backend/tests/Feature/Admin/EditorialSeoTest.php
+docs/EDITORIAL_SPRINT_PLAN.md
+```
+
+### Handoff — Sprint 5c COMPLETE
+
+**Tests run:** `npm run lint` — pass; `php artisan test --filter=EditorialSeoTest` — 9 passed
+**Known gaps:** Admin publish button still banner-only; B2B quote/event_details blocks not in UI (API allows them).
+
+**Next agent START: Sprint 6a — Agent webhook draft ingest**
+
+```
+READ:
+  docs/EDITORIAL_SPRINT_PLAN.md Sprint 6a section
+  backend/app/Services/Editorial/EditorialWorkflowService.php
+
+CREATE:
+  backend/app/Http/Controllers/Webhooks/AgentEditorialWebhookController.php
+
+IMPLEMENT:
+  POST /webhooks/editorial/agent-draft — HMAC-signed agent drafts
+
+VERIFY:
+  Signed payload → draft with author_type=agent
+  Cannot auto-publish
+  php artisan test --filter=AgentEditorial
+```
 
 ---
 
@@ -1341,4 +1389,4 @@ When finishing any sub-phase, append:
 
 ---
 
-*Document version: 2.5 · Sprint 5b complete · Next: Sprint 5c B2B author portal*
+*Document version: 2.6 · Sprint 5c complete · Next: Sprint 6a agent webhooks*
