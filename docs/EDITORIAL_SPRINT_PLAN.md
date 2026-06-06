@@ -30,7 +30,7 @@ Each sprint is split into **agent-sized sub-phases** (0a, 0b, …). After comple
 | **4** | Internal search indexer + Nando context | 4a ✅, 4b ✅, 4c ✅ | backend + frontend |
 | **5** | Admin CMS UI + SEO approval + B2B portal | 5a ✅, 5b ✅, 5c ✅ | frontend + backend |
 | **6** | Agent webhooks + analytics polish | 6a ✅, 6b ✅, 6c ✅ | backend + frontend |
-| **7** | Editorial analytics dashboards | 7a ✅, 7b ✅, 7c ✅ | backend + frontend |
+| **7** | Editorial analytics dashboards | 7a ✅, 7b ✅, 7c ✅, 7d ✅ | backend + frontend |
 
 ---
 
@@ -1652,25 +1652,46 @@ VERIFY:
 
 **Repo:** `frontend/` (workspace root)
 
-### Handoff — Sprint 7c COMPLETE
+### Sprint 7d — Template polish + auto-review UX ✅ DONE
 
-**Next agent START: Sprint 7d — Template polish & per-article analytics drill-down**
+**Status:** ✅ DONE (2026-06-06)
+
+**Goals:** Wix-style layout library expansion, template-aware article starters, SEO review checklist in admin editor, Groq plain-text extraction for layout blocks.
+
+**Delivered**
+
+- [x] 3 new layout templates: `interview-qa`, `event-card`, `checklist-band` (registry + `LayoutSection.jsx` + `EditorialLayoutRenderer.php`)
+- [x] `createStarterBlocksForContentType()` — interview → Q&A + prose; event → event-card + prose; guide/anti-truffe → checklist + FAQ
+- [x] Admin `SeoReviewPanel` — content checklist (H2, FAQ, word count, CTA), missing layout slots, FAQ banner for guides
+- [x] `EditorialSeoGroqService::extractPlainText()` — includes layout `template_id` + slot text for Groq/fallback SEO
+- [x] `EditorialPageTest::test_new_layout_templates_render_semantic_html`
+- [x] Agent webhook already accepts `layout` blocks in `StoreAgentEditorialDraftRequest`
+
+**Dependencies:** Sprint 5b ✅, Sprint 3a ✅
+
+**Repo:** `frontend/` + `backend/`
+
+### Handoff — Sprint 7d COMPLETE
+
+**Next agent START: Sprint 7e — Notifications & alerts**
 
 ```
 READ:
   docs/EDITORIAL_SPRINT_PLAN.md
-  src/pages/admin/editorial/EditorialAnalyticsPage.jsx
-  src/services/adminEditorialService.js — fetchContentAnalytics()
+  backend/app/Services/Editorial/EditorialWorkflowService.php
+  backend/app/Models/EditorialModerationQueue.php
 
-OPTIONAL:
-  Per-article analytics panel in EditorialEditorPage sidebar (fetchContentAnalytics)
-  Magazine HTML template polish (show.blade.php typography, related articles rail)
-  Empty-state illustrations for zero-view periods
+IMPLEMENT:
+  Email/in-app alerts when content enters pending_review or moderation queue
+  Admin digest for SEO rejections and low-score generations
+  B2B notification when structure content is approved/rejected
+  Optional: webhook callback for agent pipeline on review outcome
 
 VERIFY:
+  php artisan test --filter=EditorialWorkflow
   npm run lint && npm run build
 ```
 
 ---
 
-*Document version: 2.11 · Sprint 7c complete · Admin platform analytics dashboard live*
+*Document version: 2.12 · Sprint 7d complete · Layout templates + SEO review checklist live*

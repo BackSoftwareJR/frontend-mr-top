@@ -9,6 +9,8 @@ import {
 import { ApiError, isApiConfigured } from '../../../services/apiClient'
 import { adminGlassCard } from '../adminStyles'
 import {
+  buildBlockSeoChecklist,
+  findLayoutBlocksWithMissingSlots,
   getSeoScoreBadgeClass,
   isSeoApproved,
   SEO_BREAKDOWN_LABELS,
@@ -143,9 +145,23 @@ function TagList({ tags }) {
 }
 
 /**
- * @param {{ uuid: string, contentSeoPack?: Record<string, unknown> | null, onApproved?: (content: Record<string, unknown>) => void }} props
+ * @param {{
+ *   uuid: string,
+ *   contentSeoPack?: Record<string, unknown> | null,
+ *   bodyBlocks?: Array<{ type: string, data?: Record<string, unknown> }>,
+ *   contentType?: string,
+ *   rubricSlug?: string,
+ *   onApproved?: (content: Record<string, unknown>) => void,
+ * }} props
  */
-export default function SeoReviewPanel({ uuid, contentSeoPack, onApproved }) {
+export default function SeoReviewPanel({
+  uuid,
+  contentSeoPack,
+  bodyBlocks = [],
+  contentType = 'article',
+  rubricSlug,
+  onApproved,
+}) {
   const [seoData, setSeoData] = useState(null)
   const [loading, setLoading] = useState(Boolean(uuid && isApiConfigured()))
   const [error, setError] = useState(null)
@@ -182,6 +198,14 @@ export default function SeoReviewPanel({ uuid, contentSeoPack, onApproved }) {
   const breakdown = basePack?.seo_score_breakdown ?? {}
   const canReview = generationStatus === 'pending' && !contentApproved
   const scoreTooLow = score != null && score < SEO_MIN_SCORE
+
+  const blockChecklist = useMemo(
+    () => buildBlockSeoChecklist(bodyBlocks, { contentType, rubricSlug }),
+    [bodyBlocks, contentType, rubricSlug],
+  )
+  const layoutIssues = useMemo(() => findLayoutBlocksWithMissingSlots(bodyBlocks), [bodyBlocks])
+  const faqCheck = blockChecklist.find((item) => item.id === 'faq')
+  const showFaqBanner = faqCheck?.warn
 
   const loadSeo = useCallback(async () => {
     if (!uuid || !isApiConfigured()) return
@@ -358,6 +382,59 @@ export default function SeoReviewPanel({ uuid, contentSeoPack, onApproved }) {
             </span>
           ) : null}
         </div>
+
+        {showFaqBanner ? (
+          <div className="mt-3 flex items-start gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" />
+            <p>
+              Manca una sezione FAQ compilata. Per guide e articoli SEO, aggiungi il layout
+              &quot;Domande frequenti&quot; prima di inviare in revisione.
+            </p>
+          </div>
+        ) : null}
+
+        {bodyBlocks.length > 0 ? (
+          <div className="mt-3 rounded-lg border border-white/10 bg-white/[0.02] p-3">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+              Checklist contenuto
+            </p>
+            <ul className="mt-2 space-y-1.5">
+              {blockChecklist.map((item) => (
+                <li key={item.id} className="flex items-start gap-2 text-xs">
+                  {item.ok ? (
+                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                  ) : (
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" />
+                  )}
+                  <span className={item.ok ? 'text-zinc-300' : 'text-amber-300'}>
+                    {item.label}
+                    <span className="ml-1 text-zinc-500">— {item.detail}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {layoutIssues.length > 0 ? (
+          <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-amber-400">
+              Slot layout da completare
+            </p>
+            <ul className="mt-2 space-y-2">
+              {layoutIssues.map((issue) => (
+                <li key={issue.templateId} className="text-xs text-amber-200/90">
+                  <span className="font-medium text-amber-100">{issue.templateLabel}</span>
+                  <span className="text-amber-300/70">
+                    {' '}
+                    — {issue.missing.slice(0, 3).join(', ')}
+                    {issue.missing.length > 3 ? ` +${issue.missing.length - 3}` : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         {contentApproved ? (
           <div className="mt-3 flex items-center gap-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-400">

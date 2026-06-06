@@ -263,6 +263,188 @@ function StatsRow({ slots, onSlotsChange, editMode, disabled }) {
   )
 }
 
+function InterviewQa({ slots, onSlotsChange, editMode, disabled }) {
+  const pairs = [
+    ['q1', 'a1'],
+    ['q2', 'a2'],
+    ['q3', 'a3'],
+  ]
+
+  return (
+    <section className="editorial-layout editorial-layout--interview-qa rounded-2xl bg-white px-6 py-8 sm:px-10">
+      <InlineEditable
+        as="h2"
+        value={slots.title}
+        onChange={(v) => updateSlot(slots, 'title', v, onSlotsChange)}
+        placeholder="Titolo intervista"
+        disabled={disabled || !editMode}
+        className="mb-4 font-serif text-2xl font-bold text-[#1F2937]"
+      />
+      <InlineEditable
+        value={slots.intro}
+        onChange={(v) => updateSlot(slots, 'intro', v, onSlotsChange)}
+        placeholder="Introduzione"
+        multiline
+        disabled={disabled || !editMode}
+        className="mb-6 text-base leading-relaxed text-[#6B7280] whitespace-pre-wrap"
+      />
+      <dl className="space-y-6">
+        {pairs.map(([qKey, aKey]) => (
+          <div key={qKey} className="rounded-xl border border-zinc-200 bg-[#FDFBF7] p-4">
+            <dt className="mb-2">
+              <InlineEditable
+                as="h3"
+                value={slots[qKey]}
+                onChange={(v) => updateSlot(slots, qKey, v, onSlotsChange)}
+                placeholder="Domanda"
+                disabled={disabled || !editMode}
+                className="font-serif text-lg font-semibold text-[#E07A5F]"
+              />
+            </dt>
+            <dd>
+              <InlineEditable
+                value={slots[aKey]}
+                onChange={(v) => updateSlot(slots, aKey, v, onSlotsChange)}
+                placeholder="Risposta"
+                multiline
+                disabled={disabled || !editMode}
+                className="text-base leading-relaxed text-[#374151] whitespace-pre-wrap"
+              />
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  )
+}
+
+function EventCard({ slots, onSlotsChange, editMode, disabled }) {
+  return (
+    <section className="editorial-layout editorial-layout--event-card relative overflow-hidden rounded-2xl border border-[#E07A5F]/25 bg-gradient-to-br from-[#FFF4EC] to-[#FDFBF7] px-6 py-8 sm:px-10">
+      <DotPatternBg />
+      <div className="relative z-10">
+        <InlineEditable
+          as="h2"
+          value={slots.title}
+          onChange={(v) => updateSlot(slots, 'title', v, onSlotsChange)}
+          placeholder="Nome evento"
+          disabled={disabled || !editMode}
+          className="font-serif text-2xl font-bold text-[#1F2937]"
+        />
+        <div className="mt-4 flex flex-wrap gap-4 text-sm text-[#4B5563]">
+          <div className="rounded-lg bg-white/80 px-3 py-2">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-[#E07A5F]">Data</span>
+            <InlineEditable
+              value={slots.event_date}
+              onChange={(v) => updateSlot(slots, 'event_date', v, onSlotsChange)}
+              placeholder="Data evento"
+              disabled={disabled || !editMode}
+              className="mt-0.5 block font-medium text-[#1F2937]"
+            />
+          </div>
+          <div className="rounded-lg bg-white/80 px-3 py-2">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-[#E07A5F]">Orario</span>
+            <InlineEditable
+              value={slots.event_time}
+              onChange={(v) => updateSlot(slots, 'event_time', v, onSlotsChange)}
+              placeholder="Orario"
+              disabled={disabled || !editMode}
+              className="mt-0.5 block font-medium text-[#1F2937]"
+            />
+          </div>
+          <div className="min-w-[200px] flex-1 rounded-lg bg-white/80 px-3 py-2">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-[#E07A5F]">Luogo</span>
+            <InlineEditable
+              value={slots.event_location}
+              onChange={(v) => updateSlot(slots, 'event_location', v, onSlotsChange)}
+              placeholder="Luogo o modalità"
+              disabled={disabled || !editMode}
+              className="mt-0.5 block font-medium text-[#1F2937]"
+            />
+          </div>
+        </div>
+        <InlineEditable
+          value={slots.description}
+          onChange={(v) => updateSlot(slots, 'description', v, onSlotsChange)}
+          placeholder="Descrizione evento"
+          multiline
+          disabled={disabled || !editMode}
+          className="mt-4 text-base leading-relaxed text-[#4B5563] whitespace-pre-wrap"
+        />
+        {editMode && !disabled ? (
+          <div className="mt-6 space-y-2">
+            <input
+              type="text"
+              value={slots.cta_label ?? ''}
+              onChange={(e) => updateSlot(slots, 'cta_label', e.target.value, onSlotsChange)}
+              placeholder="Testo pulsante iscrizione"
+              className="w-full rounded-lg border border-[#E07A5F]/30 bg-white px-3 py-2 text-sm text-[#1F2937]"
+            />
+            <input
+              type="url"
+              value={slots.cta_url ?? ''}
+              onChange={(e) => updateSlot(slots, 'cta_url', e.target.value, onSlotsChange)}
+              placeholder="URL iscrizione"
+              className="w-full rounded-lg border border-[#E07A5F]/30 bg-white px-3 py-2 text-sm text-[#1F2937]"
+            />
+          </div>
+        ) : (
+          <a
+            href={slots.cta_url || '#'}
+            className="mt-6 inline-block rounded-full bg-[#E07A5F] px-6 py-2.5 text-sm font-semibold text-white"
+          >
+            {slots.cta_label || 'Iscriviti'}
+          </a>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function ChecklistBand({ slots, onSlotsChange, editMode, disabled }) {
+  const items = ['item1', 'item2', 'item3', 'item4', 'item5']
+
+  return (
+    <section className="editorial-layout editorial-layout--checklist rounded-2xl border border-emerald-200/60 bg-emerald-50/50 px-6 py-8 sm:px-10">
+      <InlineEditable
+        as="h3"
+        value={slots.title}
+        onChange={(v) => updateSlot(slots, 'title', v, onSlotsChange)}
+        placeholder="Titolo checklist"
+        disabled={disabled || !editMode}
+        className="mb-3 font-serif text-xl font-bold text-[#1F2937]"
+      />
+      <InlineEditable
+        value={slots.intro}
+        onChange={(v) => updateSlot(slots, 'intro', v, onSlotsChange)}
+        placeholder="Introduzione checklist"
+        multiline
+        disabled={disabled || !editMode}
+        className="mb-5 text-sm leading-relaxed text-[#6B7280] whitespace-pre-wrap"
+      />
+      <ul className="space-y-2.5" role="list">
+        {items.map((key) => (
+          <li key={key} className="flex items-start gap-3 rounded-lg bg-white px-4 py-3 text-[#374151]">
+            <span
+              className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 border-[#E07A5F] text-[10px] font-bold text-[#E07A5F]"
+              aria-hidden
+            >
+              ✓
+            </span>
+            <InlineEditable
+              value={slots[key]}
+              onChange={(v) => updateSlot(slots, key, v, onSlotsChange)}
+              placeholder="Voce checklist"
+              disabled={disabled || !editMode}
+              className="flex-1 text-sm leading-relaxed"
+            />
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
 function CtaCoral({ slots, onSlotsChange, editMode, disabled }) {
   return (
     <section className="editorial-layout editorial-layout--cta relative overflow-hidden rounded-2xl bg-[#E07A5F] px-8 py-10 text-center text-white">
@@ -320,6 +502,9 @@ const TEMPLATE_COMPONENTS = {
   'quote-spotlight': QuoteSpotlight,
   'stats-row': StatsRow,
   'cta-coral': CtaCoral,
+  'interview-qa': InterviewQa,
+  'event-card': EventCard,
+  'checklist-band': ChecklistBand,
 }
 
 /**

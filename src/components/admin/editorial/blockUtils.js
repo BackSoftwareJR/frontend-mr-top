@@ -27,11 +27,43 @@ export function createLayoutBlock(templateId) {
 
 /** Starter blocks for new articles — Wix-style hero + prose + highlight */
 export function createStarterArticleBlocks() {
-  return [
-    createLayoutBlock('hero-coral'),
-    createLayoutBlock('prose-block'),
-    createLayoutBlock('highlight-band'),
-  ]
+  return createStarterBlocksForContentType('article')
+}
+
+/**
+ * Smart starter layouts per content type (and optional rubric).
+ * @param {string} contentType — article | story | interview | event
+ * @param {string} [rubricSlug]
+ */
+export function createStarterBlocksForContentType(contentType, rubricSlug) {
+  if (rubricSlug === 'anti-truffe' || rubricSlug === 'guide') {
+    return [
+      createLayoutBlock('hero-coral'),
+      createLayoutBlock('prose-block'),
+      createLayoutBlock('checklist-band'),
+      createLayoutBlock('faq-band'),
+    ]
+  }
+
+  switch (contentType) {
+    case 'interview':
+      return [createLayoutBlock('interview-qa'), createLayoutBlock('prose-block')]
+    case 'event':
+      return [createLayoutBlock('event-card'), createLayoutBlock('prose-block')]
+    case 'story':
+      return [
+        createLayoutBlock('hero-coral'),
+        createLayoutBlock('prose-block'),
+        createLayoutBlock('quote-spotlight'),
+      ]
+    case 'article':
+    default:
+      return [
+        createLayoutBlock('hero-coral'),
+        createLayoutBlock('prose-block'),
+        createLayoutBlock('highlight-band'),
+      ]
+  }
 }
 
 /** @param {'heading'|'paragraph'|'image'|'callout'} type */

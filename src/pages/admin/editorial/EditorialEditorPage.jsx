@@ -13,7 +13,11 @@ import { ApiError, isApiConfigured } from '../../../services/apiClient'
 import AdminLoadError from '../../../components/admin/AdminLoadError'
 import TileEditor from '../../../components/admin/editorial/TileEditor'
 import SeoReviewPanel from '../../../components/admin/editorial/SeoReviewPanel'
-import { createEmptyBlock, createStarterArticleBlocks } from '../../../components/admin/editorial/blockUtils'
+import {
+  createEmptyBlock,
+  createStarterArticleBlocks,
+  createStarterBlocksForContentType,
+} from '../../../components/admin/editorial/blockUtils'
 import { isSeoApproved } from '../../../components/admin/editorial/seoUtils'
 import { adminGlassCard, adminPageSubtitle, adminPageTitle } from '../../../components/admin/adminStyles'
 
@@ -105,6 +109,7 @@ export default function EditorialEditorPage() {
   const [rubricId, setRubricId] = useState('')
   const [featured, setFeatured] = useState(false)
   const [bodyBlocks, setBodyBlocks] = useState(createStarterArticleBlocks())
+  const [starterPrompt, setStarterPrompt] = useState(null)
 
   useEffect(() => {
     if (!isApiConfigured()) return undefined
@@ -194,6 +199,23 @@ export default function EditorialEditorPage() {
     const timer = window.setTimeout(() => setToast(null), 3000)
     return () => window.clearTimeout(timer)
   }, [toast])
+
+  const selectedRubricSlug = rubrics.find((r) => String(r.id) === rubricId)?.slug
+
+  const applyRecommendedLayout = () => {
+    setBodyBlocks(createStarterBlocksForContentType(contentType, selectedRubricSlug))
+    setStarterPrompt(null)
+    setToast({ type: 'success', message: 'Layout consigliato applicato' })
+  }
+
+  const handleContentTypeChange = (nextType) => {
+    setContentType(nextType)
+    if (isNew) {
+      setBodyBlocks(createStarterBlocksForContentType(nextType, selectedRubricSlug))
+      return
+    }
+    setStarterPrompt(nextType)
+  }
 
   const buildPayload = () => ({
     title: title.trim(),
@@ -398,7 +420,7 @@ export default function EditorialEditorPage() {
                 <select
                   id="editorial-type"
                   value={contentType}
-                  onChange={(e) => setContentType(e.target.value)}
+                  onChange={(e) => handleContentTypeChange(e.target.value)}
                   className={inputClass}
                 >
                   {EDITORIAL_TYPES.map((t) => (
@@ -427,6 +449,27 @@ export default function EditorialEditorPage() {
                 </select>
               </div>
             </div>
+            {starterPrompt ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#E07A5F]/30 bg-[#E07A5F]/10 px-3 py-2 text-xs text-[#FDFBF7]">
+                <span>Vuoi applicare il layout consigliato per questo tipo?</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={applyRecommendedLayout}
+                    className="rounded-md bg-[#E07A5F] px-2.5 py-1 font-medium text-white hover:bg-[#c96a52]"
+                  >
+                    Applica layout
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStarterPrompt(null)}
+                    className="rounded-md border border-white/20 px-2.5 py-1 text-zinc-300 hover:text-white"
+                  >
+                    Ignora
+                  </button>
+                </div>
+              </div>
+            ) : null}
             <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
               <input
                 type="checkbox"
@@ -452,6 +495,9 @@ export default function EditorialEditorPage() {
           <SeoReviewPanel
             uuid={isNew ? null : uuid}
             contentSeoPack={seoPack}
+            bodyBlocks={bodyBlocks}
+            contentType={contentType}
+            rubricSlug={selectedRubricSlug}
             onApproved={(content) => {
               applyContent(content)
               setToast({ type: 'success', message: 'SEO approvato' })
