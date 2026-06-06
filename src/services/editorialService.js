@@ -1,10 +1,28 @@
 import apiClient, { isApiConfigured, unwrapApiData } from './apiClient'
 
+export const EDITORIAL_SITE_URL =
+  import.meta.env.VITE_EDITORIAL_SITE_URL ?? 'https://wenando.com'
+
 /**
  * True when editorial CMS API is enabled and a backend URL is configured.
  */
 export function isEditorialApiEnabled() {
   return import.meta.env.VITE_EDITORIAL_API === 'true' && isApiConfigured()
+}
+
+/**
+ * Resolve a magazine article URL — API returns relative paths like /magazine/{rubric}/{slug}.
+ * @param {string | null | undefined} url
+ * @returns {string}
+ */
+export function resolveEditorialArticleUrl(url) {
+  if (!url) return EDITORIAL_SITE_URL
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+
+  const base = EDITORIAL_SITE_URL.replace(/\/$/, '')
+  const path = url.startsWith('/') ? url : `/${url}`
+
+  return `${base}${path}`
 }
 
 /**

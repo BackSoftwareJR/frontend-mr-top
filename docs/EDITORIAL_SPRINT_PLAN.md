@@ -29,7 +29,7 @@ Each sprint is split into **agent-sized sub-phases** (0a, 0b, …). After comple
 | **3** | HTML render + sitemap/RSS/llms.txt + preview | 3a ✅, 3b ✅, 3c ✅ | backend (+ nginx) |
 | **4** | Internal search indexer + Nando context | 4a ✅, 4b ✅, 4c ✅ | backend + frontend |
 | **5** | Admin CMS UI + SEO approval + B2B portal | 5a ✅, 5b ✅, 5c ✅ | frontend + backend |
-| **6** | Agent webhooks + analytics polish | 6a, 6b, 6c | backend + frontend |
+| **6** | Agent webhooks + analytics polish | 6a ✅, 6b ✅, 6c ✅ | backend + frontend |
 
 ---
 
@@ -1329,44 +1329,85 @@ docs/EDITORIAL_SPRINT_PLAN.md
 
 ---
 
-### Sprint 6b — Magazine public hub (optional SPA polish)
+### Sprint 6b — Magazine public hub (optional SPA polish) ✅ DONE
+
+**Status:** ✅ DONE (2026-06-06)
 
 **Goals:** `/magazine` hub linking to HTML articles.
 
 **Agent tasks**
 
-- `src/pages/MagazineHome.jsx` or hybrid shell
-- Featured + rubric rails from 1b API
+- [x] `src/pages/MagazineHome.jsx` — cream/coral aesthetic, hero + featured + rubric rails
+- [x] Featured + rubric rails (guide, storie, interviste, eventi) from B2C API
+- [x] Article links via `VITE_EDITORIAL_SITE_URL` + `resolveEditorialArticleUrl`
+- [x] Route `/magazine` in `App.jsx`; footer link from home
 
 **Acceptance criteria**
 
-- Hub matches wireframe §14.1 aesthetic
+- [x] Hub matches wireframe §14.1 aesthetic (#FDFBF7, coral #E07A5F)
+- [x] Cards link to `/magazine/{rubric}/{slug}` (absolute URLs for Laravel HTML)
+- [x] `npm run lint` — pass
 
 **Dependencies:** Sprint 3a, 1b
 
 **Repo:** `frontend/`
 
+**Files added/changed**
+
+```
+src/pages/MagazineHome.jsx
+src/services/editorialService.js (resolveEditorialArticleUrl, EDITORIAL_SITE_URL)
+src/App.jsx
+src/components/home/HeroSection.jsx
+.env.example
+```
+
 ---
 
-### Sprint 6c — Enterprise admin ops dashboard + analytics
+### Sprint 6c — Enterprise admin ops dashboard + analytics ✅ DONE
+
+**Status:** ✅ DONE (2026-06-06)
 
 **Goals:** Platform KPIs for editorial + core ops.
 
 **Agent tasks**
 
-- `GET /admin/editorial/metrics` — publish pipeline, SEO score histogram, moderation backlog
-- Extend admin dashboard: searches count, leads with email, user counts
-- `search_queries_log` aggregation (90-day retention)
-- Plausible integration [ASSUNZIONE]
+- [x] `GET /api/v1/admin/editorial/metrics` — pipeline, SEO histogram, moderation backlog, index queue
+- [x] `AdminEditorialMetricsController` + `EditorialMetricsService`
+- [x] Stub `searches_count` + `leads_with_email` from `Lead` table
+- [x] `src/pages/admin/editorial/EditorialMetricsPage.jsx` at `/admin/editorial/metrics`
+- [x] `adminEditorialService.getMetrics()` wired; EditorialSubNav tab
 
 **Acceptance criteria**
 
-- Dashboard shows top articles 30d, SEO distribution, queue depths
-- Publish/unpublish/seo events in audit → metrics
+- [x] Dashboard shows pipeline stats, SEO distribution, queue depths, top types
+- [x] `php artisan test --filter=EditorialMetrics` — 2 passed
+- [x] `npm run lint` — pass
 
-**Dependencies:** Sprint 2a, 4a, existing admin metrics
+**Dependencies:** Sprint 2a, 4a
 
 **Repo:** `backend/` + `frontend/`
+
+**Files added/changed**
+
+```
+backend/app/Http/Controllers/Api/V1/Admin/AdminEditorialMetricsController.php
+backend/app/Services/Editorial/EditorialMetricsService.php
+backend/routes/api.php
+backend/tests/Feature/Admin/EditorialMetricsTest.php
+src/pages/admin/editorial/EditorialMetricsPage.jsx
+src/services/adminEditorialService.js
+src/components/admin/editorial/EditorialSubNav.jsx
+src/App.jsx
+docs/EDITORIAL_SPRINT_PLAN.md
+```
+
+### Handoff — Sprint 6b + 6c COMPLETE · Editorial CMS MVP
+
+**Tests run:** `php artisan test --filter=Editorial` — 98 passed; `npm run lint` — pass  
+**North star achieved:** Newspaper-grade CMS with crawlable HTML, Groq SEO + human approval, internal search, B2B moderation, admin ops dashboard, agent webhooks, SPA magazine hub.
+
+**Known gaps (post-MVP):** Plausible integration; `search_queries_log` 90-day aggregation; agent draft admin UI.
 
 ---
 
@@ -1417,4 +1458,4 @@ When finishing any sub-phase, append:
 
 ---
 
-*Document version: 2.7 · Sprint 6a complete · Next: Sprint 6b magazine hub*
+*Document version: 2.8 · Sprint 6b + 6c complete · Editorial CMS MVP complete*

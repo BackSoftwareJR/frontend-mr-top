@@ -52,6 +52,7 @@ const EditorialListPage = lazyRoute(() => import('./pages/admin/editorial/Editor
 const EditorialEditorPage = lazyRoute(() => import('./pages/admin/editorial/EditorialEditorPage'))
 const EditorialReviewPage = lazyRoute(() => import('./pages/admin/editorial/EditorialReviewPage'))
 const EditorialIndexingPage = lazyRoute(() => import('./pages/admin/editorial/EditorialIndexingPage'))
+const EditorialMetricsPage = lazyRoute(() => import('./pages/admin/editorial/EditorialMetricsPage'))
 const ImpersonateBootstrap = lazyRoute(() => import('./pages/b2b/ImpersonateBootstrap'))
 const DesktopRouteTransitions = lazyRoute(() => import('./DesktopRouteTransitions'))
 const PrivacyPage = lazyRoute(() => import('./pages/legal/PrivacyPage'))
@@ -60,6 +61,7 @@ const TermsPage = lazyRoute(() => import('./pages/legal/TermsPage'))
 const TermsPartnersPage = lazyRoute(() => import('./pages/legal/TermsPartnersPage'))
 const ComeFunzionaPage = lazyRoute(() => import('./pages/ComeFunzionaPage'))
 const ChiSiamoPage = lazyRoute(() => import('./pages/ChiSiamoPage'))
+const MagazineHome = lazyRoute(() => import('./pages/MagazineHome'))
 const NotFoundPage = lazyRoute(() => import('./pages/errors/NotFoundPage'))
 const ErrorStatusPage = lazyRoute(() => import('./pages/errors/ErrorStatusPage'))
 
@@ -114,6 +116,7 @@ function AppRoutes() {
         <Route path="/accedi" element={<Accedi />} />
         <Route path="/come-funziona" element={<ComeFunzionaPage />} />
         <Route path="/chi-siamo" element={<ChiSiamoPage />} />
+        <Route path="/magazine" element={<MagazineHome />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/cookies" element={<CookiesPage />} />
         <Route path="/terms" element={<TermsPage />} />
@@ -170,6 +173,7 @@ function AppRoutes() {
           <Route path="editorial/new" element={<EditorialEditorPage />} />
           <Route path="editorial/review" element={<EditorialReviewPage />} />
           <Route path="editorial/indexing" element={<EditorialIndexingPage />} />
+          <Route path="editorial/metrics" element={<EditorialMetricsPage />} />
           <Route path="editorial/:uuid/edit" element={<EditorialEditorPage />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>

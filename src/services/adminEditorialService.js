@@ -373,6 +373,31 @@ export const EDITORIAL_CONTENT_STATUSES = [
   { value: 'rejected', label: 'Rifiutato' },
 ]
 
+/** @param {Record<string, unknown>} data */
+function mapMetrics(data) {
+  return {
+    contentsByStatus: data.contents_by_status ?? data.contentsByStatus ?? {},
+    moderationBacklog: data.moderation_backlog ?? data.moderationBacklog ?? 0,
+    seoScoreHistogram: Array.isArray(data.seo_score_histogram)
+      ? data.seo_score_histogram
+      : (data.seoScoreHistogram ?? []),
+    publishedLast30Days: data.published_last_30_days ?? data.publishedLast30Days ?? 0,
+    indexQueuePending: data.index_queue_pending ?? data.indexQueuePending ?? 0,
+    topPublishedByType: Array.isArray(data.top_published_by_type)
+      ? data.top_published_by_type
+      : (data.topPublishedByType ?? []),
+    searchesCount: data.searches_count ?? data.searchesCount ?? 0,
+    leadsWithEmail: data.leads_with_email ?? data.leadsWithEmail ?? 0,
+  }
+}
+
+export async function getMetrics() {
+  const response = await apiClient.get('/admin/editorial/metrics')
+  const data = unwrapApiData(response)
+
+  return mapMetrics(data)
+}
+
 export const EDITORIAL_STATUS_COLORS = {
   draft: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/25',
   pending_review: 'bg-amber-500/15 text-amber-400 border-amber-500/25',

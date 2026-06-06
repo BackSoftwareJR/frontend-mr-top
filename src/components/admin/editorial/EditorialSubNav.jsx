@@ -4,6 +4,7 @@ const TABS = [
   { to: '/admin/editorial', label: 'Contenuti', end: true },
   { to: '/admin/editorial/review', label: 'Revisione' },
   { to: '/admin/editorial/indexing', label: 'Indicizzazione' },
+  { to: '/admin/editorial/metrics', label: 'Metriche' },
 ]
 
 export default function EditorialSubNav() {

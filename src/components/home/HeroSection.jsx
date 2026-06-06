@@ -119,6 +119,15 @@ function HomeFooter() {
           ·
         </span>
         <Link
+          to="/magazine"
+          className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-800"
+        >
+          Magazine
+        </Link>
+        <span className="hidden text-slate-300 sm:inline" aria-hidden>
+          ·
+        </span>
+        <Link
           to="/privacy"
           className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-800"
         >
@@ -193,7 +202,7 @@ function HeroSectionStatic() {
         words={HOME_HERO.title}
         className="hero-fade-in-heading relative z-10 mb-2.5 max-w-[22rem] text-[2.75rem] font-extrabold leading-[1.06] tracking-tight sm:max-w-4xl"
         startIndex={0}
-        neutralWords={[1, 3, 4, 7, 9, 10]}
+        neutralWords={[0, 3, 4]}
         trigger="mount"
         trailingAnchorRef={heroDotRef}
         trailingAnchorProps={{
