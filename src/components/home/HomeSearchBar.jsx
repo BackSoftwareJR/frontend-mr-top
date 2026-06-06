@@ -7,6 +7,7 @@ import { useReadingSearchGlow } from '../../hooks/useReadingSearchGlow'
 import { useHeroStickySearch } from '../../hooks/useHeroStickySearch'
 import { useTypewriterPlaceholder } from '../../hooks/useTypewriterPlaceholder'
 import { createSearchSession } from '../../utils/searchSessionStorage'
+import { prefetchRoute } from '../../utils/routePrefetch'
 import AppleIntelligenceBorder from '../ui/AppleIntelligenceBorder'
 import RecentSearches from './RecentSearches'
 
@@ -100,6 +101,7 @@ export default function HomeSearchBar({ className = '', enableSticky = true }) {
       const trimmed = String(rawQuery ?? '').trim()
       if (!trimmed) return
 
+      prefetchRoute('/esplora')
       const session = createSearchSession(trimmed)
       navigate(`/esplora?session=${session.id}&started=1`, { replace: false })
     },

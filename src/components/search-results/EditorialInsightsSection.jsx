@@ -36,7 +36,7 @@ function ContentCard({ item, index, animate, size = 'default' }) {
   return (
     <MotionArticle
       {...motionProps}
-      className={`group overflow-hidden rounded-2xl border border-black/[0.06] bg-white shadow-sm transition-shadow hover:shadow-md ${
+      className={`group overflow-hidden rounded-2xl border border-black/[0.05] bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${
         isLarge ? 'sm:flex sm:flex-row' : ''
       }`}
     >
@@ -72,8 +72,11 @@ function ContentCard({ item, index, animate, size = 'default' }) {
           </a>
         </h3>
         <p className={`mt-1.5 flex-1 text-slate-600 ${isLarge ? 'text-sm' : 'text-xs sm:text-sm line-clamp-2'}`}>
-          {item.description}
+          {item.description ?? item.summary}
         </p>
+        {item.relevanceReason ? (
+          <p className="mt-2 text-xs italic text-violet-700/90">{item.relevanceReason}</p>
+        ) : null}
         <a
           href={item.url}
           className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#c96a52] hover:text-[#E07A5F] sm:text-sm"
@@ -101,7 +104,7 @@ function ContentSection({ type, items, animate, startIndex = 0 }) {
         <span className="text-xs text-slate-400">({items.length})</span>
       </div>
       <ContentCard item={lead} index={startIndex} animate={animate} size="large" />
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:gap-5">
         {rest.map((item, i) => (
           <ContentCard key={item.id} item={item} index={startIndex + i + 1} animate={animate} />
         ))}
@@ -110,7 +113,12 @@ function ContentSection({ type, items, animate, startIndex = 0 }) {
   )
 }
 
-export default function EditorialInsightsSection({ articles, animate = true, className = '' }) {
+export default function EditorialInsightsSection({
+  articles,
+  animate = true,
+  className = '',
+  highlighted = false,
+}) {
   if (!articles?.length) return null
 
   const byType = {
@@ -121,33 +129,38 @@ export default function EditorialInsightsSection({ articles, animate = true, cla
 
   return (
     <MotionSection
+      id="editorial-insights"
       initial={animate ? { opacity: 0, y: 20 } : false}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2, duration: 0.45 }}
-      className={className}
+      className={`scroll-mt-24 rounded-3xl p-1 transition-all duration-300 sm:p-2 ${
+        highlighted
+          ? 'explore-editorial-highlight ring-2 ring-[#E07A5F]/30 ring-offset-2 ring-offset-[#FDFBF7]'
+          : ''
+      } ${className}`}
     >
-      <header className="mb-8 sm:mb-10">
-        <p className="mb-2 text-sm font-bold uppercase tracking-wide text-[#E07A5F]">
-          Per approfondire
-        </p>
-        <h2 className="text-2xl font-extrabold tracking-tight text-slate-800 sm:text-3xl">
-          Articoli, storie e interviste
-        </h2>
-        <p className="mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
-          Contenuti verificati dal team Wenando — guide pratiche, esperienze reali e
-          conversazioni con esperti.
-        </p>
-      </header>
+      <div className={highlighted ? 'rounded-2xl p-4 sm:p-6' : ''}>
+        <header className="mb-6 sm:mb-8 lg:mb-10">
+          <p className="explore-section-label mb-2">Per approfondire</p>
+          <h2 className="explore-section-title text-[1.75rem] sm:text-3xl lg:text-[2rem]">
+            Articoli, storie e interviste
+          </h2>
+          <p className="mt-2.5 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
+            Contenuti verificati dal team Wenando — guide pratiche, esperienze reali e
+            conversazioni con esperti.
+          </p>
+        </header>
 
-      <div className="space-y-10 sm:space-y-12">
-        <ContentSection type="article" items={byType.article} animate={animate} startIndex={0} />
-        <ContentSection type="story" items={byType.story} animate={animate} startIndex={4} />
-        <ContentSection
-          type="interview"
-          items={byType.interview}
-          animate={animate}
-          startIndex={8}
-        />
+        <div className="space-y-8 sm:space-y-10 lg:space-y-12">
+          <ContentSection type="article" items={byType.article} animate={animate} startIndex={0} />
+          <ContentSection type="story" items={byType.story} animate={animate} startIndex={4} />
+          <ContentSection
+            type="interview"
+            items={byType.interview}
+            animate={animate}
+            startIndex={8}
+          />
+        </div>
       </div>
     </MotionSection>
   )

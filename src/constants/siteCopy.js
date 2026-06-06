@@ -161,3 +161,60 @@ export const SITE_META = {
   description:
     'Wenando è un motore di ricerca gratuito per trovare strutture e servizi per anziani. Cerca da solo o fatti guidare passo dopo passo.',
 }
+
+/** Nando companion copy — explore / results flow */
+export const NANDO_COPY = {
+  name: 'Nando',
+  tagline: 'Ti accompagno nella ricerca.',
+  rationaleHeading: 'Ecco perché',
+  rationaleFallback:
+    'Percorso orientativo basato sulle informazioni che ci hai dato finora.',
+  microPromptDefault: 'Affina la ricerca con qualche domanda in più.',
+  loading: 'Nando sta pensando…',
+  complete: 'Ho abbastanza info per ora — scrivimi se vuoi aggiungere dettagli.',
+  inputPlaceholder: 'Scrivi… zona, budget, esigenze',
+  expandLabel: 'Affina con Nando',
+  refineHeading: 'Affina questo percorso',
+  refineHint: 'Ogni dettaglio migliora le proposte — puoi saltare e tornare dopo.',
+}
+
+export const AUTONOMY_COPY = {
+  eyebrow: 'Livello di autonomia',
+  forPath: 'Per il percorso:',
+  skip: 'Lo faccio dopo',
+}
+
+/** Explore contact-intent flow — Phase 6 */
+export const CONTACT_INTENT_COPY = {
+  modalTitle: 'Contatta strutture in zona',
+  modalSubtitle:
+    'Solo se e quando decidi tu. Nessun contatto automatico: le strutture vedranno la tua richiesta solo dopo conferma.',
+  antiFraud:
+    'Wenando non chiede pagamenti anticipati per metterti in contatto. Se qualcuno ti chiede bonifici o pressioni, segnalacelo.',
+  summaryHeading: 'Riepilogo ricerca',
+  zoneLabel: 'Zona',
+  autonomyLabel: 'Livello di autonomia',
+  budgetLabel: 'Budget indicativo',
+  contactHeading: 'Come possiamo ricontattarti',
+  nomePlaceholder: 'Il tuo nome',
+  telefonoPlaceholder: 'Telefono (es. +39 333 123 4567)',
+  emailPlaceholder: 'Email (facoltativa)',
+  submit: 'Cerca strutture compatibili',
+  submitting: 'Sto cercando strutture…',
+  cancel: 'Annulla',
+  scopriDiPiu: 'Scopri di più',
+  contattaCta: 'Contatta strutture in zona',
+  resultsTitle: 'Strutture in zona',
+  resultsSubtitle:
+    'Solo strutture verificate Wenando compatibili con zona e percorso scelto. I dettagli di contatto restano protetti finché non procedi.',
+  emptyTitle: 'Nessuna struttura in questa zona per ora',
+  emptyBody:
+    'Prova ad ampliare l’area di ricerca — ad esempio un’intera provincia — o modifica il budget indicativo.',
+  emptyAction: 'Amplia la zona',
+  closeResults: 'Chiudi',
+  errorGeneric: 'Impossibile completare la richiesta. Riprova tra poco.',
+  offlineNotice:
+    'Connessione non disponibile — salva i tuoi dati e riprova quando sei online.',
+  consentIntro:
+    'Per inoltrare la richiesta alle strutture partner devi accettare quanto segue:',
+}
