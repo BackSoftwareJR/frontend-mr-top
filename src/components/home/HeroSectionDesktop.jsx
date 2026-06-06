@@ -32,7 +32,7 @@ export default function HeroSectionDesktop() {
         words={HOME_HERO.title}
         className="relative z-10 mb-6 max-w-4xl text-4xl font-extrabold leading-[1.05] tracking-tight sm:mb-6 sm:text-6xl md:text-7xl lg:text-8xl"
         startIndex={0}
-        neutralWords={[1, 3, 4, 7, 9, 10]}
+        neutralWords={[0, 3, 4]}
         trigger="mount"
         trailingAnchorRef={heroDotRef}
         trailingAnchorProps={{

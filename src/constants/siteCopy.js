@@ -1,7 +1,7 @@
 /** Consumer-facing marketing copy — source: wenando-testi-v3.md */
 
 export const HOME_HERO = {
-  title: 'Cerca la struttura o il servizio giusto per te, o per chi ami.',
+  title: 'La guida sicura per chi ami.',
   subtitle:
     'Wenando è un motore di ricerca gratuito per trovare strutture e servizi per anziani. Puoi cercare da solo, oppure farti guidare passo dopo passo. Il team è lì se hai bisogno di qualcuno con cui parlare.',
 }
