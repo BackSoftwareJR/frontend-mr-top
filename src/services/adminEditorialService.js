@@ -463,6 +463,16 @@ export async function fetchContentAnalytics(uuid, { from, to } = {}) {
   }
 }
 
+export async function fetchEditorialNotifications() {
+  const response = await apiClient.get('/admin/editorial/notifications')
+  const data = unwrapApiData(response)
+
+  return {
+    notifications: Array.isArray(data.notifications) ? data.notifications : [],
+    unreadCount: data.unread_count ?? data.unreadCount ?? 0,
+  }
+}
+
 export const EDITORIAL_STATUS_COLORS = {
   draft: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/25',
   pending_review: 'bg-amber-500/15 text-amber-400 border-amber-500/25',
