@@ -3,33 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown } from 'lucide-react'
 import MulticolorHeading from '../ui/MulticolorHeading'
 import SectionBlob from '../ui/SectionBlob'
-
-const FAQS = [
-  {
-    question: 'Quanto costa il servizio Wenando?',
-    answer:
-      "L'analisi iniziale è completamente gratuita per le famiglie. Il nostro compenso arriva dalle strutture partner, solo se decidete di procedere con una di esse.",
-    accent: '#E07A5F',
-  },
-  {
-    question: 'Quanto tempo ci vuole per ricevere le proposte?',
-    answer:
-      'In media entro 48 ore lavorative. Per situazioni urgenti, segnalatecelo nel modulo e attiviamo la priorità.',
-    accent: '#E9A84A',
-  },
-  {
-    question: 'Perché non mostrate un catalogo di strutture?',
-    answer:
-      'Ogni famiglia ha esigenze diverse. Preferiamo analizzare la vostra situazione nel dettaglio prima di consigliare qualsiasi soluzione — così le proposte sono davvero pertinenti.',
-    accent: '#9B8EC4',
-  },
-  {
-    question: 'Posso cambiare struttura se non siamo soddisfatti?',
-    answer:
-      'Assolutamente sì. Vi accompagniamo anche dopo la scelta, senza costi aggiuntivi, finché non trovate la soluzione giusta.',
-    accent: '#E879A0',
-  },
-]
+import { FAQ_ITEMS } from '../../constants/siteCopy'
 
 function FAQItem({ faq, index, isOpen, onToggle }) {
   const step = String(index + 1).padStart(2, '0')
@@ -98,26 +72,17 @@ export default function FAQSectionDesktop() {
   const [openIndex, setOpenIndex] = useState(0)
 
   const sidebar = (
-    <>
-      <p className="mb-3 text-xs font-semibold tracking-[0.2em] text-slate-400 uppercase">
-        Domande frequenti
-      </p>
-      <MulticolorHeading
-        as="h2"
-        words="Siamo qui per chiarire ogni dubbio"
-        className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl"
-        startIndex={0}
-      />
-      <p className="mx-auto mt-5 max-w-sm text-base leading-relaxed text-slate-600 lg:mx-0">
-        Risposte dirette, senza tecnicismi. Se non trovi quello che cerchi,
-        scrivici — rispondiamo sempre.
-      </p>
-    </>
+    <MulticolorHeading
+      as="h2"
+      words="Domande frequenti"
+      className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl"
+      startIndex={0}
+    />
   )
 
   const faqList = (
     <div className="border-t border-slate-200/80">
-      {FAQS.map((faq, index) => (
+      {FAQ_ITEMS.map((faq, index) => (
         <FAQItem
           key={faq.question}
           faq={faq}

@@ -14,10 +14,8 @@ export const MORPH_SPRING = {
 export const ANCHOR_ORDER = [
   'hero-dot',
   'hero-cta',
-  'stats',
+  'bento',
   'personalized',
-  'testimonials',
-  'trust',
   'faq',
   'cta-final',
 ]

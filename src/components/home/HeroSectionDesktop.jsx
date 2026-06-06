@@ -4,6 +4,7 @@ import HomeSearchBar from './HomeSearchBar'
 import MulticolorHeading from '../ui/MulticolorHeading'
 import WenandoLogo, { WenandoMark } from '../ui/WenandoLogo'
 import SectionBlob from '../ui/SectionBlob'
+import { HOME_HERO } from '../../constants/siteCopy'
 
 export default function HeroSectionDesktop() {
   const heroDotRef = useRef(null)
@@ -28,10 +29,10 @@ export default function HeroSectionDesktop() {
 
       <MulticolorHeading
         as="h1"
-        words="La guida sicura per chi ami."
+        words={HOME_HERO.title}
         className="relative z-10 mb-6 max-w-4xl text-4xl font-extrabold leading-[1.05] tracking-tight sm:mb-6 sm:text-6xl md:text-7xl lg:text-8xl"
         startIndex={0}
-        neutralWords={[0, 3, 4]}
+        neutralWords={[1, 3, 4, 7, 9, 10]}
         trigger="mount"
         trailingAnchorRef={heroDotRef}
         trailingAnchorProps={{
@@ -46,9 +47,7 @@ export default function HeroSectionDesktop() {
         transition={{ delay: 0.5, duration: 0.6 }}
         className="relative z-10 mb-10 max-w-2xl text-lg font-medium leading-relaxed text-slate-600 sm:mb-12 sm:text-xl md:text-2xl"
       >
-        Non un catalogo di strutture — un&apos;analisi personalizzata della{' '}
-        <span className="font-semibold text-[#E07A5F]">vostra</span> situazione,
-        con l&apos;empatia di chi vi ascolta davvero.
+        {HOME_HERO.subtitle}
       </motion.p>
 
       <motion.div

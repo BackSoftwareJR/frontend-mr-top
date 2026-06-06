@@ -7,14 +7,12 @@ import HomeSearchBar from './HomeSearchBar'
 import MulticolorHeading from '../ui/MulticolorHeading'
 import WenandoLogo, { WenandoMark } from '../ui/WenandoLogo'
 import BentoSteps from './BentoSteps'
-import StatsSection from './StatsSection'
 import PersonalizedAnalysisSection from './PersonalizedAnalysisSection'
-import TestimonialsSection from './TestimonialsSection'
-import TrustPartnersSection from './TrustPartnersSection'
 import FAQSection from './FAQSection'
 import CTASection from './CTASection'
 import AuroraBackground from '../layout/AuroraBackground'
 import SectionBlob from '../ui/SectionBlob'
+import { HOME_CTA, HOME_HERO } from '../../constants/siteCopy'
 
 const HomeNavDesktop = lazy(() => import('./HomeNavDesktop'))
 const HeroSectionDesktop = lazy(() => import('./HeroSectionDesktop'))
@@ -39,7 +37,7 @@ function MobileHomeNavLinks() {
           variant="outline-coral"
           className={MOBILE_NAV_CTA_CLASS}
         >
-          Inizia ora →
+          {HOME_CTA.label} →
         </MagneticButton>
       </div>
     </>
@@ -63,7 +61,7 @@ function HomeNavLinks() {
           variant="outline-coral"
           className="!min-h-[44px] !px-5 !py-2.5 !text-sm !font-semibold"
         >
-          Inizia ora →
+          {HOME_CTA.label} →
         </MagneticButton>
       </div>
     </>
@@ -102,6 +100,24 @@ function HomeFooter() {
   return (
     <footer className="border-t border-black/5 px-6 py-12 text-center">
       <div className="mb-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+        <Link
+          to="/come-funziona"
+          className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-800"
+        >
+          Come funziona
+        </Link>
+        <span className="hidden text-slate-300 sm:inline" aria-hidden>
+          ·
+        </span>
+        <Link
+          to="/chi-siamo"
+          className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-800"
+        >
+          Chi siamo
+        </Link>
+        <span className="hidden text-slate-300 sm:inline" aria-hidden>
+          ·
+        </span>
         <Link
           to="/privacy"
           className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-800"
@@ -145,7 +161,7 @@ function HomeFooter() {
         </Link>
       </div>
       <p className="text-sm text-slate-500">
-        © 2026 Wenando — Con cura, per chi ami.
+        © 2026 Wenando — Motore di ricerca gratuito per servizi anziani.
       </p>
     </footer>
   )
@@ -174,10 +190,10 @@ function HeroSectionStatic() {
 
       <MulticolorHeading
         as="h1"
-        words="La guida sicura per chi ami."
+        words={HOME_HERO.title}
         className="hero-fade-in-heading relative z-10 mb-2.5 max-w-[22rem] text-[2.75rem] font-extrabold leading-[1.06] tracking-tight sm:max-w-4xl"
         startIndex={0}
-        neutralWords={[0, 3, 4]}
+        neutralWords={[1, 3, 4, 7, 9, 10]}
         trigger="mount"
         trailingAnchorRef={heroDotRef}
         trailingAnchorProps={{
@@ -187,9 +203,7 @@ function HeroSectionStatic() {
       />
 
       <p className="hero-fade-in relative z-10 mb-5 max-w-[21rem] text-[1.0625rem] font-medium leading-snug text-slate-600 sm:max-w-2xl sm:text-lg">
-        Non un catalogo di strutture — un&apos;analisi personalizzata della{' '}
-        <span className="font-semibold text-[#E07A5F]">vostra</span> situazione,
-        con l&apos;empatia di chi vi ascolta davvero.
+        {HOME_HERO.subtitle}
       </p>
 
       <div className="hero-fade-in-delay relative z-10 flex w-full justify-center px-1">
@@ -221,10 +235,7 @@ export function HomePageContent() {
         <HomeNav />
         <HeroSection />
         <BentoSteps />
-        <StatsSection />
         <PersonalizedAnalysisSection />
-        <TestimonialsSection />
-        <TrustPartnersSection />
         <FAQSection />
         <CTASection />
         <HomeFooter />

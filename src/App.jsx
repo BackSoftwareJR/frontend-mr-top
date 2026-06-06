@@ -52,6 +52,8 @@ const PrivacyPage = lazyRoute(() => import('./pages/legal/PrivacyPage'))
 const CookiesPage = lazyRoute(() => import('./pages/legal/CookiesPage'))
 const TermsPage = lazyRoute(() => import('./pages/legal/TermsPage'))
 const TermsPartnersPage = lazyRoute(() => import('./pages/legal/TermsPartnersPage'))
+const ComeFunzionaPage = lazyRoute(() => import('./pages/ComeFunzionaPage'))
+const ChiSiamoPage = lazyRoute(() => import('./pages/ChiSiamoPage'))
 const NotFoundPage = lazyRoute(() => import('./pages/errors/NotFoundPage'))
 const ErrorStatusPage = lazyRoute(() => import('./pages/errors/ErrorStatusPage'))
 
@@ -104,6 +106,8 @@ function AppRoutes() {
         <Route path="/esplora" element={<ExplorePage />} />
         <Route path="/results" element={<ResultsPage />} />
         <Route path="/accedi" element={<Accedi />} />
+        <Route path="/come-funziona" element={<ComeFunzionaPage />} />
+        <Route path="/chi-siamo" element={<ChiSiamoPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/cookies" element={<CookiesPage />} />
         <Route path="/terms" element={<TermsPage />} />

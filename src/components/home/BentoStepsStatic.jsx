@@ -1,6 +1,6 @@
-import AnimatedText from '../ui/AnimatedText'
 import MulticolorHeading from '../ui/MulticolorHeading'
 import SectionBlob from '../ui/SectionBlob'
+import { HOME_BENTO } from '../../constants/siteCopy'
 import { BENTO_STEPS } from './bentoShared'
 
 export default function BentoStepsStatic() {
@@ -22,14 +22,11 @@ export default function BentoStepsStatic() {
 
         <div className="relative z-10">
           <div className="mb-10 text-center sm:mb-12">
-            <p className="mb-2.5 text-sm font-semibold tracking-widest text-slate-400 uppercase">
-              Come funziona
-            </p>
             <MulticolorHeading
               as="h2"
-              words="Tre passi con cura"
+              words={HOME_BENTO.label}
               className="text-xl font-extrabold leading-[1.1] tracking-tight sm:text-2xl"
-              startIndex={1}
+              startIndex={0}
             />
           </div>
 
@@ -56,13 +53,7 @@ export default function BentoStepsStatic() {
                   </span>
 
                   <div className="relative">
-                    <AnimatedText
-                      text={step.tagline}
-                      as="p"
-                      className={`mb-4 text-sm font-bold tracking-wide sm:text-base ${step.accentColor}`}
-                    />
-
-                    <h3 className="mb-2 text-lg font-bold text-slate-800">
+                    <h3 className={`mb-3 text-lg font-bold ${step.accentColor}`}>
                       {step.title}
                     </h3>
 

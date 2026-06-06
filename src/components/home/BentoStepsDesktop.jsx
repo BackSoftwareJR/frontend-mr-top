@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
-import AnimatedText from '../ui/AnimatedText'
 import MulticolorHeading from '../ui/MulticolorHeading'
 import SectionBlob from '../ui/SectionBlob'
+import { HOME_BENTO } from '../../constants/siteCopy'
 import {
   BENTO_STEPS,
   bentoCardVariants,
@@ -33,14 +33,11 @@ export default function BentoStepsDesktop() {
           viewport={{ once: true, amount: 0.25 }}
         >
           <motion.div variants={bentoCardVariants} className="mb-12 text-center sm:mb-14">
-            <p className="mb-3 text-sm font-semibold tracking-widest text-slate-400 uppercase">
-              Come funziona
-            </p>
             <MulticolorHeading
               as="h2"
-              words="Tre passi con cura"
+              words={HOME_BENTO.label}
               className="text-2xl font-extrabold tracking-tight sm:text-3xl md:text-4xl"
-              startIndex={1}
+              startIndex={0}
             />
           </motion.div>
 
@@ -74,13 +71,7 @@ export default function BentoStepsDesktop() {
                   </span>
 
                   <div className="relative">
-                    <AnimatedText
-                      text={step.tagline}
-                      as="p"
-                      className={`mb-4 text-sm font-bold tracking-wide sm:text-base ${step.accentColor}`}
-                    />
-
-                    <h3 className="mb-2 text-lg font-bold text-slate-800">
+                    <h3 className={`mb-3 text-lg font-bold ${step.accentColor}`}>
                       {step.title}
                     </h3>
 

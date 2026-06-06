@@ -2,33 +2,7 @@ import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import MulticolorHeading from '../ui/MulticolorHeading'
 import SectionBlob from '../ui/SectionBlob'
-
-const FAQS = [
-  {
-    question: 'Quanto costa il servizio Wenando?',
-    answer:
-      "L'analisi iniziale è completamente gratuita per le famiglie. Il nostro compenso arriva dalle strutture partner, solo se decidete di procedere con una di esse.",
-    accent: '#E07A5F',
-  },
-  {
-    question: 'Quanto tempo ci vuole per ricevere le proposte?',
-    answer:
-      'In media entro 48 ore lavorative. Per situazioni urgenti, segnalatecelo nel modulo e attiviamo la priorità.',
-    accent: '#E9A84A',
-  },
-  {
-    question: 'Perché non mostrate un catalogo di strutture?',
-    answer:
-      'Ogni famiglia ha esigenze diverse. Preferiamo analizzare la vostra situazione nel dettaglio prima di consigliare qualsiasi soluzione — così le proposte sono davvero pertinenti.',
-    accent: '#9B8EC4',
-  },
-  {
-    question: 'Posso cambiare struttura se non siamo soddisfatti?',
-    answer:
-      'Assolutamente sì. Vi accompagniamo anche dopo la scelta, senza costi aggiuntivi, finché non trovate la soluzione giusta.',
-    accent: '#E879A0',
-  },
-]
+import { FAQ_ITEMS } from '../../constants/siteCopy'
 
 function FAQItem({ faq, index, isOpen, onToggle }) {
   const step = String(index + 1).padStart(2, '0')
@@ -99,23 +73,16 @@ export default function FAQSectionStatic() {
       <div className="relative z-10 mx-auto max-w-6xl">
         <div className="grid gap-12 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start lg:gap-16 xl:gap-24">
           <div className="text-center lg:sticky lg:top-28 lg:text-left">
-            <p className="mb-3 text-xs font-semibold tracking-[0.2em] text-slate-400 uppercase">
-              Domande frequenti
-            </p>
             <MulticolorHeading
               as="h2"
-              words="Siamo qui per chiarire ogni dubbio"
+              words="Domande frequenti"
               className="text-2xl font-extrabold leading-[1.1] tracking-tight sm:text-3xl"
               startIndex={0}
             />
-            <p className="mx-auto mt-5 max-w-sm text-base leading-relaxed text-slate-600 lg:mx-0">
-              Risposte dirette, senza tecnicismi. Se non trovi quello che cerchi,
-              scrivici — rispondiamo sempre.
-            </p>
           </div>
 
           <div className="border-t border-slate-200/80">
-            {FAQS.map((faq, index) => (
+            {FAQ_ITEMS.map((faq, index) => (
               <FAQItem
                 key={faq.question}
                 faq={faq}

@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom'
 import { MORPH_SPRING } from '../../data/readingPathSchema'
 import ConsumerAccediNavLink from './ConsumerAccediNavLink'
 import MagneticButton from '../ui/MagneticButton'
+import { HOME_CTA } from '../../constants/siteCopy'
 import WenandoLogo, { WenandoMark } from '../ui/WenandoLogo'
 
 const NAV_SCROLL_RANGE = [0, 140]
@@ -56,7 +57,7 @@ function HomeNavActions() {
         variant="outline-coral"
         className="!px-4 !py-2 !text-sm sm:!px-5 sm:!py-2.5"
       >
-        Inizia ora →
+        {HOME_CTA.label} →
       </MagneticButton>
     </div>
   )
