@@ -31,6 +31,7 @@ Each sprint is split into **agent-sized sub-phases** (0a, 0b, …). After comple
 | **5** | Admin CMS UI + SEO approval + B2B portal | 5a ✅, 5b ✅, 5c ✅ | frontend + backend |
 | **6** | Agent webhooks + analytics polish | 6a ✅, 6b ✅, 6c ✅ | backend + frontend |
 | **7** | Editorial analytics dashboards | 7a ✅, 7b ✅, 7c ✅, 7d ✅ | backend + frontend |
+| **8** | Editor UX polish | 8a | frontend |
 
 ---
 
@@ -1708,4 +1709,61 @@ npm run lint && npm run build
 
 ---
 
-*Document version: 2.13 · Sprint 7e complete · Editorial notifications & digest live*
+## Sprint 8 — Editor UX polish
+
+### Sprint 8a — Drag-and-Drop Tile Editor ✅ DONE
+
+**Status:** ✅ DONE (2026-06-06)
+
+**Goals:** Wix-style drag-and-drop section reorder in canvas mode; same DnD in advanced block list; section selection with duplicate/delete actions.
+
+**Agent tasks (completed)**
+
+- [x] Install `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`
+- [x] `useSortableList.js` — shared hook (pointer + touch sensors, keyboard a11y)
+- [x] `SortableSection.jsx` — always-visible grip handle, coral selection ring, floating duplicate/delete
+- [x] `SortableBlockRow.jsx` — advanced mode block list DnD
+- [x] `DropIndicatorLine.jsx` — coral drop indicator while dragging
+- [x] `duplicateLayoutBlock()` in `blockUtils.js` — deep copy with fresh UUID
+- [x] Italian tooltips: "Trascina per riordinare", "Duplica sezione"
+- [x] Drag disabled when `disabled={true}` (B2B read-only)
+
+**Acceptance criteria**
+
+- [x] Canvas sections reorder via drag handle (no up/down buttons)
+- [x] Advanced mode blocks reorder via same DnD pattern
+- [x] Click section → coral ring + floating duplicate/delete
+- [x] Touch-friendly activation (200ms delay) for tablet
+- [x] `npm run lint && npm run build` — pass
+
+**Dependencies:** Sprint 5a (TileEditor), Sprint 7d (layout templates)
+
+**Repo:** `frontend/` (workspace root)
+
+**Files added**
+
+```
+src/components/admin/editorial/useSortableList.js
+src/components/admin/editorial/SortableSection.jsx
+src/components/admin/editorial/SortableBlockRow.jsx
+src/components/admin/editorial/DropIndicatorLine.jsx
+```
+
+**Files changed**
+
+```
+package.json
+package-lock.json
+src/components/admin/editorial/TileEditor.jsx
+src/components/admin/editorial/BlockEditor.jsx
+src/components/admin/editorial/blockUtils.js
+docs/EDITORIAL_SPRINT_PLAN.md
+```
+
+### Handoff — Sprint 8a COMPLETE
+
+**Next agent START: Sprint 8b — (TBD)**
+
+---
+
+*Document version: 2.14 · Sprint 8a complete · Drag-and-drop tile editor live*

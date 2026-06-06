@@ -8,6 +8,19 @@ export function createBlockId() {
   return `block-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 }
 
+/** Deep-copy a layout (or any) block with a fresh id. */
+export function duplicateLayoutBlock(block) {
+  const copy =
+    typeof structuredClone === 'function'
+      ? structuredClone(block)
+      : JSON.parse(JSON.stringify(block))
+
+  return {
+    ...copy,
+    id: createBlockId(),
+  }
+}
+
 /** @param {string} templateId */
 export function createLayoutBlock(templateId) {
   const template = getLayoutTemplate(templateId)

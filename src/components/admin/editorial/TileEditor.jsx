@@ -1,54 +1,19 @@
-import { useState } from 'react'
-import { ChevronDown, ChevronUp, LayoutGrid, Plus, Trash2, Type } from 'lucide-react'
+import { useCallback, useState } from 'react'
+import { DndContext, DragOverlay } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { LayoutGrid, Plus, Type } from 'lucide-react'
 import TemplatePicker from './TemplatePicker'
 import LayoutSection from './layouts/LayoutSection'
 import BlockEditor from './BlockEditor'
-import { createLayoutBlock } from './blockUtils'
+import SortableSection from './SortableSection'
+import { createLayoutBlock, duplicateLayoutBlock } from './blockUtils'
 import { getLayoutTemplate, QUICK_ADD_TEMPLATES } from './layouts/registry'
-
-function SectionToolbar({ index, total, label, onMoveUp, onMoveDown, onDelete, disabled }) {
-  return (
-    <div className="mb-2 flex items-center justify-between gap-2 rounded-lg bg-zinc-900/90 px-3 py-1.5 opacity-0 transition-opacity group-hover:opacity-100">
-      <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
-        {label}
-      </span>
-      <div className="flex shrink-0 items-center gap-0.5">
-        <button
-          type="button"
-          disabled={disabled || index === 0}
-          onClick={onMoveUp}
-          className="rounded p-1 text-zinc-400 hover:text-white disabled:opacity-30"
-          title="Sposta su"
-        >
-          <ChevronUp className="h-3.5 w-3.5" />
-        </button>
-        <button
-          type="button"
-          disabled={disabled || index >= total - 1}
-          onClick={onMoveDown}
-          className="rounded p-1 text-zinc-400 hover:text-white disabled:opacity-30"
-          title="Sposta giù"
-        >
-          <ChevronDown className="h-3.5 w-3.5" />
-        </button>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={onDelete}
-          className="rounded p-1 text-red-400/80 hover:text-red-400 disabled:opacity-30"
-          title="Elimina sezione"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
-      </div>
-    </div>
-  )
-}
+import { getSortableId, useSortableList } from './useSortableList'
 
 export default function TileEditor({ blocks, onChange, disabled = false, b2bMode = false }) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [mode, setMode] = useState('visual')
-  const [selectedIndex, setSelectedIndex] = useState(null)
+  const [selectedSectionId, setSelectedSectionId] = useState(null)
   const safeBlocks = Array.isArray(blocks) ? blocks : []
 
   const quickAddTemplates = QUICK_ADD_TEMPLATES.filter(({ id }) => {
@@ -56,44 +21,42 @@ export default function TileEditor({ blocks, onChange, disabled = false, b2bMode
     return template && (!b2bMode || template.b2bAllowed)
   })
 
+  const selectedIndex = safeBlocks.findIndex(
+    (block, index) => getSortableId(block, index) === selectedSectionId
+  )
+
   const updateBlock = (index, nextBlock) => {
     const next = [...safeBlocks]
     next[index] = nextBlock
     onChange(next)
   }
 
-  const moveBlock = (index, direction) => {
-    const target = index + direction
-    if (target < 0 || target >= safeBlocks.length) return
-    const next = [...safeBlocks]
-    ;[next[index], next[target]] = [next[target], next[index]]
-    onChange(next)
-    if (selectedIndex === index) {
-      setSelectedIndex(target)
-    } else if (selectedIndex === target) {
-      setSelectedIndex(index)
+  const deleteBlock = (index) => {
+    const removedId = getSortableId(safeBlocks[index], index)
+    onChange(safeBlocks.filter((_, i) => i !== index))
+    if (selectedSectionId === removedId) {
+      setSelectedSectionId(null)
     }
   }
 
-  const deleteBlock = (index) => {
-    onChange(safeBlocks.filter((_, i) => i !== index))
-    if (selectedIndex === index) {
-      setSelectedIndex(null)
-    } else if (selectedIndex !== null && selectedIndex > index) {
-      setSelectedIndex(selectedIndex - 1)
-    }
+  const duplicateBlock = (index) => {
+    const copy = duplicateLayoutBlock(safeBlocks[index])
+    const next = [...safeBlocks]
+    next.splice(index + 1, 0, copy)
+    onChange(next)
+    setSelectedSectionId(copy.id)
   }
 
   const addLayout = (templateId) => {
     const newBlock = createLayoutBlock(templateId)
-    if (selectedIndex !== null && selectedIndex >= 0 && selectedIndex < safeBlocks.length) {
+    if (selectedIndex >= 0 && selectedIndex < safeBlocks.length) {
       const next = [...safeBlocks]
       next.splice(selectedIndex + 1, 0, newBlock)
       onChange(next)
-      setSelectedIndex(selectedIndex + 1)
+      setSelectedSectionId(newBlock.id)
     } else {
       onChange([...safeBlocks, newBlock])
-      setSelectedIndex(safeBlocks.length)
+      setSelectedSectionId(newBlock.id)
     }
   }
 
@@ -106,6 +69,25 @@ export default function TileEditor({ blocks, onChange, disabled = false, b2bMode
       return getLayoutTemplate(block.data?.template_id)?.label ?? 'Layout'
     }
     return block.type
+  }
+
+  const handleReorder = useCallback(
+    (next) => {
+      onChange(next)
+    },
+    [onChange]
+  )
+
+  const sortable = useSortableList({
+    items: safeBlocks,
+    onReorder: handleReorder,
+    disabled,
+  })
+
+  const showDropBefore = (index) => {
+    if (sortable.activeIndex === -1 || sortable.overIndex === -1) return false
+    if (sortable.activeIndex === sortable.overIndex) return false
+    return sortable.overIndex === index
   }
 
   return (
@@ -178,9 +160,12 @@ export default function TileEditor({ blocks, onChange, disabled = false, b2bMode
       ) : null}
 
       {mode === 'advanced' ? (
-        <BlockEditor blocks={safeBlocks} onChange={onChange} />
+        <BlockEditor blocks={safeBlocks} onChange={onChange} disabled={disabled} />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#FDFBF7] p-4 sm:p-6">
+        <div
+          className="overflow-hidden rounded-2xl border border-white/10 bg-[#FDFBF7] p-4 sm:p-6"
+          onClick={() => setSelectedSectionId(null)}
+        >
           {safeBlocks.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <LayoutGrid className="mb-3 h-10 w-10 text-[#E07A5F]/40" />
@@ -200,78 +185,85 @@ export default function TileEditor({ blocks, onChange, disabled = false, b2bMode
               ) : null}
             </div>
           ) : (
-            <div className="space-y-6">
-              {safeBlocks.map((block, index) => (
-                <div
-                  key={block.id ?? index}
-                  className={`group relative rounded-xl transition-shadow ${
-                    selectedIndex === index
-                      ? 'ring-2 ring-[#E07A5F] ring-offset-2 ring-offset-[#FDFBF7]'
-                      : ''
-                  }`}
-                  onClick={() => setSelectedIndex(index)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      setSelectedIndex(index)
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  aria-pressed={selectedIndex === index}
-                  aria-label={`Sezione ${index + 1}: ${blockLabel(block)}`}
-                >
-                  <SectionToolbar
-                    index={index}
-                    total={safeBlocks.length}
-                    label={blockLabel(block)}
-                    onMoveUp={() => moveBlock(index, -1)}
-                    onMoveDown={() => moveBlock(index, 1)}
-                    onDelete={() => deleteBlock(index)}
-                    disabled={disabled}
-                  />
+            <DndContext
+              sensors={sortable.sensors}
+              collisionDetection={sortable.collisionDetection}
+              onDragStart={sortable.onDragStart}
+              onDragOver={sortable.onDragOver}
+              onDragEnd={sortable.onDragEnd}
+              onDragCancel={sortable.onDragCancel}
+            >
+              <SortableContext items={sortable.itemIds} strategy={verticalListSortingStrategy}>
+                <div className="space-y-6">
+                  {safeBlocks.map((block, index) => {
+                    const sectionId = getSortableId(block, index)
 
-                  {block.type === 'layout' ? (
-                    <LayoutSection
-                      templateId={block.data?.template_id}
-                      slots={block.data?.slots ?? {}}
-                      onSlotsChange={(slots) =>
-                        updateBlock(index, {
-                          ...block,
-                          data: { ...block.data, slots },
-                        })
-                      }
-                      editMode
-                      disabled={disabled}
-                    />
-                  ) : (
-                    <div className="rounded-xl border border-zinc-200 bg-white p-4">
-                      <p className="mb-2 text-[10px] font-semibold uppercase text-zinc-400">
-                        Blocco legacy: {block.type}
-                      </p>
-                      <BlockEditor
-                        blocks={[block]}
-                        onChange={(next) => updateBlock(index, next[0])}
-                      />
-                    </div>
-                  )}
+                    return (
+                      <SortableSection
+                        key={sectionId}
+                        block={block}
+                        index={index}
+                        label={blockLabel(block)}
+                        selected={selectedSectionId === sectionId}
+                        disabled={disabled}
+                        showDropIndicator={showDropBefore(index)}
+                        onSelect={setSelectedSectionId}
+                        onDuplicate={() => duplicateBlock(index)}
+                        onDelete={() => deleteBlock(index)}
+                      >
+                        {block.type === 'layout' ? (
+                          <LayoutSection
+                            templateId={block.data?.template_id}
+                            slots={block.data?.slots ?? {}}
+                            onSlotsChange={(slots) =>
+                              updateBlock(index, {
+                                ...block,
+                                data: { ...block.data, slots },
+                              })
+                            }
+                            editMode
+                            disabled={disabled}
+                          />
+                        ) : (
+                          <div className="rounded-xl border border-zinc-200 bg-white p-4">
+                            <p className="mb-2 text-[10px] font-semibold uppercase text-zinc-400">
+                              Blocco legacy: {block.type}
+                            </p>
+                            <BlockEditor
+                              blocks={[block]}
+                              onChange={(next) => updateBlock(index, next[0])}
+                              disabled={disabled}
+                            />
+                          </div>
+                        )}
+                      </SortableSection>
+                    )
+                  })}
+
+                  {!disabled ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedSectionId(null)
+                        setPickerOpen(true)
+                      }}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#E07A5F]/30 py-6 text-sm font-medium text-[#E07A5F] transition-colors hover:border-[#E07A5F]/50 hover:bg-[#E07A5F]/5"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Aggiungi sezione
+                    </button>
+                  ) : null}
                 </div>
-              ))}
+              </SortableContext>
 
-              {!disabled ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedIndex(null)
-                    setPickerOpen(true)
-                  }}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#E07A5F]/30 py-6 text-sm font-medium text-[#E07A5F] transition-colors hover:border-[#E07A5F]/50 hover:bg-[#E07A5F]/5"
-                >
-                  <Plus className="h-4 w-4" />
-                  Aggiungi sezione
-                </button>
-              ) : null}
-            </div>
+              <DragOverlay dropAnimation={null}>
+                {sortable.activeId ? (
+                  <div className="rounded-xl border-2 border-[#E07A5F]/40 bg-white/90 px-4 py-3 text-xs font-semibold text-[#E07A5F] shadow-lg">
+                    Trascina sezione…
+                  </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
           )}
         </div>
       )}
@@ -281,7 +273,7 @@ export default function TileEditor({ blocks, onChange, disabled = false, b2bMode
         onClose={() => setPickerOpen(false)}
         onSelect={addLayout}
         b2bMode={b2bMode}
-        insertIndex={selectedIndex}
+        insertIndex={selectedIndex >= 0 ? selectedIndex : null}
       />
     </div>
   )
