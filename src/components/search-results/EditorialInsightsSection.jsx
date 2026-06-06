@@ -118,6 +118,7 @@ export default function EditorialInsightsSection({
   animate = true,
   className = '',
   highlighted = false,
+  contextLabel = null,
 }) {
   if (!articles?.length) return null
 
@@ -142,6 +143,9 @@ export default function EditorialInsightsSection({
       <div className={highlighted ? 'rounded-2xl p-4 sm:p-6' : ''}>
         <header className="mb-6 sm:mb-8 lg:mb-10">
           <p className="explore-section-label mb-2">Per approfondire</p>
+          {contextLabel ? (
+            <p className="mb-2 text-xs font-medium text-violet-700/90 sm:text-sm">{contextLabel}</p>
+          ) : null}
           <h2 className="explore-section-title text-[1.75rem] sm:text-3xl lg:text-[2rem]">
             Articoli, storie e interviste
           </h2>

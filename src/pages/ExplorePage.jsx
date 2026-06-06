@@ -22,7 +22,7 @@ import {
   REFINEMENT_CHIP_META,
 } from '../constants/pathRefinement'
 import { CONTACT_INTENT_COPY } from '../constants/siteCopy'
-import { MOCK_BLOG_RESULTS } from '../constants/searchResultsData'
+import { useQueryAwareEditorial } from '../hooks/useEditorialContents'
 import { useNandoGuide } from '../hooks/useNandoGuide'
 import { useSearchOrchestration } from '../hooks/useSearchOrchestration'
 import { submitContactIntent } from '../services/searchService'
@@ -90,7 +90,20 @@ export default function ExplorePage() {
   } = useSearchOrchestration(session)
 
   const pageTitle = orchestratorPageTitle || nandoPageTitle
-  const editorialArticles = editorial?.length ? editorial : MOCK_BLOG_RESULTS
+  const { articles: editorialFromCms, source: editorialSource } = useQueryAwareEditorial(session, {
+    limit: 50,
+  })
+  const editorialArticles = useMemo(() => {
+    if (editorialSource === 'query' && editorialFromCms.length) {
+      return editorialFromCms
+    }
+    if (editorial?.length) {
+      return editorial
+    }
+    return editorialFromCms
+  }, [editorialSource, editorialFromCms, editorial])
+  const editorialContextLabel =
+    editorialSource === 'query' && editorialFromCms.length ? 'In base alla tua ricerca' : null
 
   const activePath = useMemo(
     () => paths.find((path) => path.id === activePathId) ?? null,
@@ -410,6 +423,7 @@ export default function ExplorePage() {
             animate={shouldAnimate}
             className="mt-10"
             highlighted={isEditorialPathActive}
+            contextLabel={editorialContextLabel}
           />
         </main>
       </div>
@@ -458,6 +472,7 @@ export default function ExplorePage() {
             articles={editorialArticles}
             animate={shouldAnimate}
             highlighted={isEditorialPathActive}
+            contextLabel={editorialContextLabel}
           />
         </div>
       </main>
