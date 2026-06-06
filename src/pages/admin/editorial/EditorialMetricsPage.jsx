@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Loader2 } from 'lucide-react'
+import { ArrowRight, BarChart3, Eye, FileText, Layers, Search } from 'lucide-react'
 import {
   EDITORIAL_CONTENT_STATUSES,
   EDITORIAL_CONTENT_TYPES,
@@ -9,17 +9,11 @@ import {
 import { ApiError, isApiConfigured } from '../../../services/apiClient'
 import AdminLoadError from '../../../components/admin/AdminLoadError'
 import EditorialSubNav from '../../../components/admin/editorial/EditorialSubNav'
-import { adminGlassCard, adminPageSubtitle, adminPageTitle } from '../../../components/admin/adminStyles'
-
-function StatCard({ label, value, hint }) {
-  return (
-    <div className={`${adminGlassCard} p-4 sm:p-5`}>
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{label}</p>
-      <p className="mt-2 text-2xl font-bold tabular-nums text-white sm:text-3xl">{value}</p>
-      {hint ? <p className="mt-1 text-xs text-zinc-500">{hint}</p> : null}
-    </div>
-  )
-}
+import { adminGlassCard } from '../../../components/admin/adminStyles'
+import EditorialPageHeader from '../../../components/editorial/EditorialPageHeader'
+import EditorialKpiCard from '../../../components/editorial/EditorialKpiCard'
+import { EditorialKpiSkeleton } from '../../../components/editorial/EditorialListSkeleton'
+import EditorialPageMotion from '../../../components/editorial/EditorialPageMotion'
 
 function HistogramBar({ bucket, maxCount }) {
   const width = maxCount > 0 ? Math.max(4, (bucket.count / maxCount) * 100) : 0
@@ -46,6 +40,10 @@ function typeLabel(type) {
 
 function statusLabel(status) {
   return EDITORIAL_CONTENT_STATUSES.find((entry) => entry.value === status)?.label ?? status
+}
+
+function formatNumber(value) {
+  return new Intl.NumberFormat('it-IT').format(value ?? 0)
 }
 
 export default function EditorialMetricsPage() {
@@ -91,58 +89,65 @@ export default function EditorialMetricsPage() {
     : 0
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className={adminPageTitle}>Metriche editoriali</h1>
-        <p className={adminPageSubtitle}>
-          Pipeline di pubblicazione, SEO, code di moderazione e indicizzazione
-        </p>
-      </header>
+    <EditorialPageMotion className="space-y-6">
+      <EditorialPageHeader
+        variant="admin"
+        title="Metriche editoriali"
+        subtitle="Pipeline di pubblicazione, SEO, code di moderazione e indicizzazione"
+      />
 
       <EditorialSubNav />
 
       {loadError ? (
-        <AdminLoadError message={loadError} onRetry={() => {
-          setLoadError(null)
-          setLoading(true)
-          setRetryCount((c) => c + 1)
-        }} />
+        <AdminLoadError
+          message={loadError}
+          onRetry={() => {
+            setLoadError(null)
+            setLoading(true)
+            setRetryCount((c) => c + 1)
+          }}
+        />
       ) : null}
 
-      {loading ? (
-        <div className="flex items-center justify-center py-16 text-zinc-400">
-          <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
-          <span className="sr-only">Caricamento metriche…</span>
-        </div>
-      ) : null}
+      {loading ? <EditorialKpiSkeleton variant="admin" count={5} /> : null}
 
       {!loading && metrics ? (
         <div className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            <EditorialKpiCard
+              variant="admin"
               label="Pubblicati (30 gg)"
-              value={metrics.publishedLast30Days}
+              value={formatNumber(metrics.publishedLast30Days)}
               hint="Contenuti pubblicati nell'ultimo mese"
+              icon={FileText}
             />
-            <StatCard
+            <EditorialKpiCard
+              variant="admin"
               label="Moderazione in coda"
-              value={metrics.moderationBacklog}
+              value={formatNumber(metrics.moderationBacklog)}
               hint="Pending + in revisione"
+              icon={Layers}
             />
-            <StatCard
+            <EditorialKpiCard
+              variant="admin"
               label="Indice in attesa"
-              value={metrics.indexQueuePending}
+              value={formatNumber(metrics.indexQueuePending)}
               hint="Job indexer pending"
+              icon={Search}
             />
-            <StatCard
+            <EditorialKpiCard
+              variant="admin"
               label="Contenuti totali"
-              value={pipelineTotal}
+              value={formatNumber(pipelineTotal)}
               hint="Tutti gli stati pipeline"
+              icon={BarChart3}
             />
-            <StatCard
+            <EditorialKpiCard
+              variant="admin"
               label="Views magazine (30 gg)"
-              value={metrics.totalViews30d}
+              value={formatNumber(metrics.totalViews30d)}
               hint="Visualizzazioni HTML piattaforma"
+              icon={Eye}
             />
           </div>
 
@@ -155,10 +160,10 @@ export default function EditorialMetricsPage() {
             </div>
             <Link
               to="/admin/editorial/analytics"
-              className="inline-flex items-center gap-2 rounded-xl border border-accent-coral/30 bg-accent-coral/10 px-4 py-2 text-sm font-medium text-accent-coral transition-colors hover:bg-accent-coral/20"
+              className="inline-flex items-center gap-2 rounded-xl border border-accent-coral/30 bg-accent-coral/10 px-4 py-2 text-sm font-medium text-accent-coral transition-colors hover:bg-accent-coral/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-coral/40"
             >
               Apri analytics
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           </section>
 
@@ -215,13 +220,21 @@ export default function EditorialMetricsPage() {
               <h2 className="text-sm font-semibold text-white">Piattaforma (stub)</h2>
               <p className="mt-1 text-xs text-zinc-500">Lead e ricerche dal database principale</p>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <StatCard label="Ricerche (lead)" value={metrics.searchesCount} />
-                <StatCard label="Lead con email" value={metrics.leadsWithEmail} />
+                <EditorialKpiCard
+                  variant="admin"
+                  label="Ricerche (lead)"
+                  value={formatNumber(metrics.searchesCount)}
+                />
+                <EditorialKpiCard
+                  variant="admin"
+                  label="Lead con email"
+                  value={formatNumber(metrics.leadsWithEmail)}
+                />
               </div>
             </section>
           </div>
         </div>
       ) : null}
-    </div>
+    </EditorialPageMotion>
   )
 }

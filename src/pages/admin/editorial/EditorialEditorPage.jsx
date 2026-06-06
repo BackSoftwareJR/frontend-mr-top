@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { AlertTriangle, ArrowLeft, Loader2, Save, Send } from 'lucide-react'
+import { AlertTriangle, ExternalLink, Loader2, Save, Send } from 'lucide-react'
 import {
   createContent,
+  generatePreviewToken,
   getContent,
   getSuggestedLinks,
   transitionContent,
@@ -19,10 +20,13 @@ import {
   createStarterBlocksForContentType,
 } from '../../../components/admin/editorial/blockUtils'
 import { isSeoApproved } from '../../../components/admin/editorial/seoUtils'
-import { adminGlassCard, adminPageSubtitle, adminPageTitle } from '../../../components/admin/adminStyles'
+import { adminGlassCard } from '../../../components/admin/adminStyles'
+import EditorialPageHeader from '../../../components/editorial/EditorialPageHeader'
+import EditorialPageMotion from '../../../components/editorial/EditorialPageMotion'
+import EditorialSaveStatus from '../../../components/editorial/EditorialSaveStatus'
 
 const inputClass =
-  'w-full rounded-xl border border-white/10 bg-zinc-950/60 px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-accent-coral/40 focus:outline-none focus:ring-1 focus:ring-accent-coral/20'
+  'w-full rounded-xl border border-white/10 bg-zinc-950/60 px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-accent-coral/40 focus:outline-none focus:ring-2 focus:ring-accent-coral/20'
 
 const EDITORIAL_TYPES = [
   { value: 'article', label: 'Articolo' },
@@ -30,6 +34,21 @@ const EDITORIAL_TYPES = [
   { value: 'interview', label: 'Intervista' },
   { value: 'event', label: 'Evento' },
 ]
+
+function serializeAdminPayload({ title, subtitle, contentType, rubricId, featured, bodyBlocks }) {
+  return JSON.stringify({
+    title: title.trim(),
+    subtitle: subtitle.trim() || null,
+    content_type: contentType,
+    rubric_id: Number(rubricId),
+    featured,
+    body_blocks: bodyBlocks.map((block) => ({
+      id: block.id,
+      type: block.type,
+      data: block.data ?? {},
+    })),
+  })
+}
 
 function SuggestedLinksPanel({ uuid }) {
   const [links, setLinks] = useState([])
@@ -96,11 +115,13 @@ export default function EditorialEditorPage() {
   const [loading, setLoading] = useState(!isNew && isApiConfigured())
   const [saving, setSaving] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [previewLoading, setPreviewLoading] = useState(false)
   const [loadError, setLoadError] = useState(() =>
     isApiConfigured() ? null : 'Configura VITE_API_URL e accedi come admin.',
   )
   const [toast, setToast] = useState(null)
   const [updatedAt, setUpdatedAt] = useState(null)
+  const [savedSnapshot, setSavedSnapshot] = useState(null)
   const [seoPack, setSeoPack] = useState(null)
 
   const [title, setTitle] = useState('')
@@ -126,6 +147,29 @@ export default function EditorialEditorPage() {
     return undefined
   }, [isNew])
 
+  const buildPayload = useCallback(
+    () => ({
+      title: title.trim(),
+      subtitle: subtitle.trim() || null,
+      content_type: contentType,
+      rubric_id: Number(rubricId),
+      featured,
+      body_blocks: bodyBlocks.map((block) => ({
+        id: block.id,
+        type: block.type,
+        data: block.data ?? {},
+      })),
+    }),
+    [title, subtitle, contentType, rubricId, featured, bodyBlocks],
+  )
+
+  const currentSnapshot = useMemo(
+    () => JSON.stringify(buildPayload()),
+    [buildPayload],
+  )
+
+  const isDirty = savedSnapshot !== null && currentSnapshot !== savedSnapshot
+
   useEffect(() => {
     if (isNew || !uuid || !isApiConfigured()) return undefined
 
@@ -146,6 +190,19 @@ export default function EditorialEditorPage() {
         )
         setUpdatedAt(content.updatedAt)
         setSeoPack(content.seoPack ?? null)
+        setSavedSnapshot(
+          serializeAdminPayload({
+            title: content.title ?? '',
+            subtitle: content.subtitle ?? '',
+            contentType: content.contentType ?? 'article',
+            rubricId: content.rubricId ? String(content.rubricId) : '',
+            featured: Boolean(content.featured),
+            bodyBlocks:
+              content.bodyBlocks?.length > 0
+                ? content.bodyBlocks
+                : createStarterArticleBlocks(),
+          }),
+        )
       })
       .catch((err) => {
         if (!cancelled) {
@@ -176,6 +233,19 @@ export default function EditorialEditorPage() {
     )
     setUpdatedAt(content.updatedAt)
     setSeoPack(content.seoPack ?? null)
+    setSavedSnapshot(
+      serializeAdminPayload({
+        title: content.title ?? '',
+        subtitle: content.subtitle ?? '',
+        contentType: content.contentType ?? 'article',
+        rubricId: content.rubricId ? String(content.rubricId) : '',
+        featured: Boolean(content.featured),
+        bodyBlocks:
+          content.bodyBlocks?.length > 0
+            ? content.bodyBlocks
+            : [createEmptyBlock('heading'), createEmptyBlock('paragraph')],
+      }),
+    )
   }
 
   const reloadContent = () => {
@@ -217,19 +287,6 @@ export default function EditorialEditorPage() {
     setStarterPrompt(nextType)
   }
 
-  const buildPayload = () => ({
-    title: title.trim(),
-    subtitle: subtitle.trim() || null,
-    content_type: contentType,
-    rubric_id: Number(rubricId),
-    featured,
-    body_blocks: bodyBlocks.map((block) => ({
-      id: block.id,
-      type: block.type,
-      data: block.data ?? {},
-    })),
-  })
-
   const handleSave = async () => {
     if (!title.trim()) {
       setToast({ type: 'error', message: 'Il titolo è obbligatorio' })
@@ -253,6 +310,7 @@ export default function EditorialEditorPage() {
       } else {
         const updated = await updateContent(uuid, payload, { updatedAt })
         setUpdatedAt(updated.updatedAt)
+        setSavedSnapshot(currentSnapshot)
         setToast({ type: 'success', message: 'Modifiche salvate' })
       }
     } catch (err) {
@@ -277,6 +335,7 @@ export default function EditorialEditorPage() {
       await updateContent(uuid, buildPayload(), { updatedAt })
       const updated = await transitionContent(uuid, 'pending_review', { updatedAt })
       setUpdatedAt(updated.updatedAt)
+      setSavedSnapshot(currentSnapshot)
       setToast({ type: 'success', message: 'Inviato in revisione' })
     } catch (err) {
       setToast({
@@ -288,9 +347,29 @@ export default function EditorialEditorPage() {
     }
   }
 
+  const handlePreview = async () => {
+    if (isNew) {
+      setToast({ type: 'error', message: 'Salva la bozza prima di aprire l’anteprima' })
+      return
+    }
+
+    setPreviewLoading(true)
+    try {
+      const { previewUrl } = await generatePreviewToken(uuid)
+      if (previewUrl) window.open(previewUrl, '_blank', 'noopener,noreferrer')
+    } catch (err) {
+      setToast({
+        type: 'error',
+        message: err instanceof ApiError ? err.message : 'Impossibile generare l’anteprima',
+      })
+    } finally {
+      setPreviewLoading(false)
+    }
+  }
+
   if (loading) {
     return (
-      <div className={`${adminGlassCard} mx-auto flex max-w-6xl items-center justify-center py-24`}>
+      <div className={`${adminGlassCard} mx-auto flex max-w-7xl items-center justify-center py-24`}>
         <Loader2 className="h-6 w-6 animate-spin text-accent-coral" aria-label="Caricamento" />
       </div>
     )
@@ -298,12 +377,11 @@ export default function EditorialEditorPage() {
 
   if (loadError) {
     return (
-      <div className="mx-auto max-w-6xl space-y-4">
+      <div className="mx-auto max-w-7xl space-y-4">
         <Link
           to="/admin/editorial"
           className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white"
         >
-          <ArrowLeft className="h-4 w-4" />
           Torna alla lista
         </Link>
         <AdminLoadError message={loadError} onRetry={reloadContent} />
@@ -312,50 +390,64 @@ export default function EditorialEditorPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <Link
-            to="/admin/editorial"
-            className="mb-2 inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Editoriale
-          </Link>
-          <h1 className={adminPageTitle}>{isNew ? 'Nuovo contenuto' : 'Modifica contenuto'}</h1>
-          <p className={adminPageSubtitle}>
-            {isNew ? 'Crea una bozza con blocchi heading e paragrafo' : 'Aggiorna titolo, rubrica e corpo'}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving || submitting}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10 disabled:opacity-50"
-          >
-            {saving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4" />
-            )}
-            Salva bozza
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmitReview}
-            disabled={saving || submitting || isNew}
-            className="inline-flex items-center gap-2 rounded-xl border border-accent-coral/30 bg-accent-coral/15 px-4 py-2 text-sm font-medium text-accent-coral transition-colors hover:bg-accent-coral/25 disabled:opacity-50"
-          >
-            {submitting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-            Invia in revisione
-          </button>
-        </div>
-      </div>
+    <EditorialPageMotion className="mx-auto max-w-7xl space-y-6">
+      <EditorialPageHeader
+        variant="admin"
+        title={isNew ? 'Nuovo contenuto' : 'Modifica contenuto'}
+        subtitle={
+          isNew
+            ? 'Crea una bozza con blocchi heading e paragrafo'
+            : 'Aggiorna titolo, rubrica e corpo'
+        }
+        backTo="/admin/editorial"
+        backLabel="Editoriale"
+        badge={!isNew ? <EditorialSaveStatus isDirty={isDirty} variant="admin" /> : null}
+        actions={
+          <>
+            {!isNew ? (
+              <button
+                type="button"
+                onClick={handlePreview}
+                disabled={previewLoading || saving || submitting}
+                className="inline-flex items-center gap-2 rounded-xl border border-accent-coral/30 bg-accent-coral/15 px-4 py-2 text-sm font-medium text-accent-coral transition-colors hover:bg-accent-coral/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-coral/40 disabled:opacity-50"
+              >
+                {previewLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                )}
+                Anteprima
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving || submitting}
+              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-coral/40 disabled:opacity-50"
+            >
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" aria-hidden="true" />
+              )}
+              Salva bozza
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmitReview}
+              disabled={saving || submitting || isNew}
+              className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-400 transition-colors hover:bg-emerald-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 disabled:opacity-50"
+            >
+              {submitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" aria-hidden="true" />
+              )}
+              Invia in revisione
+            </button>
+          </>
+        }
+      />
 
       {toast ? (
         <div
@@ -383,8 +475,8 @@ export default function EditorialEditorPage() {
         </div>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-6">
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
           <div className={`${adminGlassCard} space-y-4 p-4 sm:p-5`}>
             <div>
               <label htmlFor="editorial-title" className="mb-1 block text-xs font-medium text-zinc-500">
@@ -491,7 +583,7 @@ export default function EditorialEditorPage() {
           </div>
         </div>
 
-        <aside className="space-y-4">
+        <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
           <SeoReviewPanel
             uuid={isNew ? null : uuid}
             contentSeoPack={seoPack}
@@ -506,6 +598,6 @@ export default function EditorialEditorPage() {
           {!isNew ? <SuggestedLinksPanel uuid={uuid} /> : null}
         </aside>
       </div>
-    </div>
+    </EditorialPageMotion>
   )
 }

@@ -31,7 +31,8 @@ Each sprint is split into **agent-sized sub-phases** (0a, 0b, …). After comple
 | **5** | Admin CMS UI + SEO approval + B2B portal | 5a ✅, 5b ✅, 5c ✅ | frontend + backend |
 | **6** | Agent webhooks + analytics polish | 6a ✅, 6b ✅, 6c ✅ | backend + frontend |
 | **7** | Editorial analytics dashboards | 7a ✅, 7b ✅, 7c ✅, 7d ✅ | backend + frontend |
-| **8** | Editor UX polish | 8a | frontend |
+| **8** | Enterprise UX polish (admin + B2B) | 8a, 8b, **8c ✅** | frontend |
+| **8** | Editor UX polish | 8a ✅, 8c ✅ | frontend |
 
 ---
 
@@ -1762,8 +1763,76 @@ docs/EDITORIAL_SPRINT_PLAN.md
 
 ### Handoff — Sprint 8a COMPLETE
 
-**Next agent START: Sprint 8b — (TBD)**
+**Next agent START: Sprint 8c — Enterprise admin & B2B pages UX overhaul**
 
 ---
 
-*Document version: 2.14 · Sprint 8a complete · Drag-and-drop tile editor live*
+### Sprint 8c — Enterprise admin & B2B pages UX overhaul ✅ DONE
+
+**Status:** ✅ DONE (2026-06-06)
+
+**Goals:** Shared editorial UI primitives across admin and B2B surfaces — consistent headers, status pills, skeletons, empty states, KPI cards, page motion, save/dirty indicators; editor layout with 2/3 canvas + sticky SEO sidebar; review queue cards with content preview snippets.
+
+**Agent tasks (completed)**
+
+- [x] Shared components in `src/components/editorial/`:
+  - `EditorialPageHeader` — admin/b2b variants with back link, badge slot, actions
+  - `EditorialContentStatusPill` — status labels from admin/B2B services
+  - `EditorialEmptyState` — glass card (admin) / warm card (b2b) with optional CTA
+  - `EditorialKpiCard` + `EditorialKpiSkeleton` / `EditorialTableSkeleton` / `EditorialListSkeleton`
+  - `EditorialPageMotion` — subtle framer-motion fade-in (respects reduced motion)
+  - `EditorialSaveStatus` — saved / unsaved dirty indicator for editors
+  - `editorialFilterStyles.js` — shared filter chip/input tokens
+- [x] Admin pages wired: List, Editor (2/3 + sticky SEO sidebar, preview CTA, dirty state), Review (card queue + excerpt), Metrics, Analytics, Indexing
+- [x] B2B pages wired: List, Editor (2/3 + sticky publication sidebar, dirty state), Analytics
+- [x] ESLint: `useCallback` for editor payload snapshots (exhaustive-deps clean)
+- [x] `npm run lint && npm run build` — pass
+
+**Acceptance criteria**
+
+- [x] All 9 editorial pages use `EditorialPageHeader` + `EditorialPageMotion`
+- [x] List/review pages use skeleton + empty state components
+- [x] Metrics/analytics use `EditorialKpiCard` + KPI/table skeletons
+- [x] Admin editor: prominent Anteprima button, `EditorialSaveStatus`, sticky SEO sidebar
+- [x] Review queue: card layout with 3-line content preview snippet
+- [x] B2B editor: status pill + save status when editable, 2/3 canvas layout
+
+**Dependencies:** Sprint 5a (admin CMS), Sprint 5c (B2B portal), Sprint 7 (analytics), Sprint 8a (TileEditor)
+
+**Repo:** `frontend/` (workspace root) · branch `frontend-mr-top`
+
+**Files added**
+
+```
+src/components/editorial/EditorialPageHeader.jsx
+src/components/editorial/EditorialContentStatusPill.jsx
+src/components/editorial/EditorialEmptyState.jsx
+src/components/editorial/EditorialKpiCard.jsx
+src/components/editorial/EditorialListSkeleton.jsx
+src/components/editorial/EditorialPageMotion.jsx
+src/components/editorial/EditorialSaveStatus.jsx
+src/components/editorial/editorialFilterStyles.js
+```
+
+**Files changed**
+
+```
+src/pages/admin/editorial/EditorialListPage.jsx
+src/pages/admin/editorial/EditorialEditorPage.jsx
+src/pages/admin/editorial/EditorialReviewPage.jsx
+src/pages/admin/editorial/EditorialMetricsPage.jsx
+src/pages/admin/editorial/EditorialAnalyticsPage.jsx
+src/pages/admin/editorial/EditorialIndexingPage.jsx
+src/pages/b2b/editorial/EditorialListPage.jsx
+src/pages/b2b/editorial/EditorialEditorPage.jsx
+src/pages/b2b/editorial/EditorialAnalyticsPage.jsx
+docs/EDITORIAL_SPRINT_PLAN.md
+```
+
+### Handoff — Sprint 8c COMPLETE
+
+**Next agent START: Sprint 9 — (TBD)**
+
+---
+
+*Document version: 2.15 · Sprint 8c complete · Enterprise editorial UX polish live*

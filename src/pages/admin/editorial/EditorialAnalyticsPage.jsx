@@ -1,15 +1,19 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Bot, Eye, ExternalLink, Loader2, Pencil, Users } from 'lucide-react'
+import { Bot, ExternalLink, Eye, Loader2, Pencil, Users } from 'lucide-react'
 import AdminLoadError from '../../../components/admin/AdminLoadError'
 import EditorialSubNav from '../../../components/admin/editorial/EditorialSubNav'
 import EditorialViewsTrendChart from '../../../components/editorial/EditorialViewsTrendChart'
-import { adminGlassCard, adminPageSubtitle, adminPageTitle } from '../../../components/admin/adminStyles'
+import { adminGlassCard } from '../../../components/admin/adminStyles'
 import { ApiError, isApiConfigured } from '../../../services/apiClient'
 import {
   fetchAdminEditorialAnalytics,
   generatePreviewToken,
 } from '../../../services/adminEditorialService'
+import EditorialPageHeader from '../../../components/editorial/EditorialPageHeader'
+import EditorialKpiCard from '../../../components/editorial/EditorialKpiCard'
+import { EditorialKpiSkeleton, EditorialTableSkeleton } from '../../../components/editorial/EditorialListSkeleton'
+import EditorialPageMotion from '../../../components/editorial/EditorialPageMotion'
 
 const PERIOD_OPTIONS = [
   { id: 7, label: '7 giorni' },
@@ -39,21 +43,6 @@ function dateRangeForDays(days) {
 
 function formatNumber(value) {
   return new Intl.NumberFormat('it-IT').format(value ?? 0)
-}
-
-function KpiCard({ label, value, icon: Icon, hint }) {
-  return (
-    <div className={`${adminGlassCard} p-4 sm:p-5`}>
-      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-accent-coral/10">
-        <Icon className="h-4 w-4 text-accent-coral" />
-      </div>
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold tabular-nums text-white sm:text-3xl">
-        {formatNumber(value)}
-      </p>
-      {hint ? <p className="mt-1 text-xs text-zinc-500">{hint}</p> : null}
-    </div>
-  )
 }
 
 export default function EditorialAnalyticsPage() {
@@ -123,13 +112,12 @@ export default function EditorialAnalyticsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className={adminPageTitle}>Analytics editoriali</h1>
-        <p className={adminPageSubtitle}>
-          Visualizzazioni piattaforma, trend giornaliero e articoli più letti su Wenando Magazine.
-        </p>
-      </header>
+    <EditorialPageMotion className="space-y-6">
+      <EditorialPageHeader
+        variant="admin"
+        title="Analytics editoriali"
+        subtitle="Visualizzazioni piattaforma, trend giornaliero e articoli più letti su Wenando Magazine."
+      />
 
       <EditorialSubNav />
 
@@ -143,8 +131,8 @@ export default function EditorialAnalyticsPage() {
               onClick={() => handlePeriodChange(option.id)}
               className={
                 periodDays === option.id
-                  ? 'rounded-full bg-accent-coral/15 px-3 py-1.5 text-xs font-semibold text-accent-coral ring-1 ring-accent-coral/25'
-                  : 'rounded-full px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:text-white'
+                  ? 'rounded-full bg-accent-coral/15 px-3 py-1.5 text-xs font-semibold text-accent-coral ring-1 ring-accent-coral/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-coral/40'
+                  : 'rounded-full px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-coral/40'
               }
             >
               {option.label}
@@ -154,29 +142,33 @@ export default function EditorialAnalyticsPage() {
       </div>
 
       {loading ? (
-        <div className={`${adminGlassCard} flex items-center justify-center py-16`}>
-          <Loader2 className="h-6 w-6 animate-spin text-accent-coral" aria-label="Caricamento" />
+        <div className="space-y-6">
+          <EditorialKpiSkeleton variant="admin" count={3} />
+          <EditorialTableSkeleton variant="admin" rows={5} />
         </div>
       ) : loadError ? (
         <AdminLoadError message={loadError} onRetry={handleRetry} />
       ) : analytics ? (
         <div className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-3">
-            <KpiCard
+            <EditorialKpiCard
+              variant="admin"
               label="Visualizzazioni pagina"
-              value={analytics.totals.pageViews}
+              value={formatNumber(analytics.totals.pageViews)}
               icon={Eye}
               hint={`Totale nel periodo · ${periodLabel}`}
             />
-            <KpiCard
+            <EditorialKpiCard
+              variant="admin"
               label="Visitatori unici"
-              value={analytics.totals.uniqueVisitors}
+              value={formatNumber(analytics.totals.uniqueVisitors)}
               icon={Users}
               hint="Utenti distinti nel periodo"
             />
-            <KpiCard
+            <EditorialKpiCard
+              variant="admin"
               label="Visualizzazioni bot"
-              value={analytics.totals.botViews}
+              value={formatNumber(analytics.totals.botViews)}
               icon={Bot}
               hint="Crawler e bot rilevati"
             />
@@ -207,6 +199,7 @@ export default function EditorialAnalyticsPage() {
                 <table className="min-w-full text-sm">
                   <thead>
                     <tr className="border-b border-white/10 bg-zinc-950/40 text-left text-xs uppercase tracking-wide text-zinc-500">
+                      <th className="px-4 py-3 font-medium sm:px-5">#</th>
                       <th className="px-4 py-3 font-medium sm:px-5">Titolo</th>
                       <th className="px-4 py-3 font-medium sm:px-5">Visualizzazioni</th>
                       <th className="px-4 py-3 font-medium sm:px-5">Unici</th>
@@ -216,8 +209,9 @@ export default function EditorialAnalyticsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
-                    {analytics.topArticles.map((article) => (
-                      <tr key={article.uuid} className="text-zinc-200">
+                    {analytics.topArticles.map((article, index) => (
+                      <tr key={article.uuid} className="text-zinc-200 transition-colors hover:bg-white/[0.02]">
+                        <td className="px-4 py-4 tabular-nums text-zinc-500 sm:px-5">{index + 1}</td>
                         <td className="px-4 py-4 sm:px-5">
                           <p className="max-w-md truncate font-medium text-white">
                             {article.title || 'Senza titolo'}
@@ -233,7 +227,7 @@ export default function EditorialAnalyticsPage() {
                           <div className="flex items-center gap-1">
                             <Link
                               to={`/admin/editorial/${article.uuid}/edit`}
-                              className="rounded-lg border border-white/10 p-1.5 text-zinc-400 transition-colors hover:border-accent-coral/30 hover:text-accent-coral"
+                              className="rounded-lg border border-white/10 p-1.5 text-zinc-400 transition-colors hover:border-accent-coral/30 hover:text-accent-coral focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-coral/40"
                               title="Modifica"
                             >
                               <Pencil className="h-3.5 w-3.5" />
@@ -242,7 +236,7 @@ export default function EditorialAnalyticsPage() {
                               type="button"
                               onClick={() => handlePreview(article.uuid)}
                               disabled={previewLoading === article.uuid}
-                              className="rounded-lg border border-white/10 p-1.5 text-zinc-400 transition-colors hover:border-accent-coral/30 hover:text-accent-coral disabled:opacity-50"
+                              className="rounded-lg border border-white/10 p-1.5 text-zinc-400 transition-colors hover:border-accent-coral/30 hover:text-accent-coral focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-coral/40 disabled:opacity-50"
                               title="Anteprima"
                             >
                               {previewLoading === article.uuid ? (
@@ -262,6 +256,6 @@ export default function EditorialAnalyticsPage() {
           </div>
         </div>
       ) : null}
-    </div>
+    </EditorialPageMotion>
   )
 }

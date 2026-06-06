@@ -1,15 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Eye, FileText, Loader2, Pencil, Users } from 'lucide-react'
+import { Eye, FileText, Pencil, Users } from 'lucide-react'
 import B2BLoadError from '../../../components/b2b/B2BLoadError'
 import B2bEditorialSubNav from '../../../components/b2b/editorial/B2bEditorialSubNav'
 import EditorialViewsTrendChart from '../../../components/editorial/EditorialViewsTrendChart'
 import {
   b2bCard,
   b2bGhostBtn,
-  b2bIconAccent,
-  b2bPageSubtitle,
-  b2bPageTitle,
   b2bSegmented,
   b2bSegmentedActive,
   b2bSegmentedInactive,
@@ -19,6 +16,10 @@ import {
   fetchB2bEditorialAnalytics,
   listB2bContents,
 } from '../../../services/b2bEditorialService'
+import EditorialPageHeader from '../../../components/editorial/EditorialPageHeader'
+import EditorialKpiCard from '../../../components/editorial/EditorialKpiCard'
+import { EditorialKpiSkeleton, EditorialTableSkeleton } from '../../../components/editorial/EditorialListSkeleton'
+import EditorialPageMotion from '../../../components/editorial/EditorialPageMotion'
 
 const PERIOD_OPTIONS = [
   { id: 7, label: '7 giorni' },
@@ -48,21 +49,6 @@ function dateRangeForDays(days) {
 
 function formatNumber(value) {
   return new Intl.NumberFormat('it-IT').format(value ?? 0)
-}
-
-function KpiCard({ label, value, icon: Icon, hint }) {
-  return (
-    <div className={`${b2bCard} p-5`}>
-      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-accent-coral/10">
-        <Icon className={`h-4 w-4 ${b2bIconAccent}`} />
-      </div>
-      <p className="text-xs font-medium text-charcoal-muted">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-charcoal">
-        {formatNumber(value)}
-      </p>
-      {hint ? <p className="mt-1 text-xs text-charcoal-muted">{hint}</p> : null}
-    </div>
-  )
 }
 
 export default function EditorialAnalyticsPage() {
@@ -125,13 +111,12 @@ export default function EditorialAnalyticsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <div>
-        <h1 className={b2bPageTitle}>Statistiche editoriali</h1>
-        <p className={b2bPageSubtitle}>
-          Monitora le visualizzazioni dei contenuti pubblicati dalla tua struttura.
-        </p>
-      </div>
+    <EditorialPageMotion className="mx-auto max-w-5xl space-y-6">
+      <EditorialPageHeader
+        variant="b2b"
+        title="Statistiche editoriali"
+        subtitle="Monitora le visualizzazioni dei contenuti pubblicati dalla tua struttura."
+      />
 
       <B2bEditorialSubNav />
 
@@ -152,29 +137,33 @@ export default function EditorialAnalyticsPage() {
       </div>
 
       {loading ? (
-        <div className={`${b2bCard} flex items-center justify-center py-16`}>
-          <Loader2 className="h-6 w-6 animate-spin text-accent-coral" aria-label="Caricamento" />
+        <div className="space-y-6">
+          <EditorialKpiSkeleton variant="b2b" count={3} />
+          <EditorialTableSkeleton variant="b2b" rows={5} columns={4} />
         </div>
       ) : loadError ? (
         <B2BLoadError message={loadError} onRetry={handleRetry} />
       ) : analytics ? (
         <div className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-3">
-            <KpiCard
+            <EditorialKpiCard
+              variant="b2b"
               label="Visualizzazioni pagina"
-              value={analytics.totals.pageViews}
+              value={formatNumber(analytics.totals.pageViews)}
               icon={Eye}
               hint={`Totale nel periodo · ${periodLabel}`}
             />
-            <KpiCard
+            <EditorialKpiCard
+              variant="b2b"
               label="Visitatori unici"
-              value={analytics.totals.uniqueVisitors}
+              value={formatNumber(analytics.totals.uniqueVisitors)}
               icon={Users}
               hint="Utenti distinti nel periodo"
             />
-            <KpiCard
+            <EditorialKpiCard
+              variant="b2b"
               label="Articoli pubblicati"
-              value={publishedCount}
+              value={formatNumber(publishedCount)}
               icon={FileText}
               hint="Contenuti live della struttura"
             />
@@ -230,7 +219,7 @@ export default function EditorialAnalyticsPage() {
                             to={`/pro/editoriale/${article.uuid}/edit`}
                             className={`inline-flex items-center gap-1.5 ${b2bGhostBtn}`}
                           >
-                            <Pencil className="h-3.5 w-3.5" />
+                            <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                             Modifica
                           </Link>
                         </td>
@@ -243,6 +232,6 @@ export default function EditorialAnalyticsPage() {
           </div>
         </div>
       ) : null}
-    </div>
+    </EditorialPageMotion>
   )
 }
