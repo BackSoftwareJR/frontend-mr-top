@@ -1,4 +1,4 @@
-import { lazy, Suspense, useRef } from 'react'
+import { Suspense, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useIsMobile } from '../../utils/performanceTier'
 import ConsumerAccediNavLink from './ConsumerAccediNavLink'
@@ -6,16 +6,15 @@ import MagneticButton from '../ui/MagneticButton'
 import HomeSearchBar from './HomeSearchBar'
 import MulticolorHeading from '../ui/MulticolorHeading'
 import WenandoLogo, { WenandoMark } from '../ui/WenandoLogo'
-import BentoSteps from './BentoSteps'
-import PersonalizedAnalysisSection from './PersonalizedAnalysisSection'
-import FAQSection from './FAQSection'
-import CTASection from './CTASection'
+import BentoStepsStatic from './BentoStepsStatic'
+import StatsSectionStatic from './StatsSectionStatic'
+import PersonalizedAnalysisSectionStatic from './PersonalizedAnalysisSectionStatic'
+import FAQSectionStatic from './FAQSectionStatic'
+import CTASectionStatic from './CTASectionStatic'
+import HomeNavDesktop from './HomeNavDesktop'
 import AuroraBackground from '../layout/AuroraBackground'
 import SectionBlob from '../ui/SectionBlob'
 import { HOME_CTA, HOME_HERO } from '../../constants/siteCopy'
-
-const HomeNavDesktop = lazy(() => import('./HomeNavDesktop'))
-const HeroSectionDesktop = lazy(() => import('./HeroSectionDesktop'))
 
 const MOBILE_NAV_CTA_CLASS =
   'shrink-0 whitespace-nowrap !min-h-[40px] !rounded-full !px-3.5 !py-2 !text-[0.8125rem] !font-semibold sm:!px-4 sm:!text-sm'
@@ -223,17 +222,7 @@ function HeroSectionStatic() {
 }
 
 export default function HeroSection() {
-  const isMobile = useIsMobile()
-
-  if (isMobile) {
-    return <HeroSectionStatic />
-  }
-
-  return (
-    <Suspense fallback={<HeroSectionStatic />}>
-      <HeroSectionDesktop />
-    </Suspense>
-  )
+  return <HeroSectionStatic />
 }
 
 export function HomePageContent() {
@@ -243,10 +232,11 @@ export function HomePageContent() {
       <div className="relative z-10">
         <HomeNav />
         <HeroSection />
-        <BentoSteps />
-        <PersonalizedAnalysisSection />
-        <FAQSection />
-        <CTASection />
+        <BentoStepsStatic />
+        <StatsSectionStatic />
+        <PersonalizedAnalysisSectionStatic />
+        <FAQSectionStatic />
+        <CTASectionStatic />
         <HomeFooter />
       </div>
     </>

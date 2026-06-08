@@ -1,17 +1,22 @@
 import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
+import { createRoot, hydrateRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import { isMobileViewport } from './utils/performanceTier'
 import { prefetchMobileCriticalRoutes } from './utils/routePrefetch'
 
 const rootEl = document.getElementById('root')
-
-createRoot(rootEl).render(
+const app = (
   <StrictMode>
     <App />
-  </StrictMode>,
+  </StrictMode>
 )
+
+if (rootEl?.hasAttribute('data-prerendered')) {
+  hydrateRoot(rootEl, app)
+} else {
+  createRoot(rootEl).render(app)
+}
 
 if (isMobileViewport()) {
   prefetchMobileCriticalRoutes()

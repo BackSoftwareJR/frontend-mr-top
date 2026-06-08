@@ -2,7 +2,6 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   motion,
-  useMotionValueEvent,
   useMotionValue,
   useReducedMotion,
   useScroll,
@@ -82,6 +81,94 @@ function refreshDocumentScrollMax() {
 
 function getDocumentScrollYProgress() {
   return Math.min(1, Math.max(0, window.scrollY / cachedScrollMax))
+}
+
+/**
+ * Desktop: stroke paint + dot position in rAF.
+ * The counter-scroll transform is handled by Framer Motion (motion.g with
+ * y: useTransform(scrollY, v => -v)) which is frame-synced with the browser
+ * and avoids the 1-frame rAF lag that causes visual wobble.
+ */
+function useDesktopReadingStrokePaint({
+  enabled,
+  showCursor,
+  visiblePathRef,
+  dotCircleRef,
+  lookupRef,
+  remapTableRef,
+  zoneConfigRef,
+  pathLength,
+  pathProgressRef,
+  pathProgressMotion,
+}) {
+  const rafRef = useRef(null)
+
+  useEffect(() => {
+    if (!enabled) return undefined
+
+    refreshDocumentScrollMax()
+    const onScrollMaxChange = () => refreshDocumentScrollMax()
+    window.addEventListener('resize', onScrollMaxChange, { passive: true })
+    window.addEventListener('load', onScrollMaxChange, { passive: true })
+
+    const apply = () => {
+      if (!showCursor) return
+
+      const len = lookupRef.current.totalLength || pathLength
+      const rawP = getDocumentScrollYProgress()
+      const pathProgress = resolveReadingPathProgress(
+        rawP,
+        remapTableRef.current,
+        zoneConfigRef.current,
+        { isMobile: false },
+      )
+
+      pathProgressRef.current = pathProgress
+      pathProgressMotion.set(pathProgress)
+
+      const path = visiblePathRef.current
+      if (path && len) {
+        const offset =
+          pathProgress <= 0
+            ? len
+            : len - pathVisibleLength(len, pathProgress, READING_STROKE_WIDTH)
+        path.style.strokeDashoffset = String(offset)
+      }
+
+      const dot = dotCircleRef.current
+      if (dot) {
+        const tip = getPathTipFromLookup(lookupRef.current, pathProgress)
+        dot.setAttribute('cx', String(tip.x))
+        dot.setAttribute('cy', String(tip.y))
+        dot.setAttribute('opacity', pathProgress > 0.001 ? '1' : '0')
+      }
+    }
+
+    const tick = () => {
+      rafRef.current = requestAnimationFrame(tick)
+      apply()
+    }
+
+    apply()
+    rafRef.current = requestAnimationFrame(tick)
+
+    return () => {
+      window.removeEventListener('resize', onScrollMaxChange)
+      window.removeEventListener('load', onScrollMaxChange)
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+    }
+  }, [
+    enabled,
+    showCursor,
+    visiblePathRef,
+    dotCircleRef,
+    lookupRef,
+    remapTableRef,
+    zoneConfigRef,
+    pathLength,
+    pathProgressRef,
+    pathProgressMotion,
+  ])
 }
 
 /** Pause mobile rAF when narrative anchors are off-screen */
@@ -566,8 +653,7 @@ const CtaGlowRing = memo(function CtaGlowRing({
 })
 
 function ReadingPathLayer({
-  scrollY,
-  scrollYProgress,
+  docScrollY,
   viewport,
   showCursor,
   ctaRects,
@@ -657,30 +743,36 @@ function ReadingPathLayer({
   }, [pathRevision, viewport.height, isMobile, isConstrained, pathD, points])
 
   const pathProgressMobile = useMotionValue(0)
-  const pathProgressDesktop = useTransform(scrollYProgress, (rawP) =>
-    resolveReadingPathProgress(rawP, remapTableRef.current, zoneConfigRef.current, {
-      isMobile: false,
-    }),
-  )
+  const pathProgressDesktop = useMotionValue(0)
   const pathProgress = isMobile ? pathProgressMobile : pathProgressDesktop
 
-  const strokeDashoffset = useTransform(pathProgressDesktop, (p) => {
-    const len = lookupRef.current.totalLength || pathLength
-    if (!len || p <= 0) return len
-    return len - pathVisibleLength(len, p, READING_STROKE_WIDTH)
-  })
-
-  /** Path lives in document space; shift by scroll so it tracks the page (desktop) */
-  const pathScrollOffset = useTransform(scrollY, (sy) => -sy)
+  // Desktop counter-scroll: negate scrollY via Framer Motion so the transform
+  // is frame-synced with the browser's render pipeline (no rAF lag/wobble).
+  const desktopGroupY = useTransform(docScrollY, (v) => -v)
 
   const visiblePathRef = useRef(null)
   const scrollGroupRef = useRef(null)
+  const desktopScrollGroupRef = useRef(null)
   const dotGroupRef = useRef(null)
   const dotCircleRef = useRef(null)
   const anchorsVisibleRef = useReadingAnchorsVisible(isMobile && showCursor)
+  const pathReady = pathLength > 0 && pathRevision > 0
+
+  useDesktopReadingStrokePaint({
+    enabled: !isMobile && pathReady,
+    showCursor,
+    visiblePathRef,
+    dotCircleRef,
+    lookupRef,
+    remapTableRef,
+    zoneConfigRef,
+    pathLength,
+    pathProgressRef,
+    pathProgressMotion: pathProgressDesktop,
+  })
 
   useMobileReadingScrollFrame({
-    enabled: isMobile && showCursor && pathLength > 0 && pathRevision > 0,
+    enabled: isMobile && showCursor && pathReady,
     anchorsVisibleRef,
     scrollGroupRef,
     visiblePathRef,
@@ -689,23 +781,6 @@ function ReadingPathLayer({
     pathProgressRef,
     frameTableRef,
     skipStrokePaint: useScrollTimelineStroke,
-  })
-
-  useMotionValueEvent(strokeDashoffset, 'change', (value) => {
-    if (isMobile) return
-    if (visiblePathRef.current) {
-      visiblePathRef.current.style.strokeDashoffset = String(value)
-    }
-  })
-
-  useMotionValueEvent(pathProgressDesktop, 'change', (p) => {
-    if (isMobile) return
-    const dot = dotCircleRef.current
-    if (!dot) return
-    const tip = getPathTipFromLookup(lookupRef.current, p)
-    dot.setAttribute('cx', String(tip.x))
-    dot.setAttribute('cy', String(tip.y))
-    dot.setAttribute('opacity', p > 0.001 ? '1' : '0')
   })
 
   useEffect(() => {
@@ -741,23 +816,38 @@ function ReadingPathLayer({
       return
     }
 
-    visiblePathRef.current.style.strokeDashoffset = String(strokeDashoffset.get())
+    refreshDocumentScrollMax()
 
-    if (dotCircleRef.current) {
-      const p = pathProgressDesktop.get()
-      const tip = getPathTipFromLookup(lookupRef.current, p)
-      dotCircleRef.current.setAttribute('cx', String(tip.x))
-      dotCircleRef.current.setAttribute('cy', String(tip.y))
-      dotCircleRef.current.setAttribute('opacity', p > 0.001 ? '1' : '0')
+    if (showCursor) {
+      const rawP = getDocumentScrollYProgress()
+      const p = resolveReadingPathProgress(
+        rawP,
+        remapTableRef.current,
+        zoneConfigRef.current,
+        { isMobile: false },
+      )
+      const len = lookupRef.current.totalLength || pathLength
+      const offset =
+        !len || p <= 0 ? len : len - pathVisibleLength(len, p, READING_STROKE_WIDTH)
+      visiblePathRef.current.style.strokeDashoffset = String(offset)
+      pathProgressRef.current = p
+      pathProgressDesktop.set(p)
+
+      if (dotCircleRef.current) {
+        const tip = getPathTipFromLookup(lookupRef.current, p)
+        dotCircleRef.current.setAttribute('cx', String(tip.x))
+        dotCircleRef.current.setAttribute('cy', String(tip.y))
+        dotCircleRef.current.setAttribute('opacity', p > 0.001 ? '1' : '0')
+      }
     }
   }, [
     pathRevision,
     pathLength,
     pathD,
     isMobile,
+    showCursor,
     pathProgressMobile,
     pathProgressDesktop,
-    strokeDashoffset,
     useScrollTimelineStroke,
   ])
 
@@ -828,8 +918,9 @@ function ReadingPathLayer({
                 </g>
               ) : (
                 <motion.g
+                  ref={desktopScrollGroupRef}
                   style={{
-                    y: pathScrollOffset,
+                    y: desktopGroupY,
                     willChange: 'transform',
                   }}
                 >
@@ -887,11 +978,9 @@ function ReadingPathLayer({
 }
 
 function DesktopReadingLineLayer({ reducedMotion, isConstrained }) {
-  const { scrollY, scrollYProgress } = useScroll({
-    offset: ['start start', 'end end'],
-  })
-  const staticProgress = useMotionValue(0)
-  const progress = reducedMotion ? staticProgress : scrollYProgress
+  // scrollY in px (MotionValue) — Framer Motion schedules updates in sync
+  // with the browser's rendering pipeline, eliminating rAF counter-scroll lag.
+  const { scrollY: docScrollY } = useScroll()
   const simplifiedPath = reducedMotion
   const viewport = useViewportSize()
   const ctaRects = useCtaAnchorRects()
@@ -900,8 +989,7 @@ function DesktopReadingLineLayer({ reducedMotion, isConstrained }) {
   const layer = (
     <div className={LAYER_CLASS} aria-hidden="true">
       <ReadingPathLayer
-        scrollY={scrollY}
-        scrollYProgress={progress}
+        docScrollY={docScrollY}
         viewport={viewport}
         showCursor={!reducedMotion}
         ctaRects={ctaRects}
@@ -917,8 +1005,9 @@ function DesktopReadingLineLayer({ reducedMotion, isConstrained }) {
 }
 
 function MobileReadingLineLayer({ reducedMotion, isConstrained, isLowCore }) {
-  const mobileScrollStubY = useMotionValue(0)
-  const mobileScrollStubProgress = useMotionValue(0)
+  // Mobile counter-scroll uses rAF in useMobileReadingScrollFrame — pass a
+  // zero stub so ReadingPathLayer can always call useTransform unconditionally.
+  const mobileScrollStub = useMotionValue(0)
   const simplifiedPath = reducedMotion
   const viewport = useViewportSize()
   const ctaRects = useCtaAnchorRects()
@@ -927,8 +1016,7 @@ function MobileReadingLineLayer({ reducedMotion, isConstrained, isLowCore }) {
   const layer = (
     <div className={MOBILE_LAYER_CLASS} aria-hidden="true">
       <ReadingPathLayer
-        scrollY={mobileScrollStubY}
-        scrollYProgress={mobileScrollStubProgress}
+        docScrollY={mobileScrollStub}
         viewport={viewport}
         showCursor={!reducedMotion}
         ctaRects={ctaRects}

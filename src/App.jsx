@@ -4,6 +4,8 @@ import AppErrorBoundary from './components/errors/AppErrorBoundary'
 import RouteLoadingFallback from './components/ui/RouteLoadingFallback'
 import { lazyRoute } from './utils/lazyRoute'
 import Home from './pages/Home'
+import ComeFunzionaPage from './pages/ComeFunzionaPage'
+import ChiSiamoPage from './pages/ChiSiamoPage'
 import { AuthProvider } from './context/AuthContext'
 import { B2BProvider } from './context/B2BContext'
 import AdminProtectedRoute from './components/auth/AdminProtectedRoute'
@@ -61,8 +63,6 @@ const PrivacyPage = lazyRoute(() => import('./pages/legal/PrivacyPage'))
 const CookiesPage = lazyRoute(() => import('./pages/legal/CookiesPage'))
 const TermsPage = lazyRoute(() => import('./pages/legal/TermsPage'))
 const TermsPartnersPage = lazyRoute(() => import('./pages/legal/TermsPartnersPage'))
-const ComeFunzionaPage = lazyRoute(() => import('./pages/ComeFunzionaPage'))
-const ChiSiamoPage = lazyRoute(() => import('./pages/ChiSiamoPage'))
 const MagazineHome = lazyRoute(() => import('./pages/MagazineHome'))
 const NotFoundPage = lazyRoute(() => import('./pages/errors/NotFoundPage'))
 const ErrorStatusPage = lazyRoute(() => import('./pages/errors/ErrorStatusPage'))

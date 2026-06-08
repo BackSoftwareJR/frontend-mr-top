@@ -589,12 +589,9 @@ input[type="range"].glass-range.range-overlay::-moz-range-thumb {
   }
 
   .hero-fade-in-heading,
-  .hero-fade-in {
-    animation: hero-fade-in 0.55s ease 0.45s both;
-  }
-
+  .hero-fade-in,
   .hero-fade-in-delay {
-    animation: hero-fade-in 0.55s ease 0.65s both;
+    animation: hero-fade-in 0.4s ease both;
   }
 
   /* Static gradient on mobile — infinite conic sweep is costly on low-end GPUs */
@@ -607,13 +604,28 @@ input[type="range"].glass-range.range-overlay::-moz-range-thumb {
 
 @keyframes hero-fade-in {
   from {
-    opacity: 0;
-    transform: translateY(18px);
+    transform: translateY(10px);
   }
 
   to {
-    opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Reserve space for below-fold homepage sections — avoids blank bands while JS hydrates */
+#stats,
+#bento,
+#faq,
+#personalized {
+  min-height: 12rem;
+}
+
+@media (min-width: 640px) {
+  #stats,
+  #bento,
+  #faq,
+  #personalized {
+    min-height: 16rem;
   }
 }
 

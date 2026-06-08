@@ -30,7 +30,7 @@ export default function StatsSectionStatic() {
               data-scroll-label={stat.label}
             >
               <div
-                className={`relative flex min-h-[11.5rem] flex-col overflow-hidden rounded-3xl border ${stat.border} ${stat.cardTint} px-6 pt-7 pb-6 shadow-sm`}
+                className={`reading-line-stat relative flex min-h-[11.5rem] flex-col overflow-hidden rounded-3xl border ${stat.border} ${stat.cardTint} px-6 pt-7 pb-6 shadow-sm`}
               >
                 <div
                   className="absolute inset-x-0 top-0 h-1 rounded-t-3xl"

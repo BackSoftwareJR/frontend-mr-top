@@ -15,6 +15,7 @@ export const ANCHOR_ORDER = [
   'hero-dot',
   'hero-cta',
   'bento',
+  'stats',
   'personalized',
   'faq',
   'cta-final',
@@ -122,6 +123,9 @@ export const HERO_SCROLL_BLEND = 0.03
 
 /** Blend after bento vertical descent before viewport remap */
 export const DESCENT_SCROLL_BLEND = 0.025
+
+/** Desktop: max scroll fraction for bento→stats descent (raised after stats section restore) */
+export const DESKTOP_DESCENT_SCROLL_ZONE_MAX = 0.5
 
 /** Mobile breakpoint — matches ScrollReadingLine matchMedia query */
 export const MOBILE_BREAKPOINT = 768
@@ -314,6 +318,15 @@ export function buildVerticalDescentPoints(fromExit, statsEntry) {
  * Stats row pass-through — enter left (vertical center), exit right.
  * Per-card fill ranges are computed from card DOM rects.
  */
+/** True when stat cards share one row (lg grid); skip horizontal sweep on stacked mobile/tablet grids */
+export function areStatCardsInSingleRow(statCardEls) {
+  if (statCardEls.length < 2) return false
+
+  const tops = statCardEls.map((el) => el.getBoundingClientRect().top)
+  const firstTop = tops[0]
+  return tops.every((top) => Math.abs(top - firstTop) < 12)
+}
+
 export function buildStatsPassThroughPoints(statCardEls) {
   if (!statCardEls.length) return []
 
@@ -805,9 +818,11 @@ export function computeReadingPathZoneConfig(
   const heroScrollEnd = isMobile ? MOBILE_HERO_SCROLL_ZONE_END : HERO_SCROLL_ZONE_END
   const scrollBlend = isMobile ? MOBILE_DESCENT_SCROLL_BLEND : HERO_SCROLL_BLEND
   const descentScrollBlend = isMobile ? MOBILE_DESCENT_SCROLL_BLEND : DESCENT_SCROLL_BLEND
-  const descentScrollMax = isMobile ? MOBILE_DESCENT_SCROLL_ZONE_MAX : 0.38
+  const descentScrollMax = isMobile
+    ? MOBILE_DESCENT_SCROLL_ZONE_MAX
+    : DESKTOP_DESCENT_SCROLL_ZONE_MAX
   const descentScrollMinGap = isMobile ? 0.06 : 0.05
-  const statsViewportRatio = isMobile ? 0.28 : 0.46
+  const statsViewportRatio = isMobile ? 0.28 : 0.38
 
   const total = pathEl?.getTotalLength?.() ?? 0
   if (!total || !viewportHeight || typeof document === 'undefined') {
@@ -1945,12 +1960,16 @@ export function measureReadingPathPoints() {
       const statEls = STAT_CARD_ANCHORS.map((id) => byId.get(id)).filter(Boolean)
       const lastPoint = pathPoints[pathPoints.length - 1]
 
-      if (statEls.length && lastPoint) {
+      if (statEls.length && lastPoint && areStatCardsInSingleRow(statEls)) {
         const statsPass = buildStatsPassThroughPoints(statEls)
         if (statsPass[0]) {
           pathPoints.push(...buildVerticalDescentPoints(lastPoint, statsPass[0]))
         }
         pathPoints.push(...statsPass)
+      } else if (lastPoint) {
+        const guide = measureDocumentPoint(el)
+        pathPoints.push(...buildVerticalDescentPoints(lastPoint, guide))
+        pathPoints.push({ ...guide, anchorId })
       } else {
         pathPoints.push({ ...measureDocumentPoint(el), anchorId })
       }
