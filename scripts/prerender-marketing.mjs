@@ -1,9 +1,10 @@
 /**
  * Post-build static prerender for marketing routes.
  * Uses Playwright against vite preview — no framework migration required.
+ *
+ * Skips gracefully when Chromium is unavailable (e.g. deploy hosts without Playwright).
  */
 import { preview } from 'vite'
-import { chromium } from 'playwright'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -40,7 +41,25 @@ function injectPrerenderedRoot(templateHtml, rootHtml) {
   return `${templateHtml.slice(0, rootOpen)}${prerenderedRootTag}${rootHtml}${templateHtml.slice(rootClose)}`
 }
 
+async function loadChromium() {
+  try {
+    const { chromium } = await import('playwright')
+    return chromium
+  } catch (err) {
+    console.warn('[prerender-marketing] Playwright not available, skipping prerender:', err.message)
+    return null
+  }
+}
+
 async function main() {
+  if (process.env.SKIP_PRERENDER === '1') {
+    console.log('[prerender-marketing] skipped (SKIP_PRERENDER=1)')
+    return
+  }
+
+  const chromium = await loadChromium()
+  if (!chromium) return
+
   const templateHtml = await fs.readFile(path.join(distDir, 'index.html'), 'utf8')
 
   const previewPort = 4173 + Math.floor(Math.random() * 200)
@@ -51,7 +70,16 @@ async function main() {
 
   const baseUrl =
     previewServer.resolvedUrls?.local?.[0] ?? `http://127.0.0.1:${previewPort}`
-  const browser = await chromium.launch({ headless: true })
+
+  let browser
+  try {
+    browser = await chromium.launch({ headless: true })
+  } catch (err) {
+    console.warn('[prerender-marketing] Chromium not installed, skipping prerender:', err.message)
+    console.warn('[prerender-marketing] Run `npx playwright install chromium` to enable prerender.')
+    await previewServer.close()
+    return
+  }
 
   try {
     for (const route of ROUTES) {
@@ -60,7 +88,7 @@ async function main() {
       })
 
       await page.goto(`${baseUrl}${route.url}`, {
-        waitUntil: 'networkidle',
+        waitUntil: 'load',
         timeout: 45_000,
       })
       await page.waitForSelector(route.readySelector, {
@@ -69,7 +97,7 @@ async function main() {
       })
       await page.waitForFunction(
         () => (document.querySelector('#root')?.innerText?.trim().length ?? 0) > 120,
-        { timeout: 10_000 },
+        { timeout: 15_000 },
       )
 
       const rootHtml = await page.locator('#root').innerHTML()
